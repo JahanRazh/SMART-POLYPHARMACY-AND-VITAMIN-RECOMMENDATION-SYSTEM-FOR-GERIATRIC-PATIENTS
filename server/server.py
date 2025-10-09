@@ -1,13 +1,18 @@
-from flask import Flask,jsonify  # type: ignore
+from flask import Flask, jsonify
+from flask_cors import CORS
 
+# app instance
 app = Flask(__name__)
+CORS(app)
 
-#/recommend
-@app.route("/recommend", methods=['GET'])
+# /api/home
+@app.route("/api/home", methods=['GET'])
 def return_home():
     return jsonify({
-        'message': "SMART Polypharmacy and Vitamin Recommendation System API"
+        'message': "Like this video if this helped...!",
+       
     })
 
-if __name__ == '__main__':
-    app.run(debug=True)
+
+if __name__ == "__main__":
+    app.run(debug=True, port=5000)
