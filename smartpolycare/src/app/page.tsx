@@ -1,12 +1,14 @@
-import Home from '@/components/Home/Home';
+import Home from '@/components/Home/Home'
 import React from 'react'
-
-const Homepage = () => {
+import Polydash from '@/Pages/Polypharmacy/polydash/polydash'
+const page = () => {
   return (
     <div>
       <Home />
+      <Polydash />
+      
     </div>
   )
 }
 
-export default Homepage;
+export default page
