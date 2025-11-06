@@ -1,0 +1,32 @@
+[debug] [2025-11-06T15:24:29.752Z] ----------------------------------------------------------------------
+[debug] [2025-11-06T15:24:29.755Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\jahan\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js init
+[debug] [2025-11-06T15:24:29.755Z] CLI Version:   14.24.0
+[debug] [2025-11-06T15:24:29.755Z] Platform:      win32
+[debug] [2025-11-06T15:24:29.755Z] Node Version:  v22.13.1
+[debug] [2025-11-06T15:24:29.756Z] Time:          Thu Nov 06 2025 20:54:29 GMT+0530 (India Standard Time)
+[debug] [2025-11-06T15:24:29.756Z] ----------------------------------------------------------------------
+[debug] 
+[info] 
+     ######## #### ########  ######## ########     ###     ######  ########
+     ##        ##  ##     ## ##       ##     ##  ##   ##  ##       ##
+     ######    ##  ########  ######   ########  #########  ######  ######
+     ##        ##  ##    ##  ##       ##     ## ##     ##       ## ##
+     ##       #### ##     ## ######## ########  ##     ##  ######  ########
+
+You're about to initialize a Firebase project in this directory:
+
+  H:\SLIIT Campus\Research Project\SMART-POLYPHARMACY-AND-VITAMIN-RECOMMENDATION-SYSTEM-FOR-GERIATRIC-PATIENTS\smartpolycare
+
+[debug] [2025-11-06T15:28:29.665Z] ExitPromptError: User force closed the prompt with SIGINT
+    at Interface.sigint (C:\Users\jahan\AppData\Roaming\npm\node_modules\firebase-tools\node_modules\@inquirer\core\dist\commonjs\lib\create-prompt.js:101:37)
+    at Interface.emit (node:events:524:28)
+    at Interface.emit (node:domain:489:12)
+    at [_ttyWrite] [as _ttyWrite] (node:internal/readline/interface:1124:18)
+    at ReadStream.onkeypress (node:internal/readline/interface:263:20)
+    at ReadStream.emit (node:events:536:35)
+    at ReadStream.emit (node:domain:489:12)
+    at emitKeys (node:internal/readline/utils:370:14)
+    at emitKeys.next (<anonymous>)
+    at ReadStream.onData (node:internal/readline/emitKeypressEvents:64:36)
+[error] 
+[error] Error: An unexpected error has occurred.
