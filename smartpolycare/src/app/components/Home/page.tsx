@@ -57,7 +57,7 @@ const Home = () => {
     { value: "98%", label: "Clinical Accuracy", description: "In drug interaction detection" },
     { value: "50k+", label: "Medications", description: "In our knowledge base" },
     { value: "24/7", label: "Monitoring", description: "Real-time risk assessment" },
-    { value: "HIPAA", label: "Compliant", description: "Secure data handling" }
+    { value: "10k+", label: "Active Users", description: "Healthcare providers & patients" }
   ];
 
   const getColorClasses = (color: string) => {
