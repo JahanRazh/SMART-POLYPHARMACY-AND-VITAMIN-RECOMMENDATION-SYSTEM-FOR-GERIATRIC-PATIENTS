@@ -225,37 +225,7 @@ const Home = () => {
           </div>
         </div>
       </section>
-
-      {/* CTA Section - Professional */}
-      <section className="py-20 bg-gradient-to-r from-gray-900 to-blue-900 text-white">
-        <div className="container mx-auto px-6 text-center">
-          <div className="max-w-4xl mx-auto">
-            <h2 className="text-3xl lg:text-4xl font-bold mb-6">
-              Ready to Enhance Patient Safety?
-            </h2>
-            <p className="text-xl text-blue-100 mb-8 leading-relaxed">
-              Join leading healthcare institutions using SmartPolyCare for evidence-based geriatric care management.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-              <Link 
-                href="/clinical-trial" 
-                className="bg-white text-gray-900 px-8 py-4 rounded-lg hover:shadow-2xl transition-all duration-200 font-semibold"
-              >
-                Start Clinical Trial
-              </Link>
-              <Link 
-                href="/contact-sales" 
-                className="border-2 border-white text-white px-8 py-4 rounded-lg hover:bg-white hover:text-gray-900 transition-all duration-200 font-semibold"
-              >
-                Contact Sales
-              </Link>
-            </div>
-            <p className="text-blue-200 mt-6 text-sm">
-              HIPAA compliant • Clinical validation ongoing • Provider network available
-            </p>
-          </div>
-        </div>
-      </section>
+     
     </div>
   );
 };
