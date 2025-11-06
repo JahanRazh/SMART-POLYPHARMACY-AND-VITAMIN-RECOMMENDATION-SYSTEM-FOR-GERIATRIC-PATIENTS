@@ -2,6 +2,7 @@
 'use client';
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from '../images/polycare.jpg';
 
 const Home = () => {
   const [activeFeature, setActiveFeature] = useState(0);
@@ -57,7 +58,7 @@ const Home = () => {
     { value: "98%", label: "Clinical Accuracy", description: "In drug interaction detection" },
     { value: "50k+", label: "Medications", description: "In our knowledge base" },
     { value: "24/7", label: "Monitoring", description: "Real-time risk assessment" },
-    { value: "HIPAA", label: "Compliant", description: "Secure data handling" }
+    { value: "10k+", label: "Active Users", description: "Healthcare providers & patients" }
   ];
 
   const getColorClasses = (color: string) => {
@@ -108,34 +109,19 @@ const Home = () => {
                 </Link>
               </div>
 
-              <div className="flex items-center space-x-8 pt-4">
-                <div className="flex items-center space-x-2">
-                  <div className="w-2 h-2 bg-teal-500 rounded-full"></div>
-                  <span className="text-gray-600">HIPAA Compliant</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <div className="w-2 h-2 bg-teal-500 rounded-full"></div>
-                  <span className="text-gray-600">FDA Guidelines</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <div className="w-2 h-2 bg-teal-500 rounded-full"></div>
-                  <span className="text-gray-600">Clinical Validation</span>
-                </div>
-              </div>
+            
             </div>
 
             <div className="relative">
-              <div className="bg-gradient-to-br from-teal-50 to-blue-50 rounded-2xl p-8 shadow-lg border border-gray-100">
-                <div className="grid grid-cols-2 gap-6">
-                  {clinicalStats.map((stat, index) => (
-                    <div key={index} className="text-center p-6 bg-white rounded-xl shadow-sm border border-gray-100">
-                      <div className="text-2xl font-bold text-gray-900 mb-2">{stat.value}</div>
-                      <div className="text-sm font-semibold text-gray-700 mb-1">{stat.label}</div>
-                      <div className="text-xs text-gray-500">{stat.description}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+             
+                  <div className="flex items-center justify-center">
+                    <img
+                      src="/images/polycare.jpg"
+                      alt="Clinical illustration"
+                      
+                    />
+                  </div>
+              
             </div>
           </div>
         </div>
@@ -239,37 +225,7 @@ const Home = () => {
           </div>
         </div>
       </section>
-
-      {/* CTA Section - Professional */}
-      <section className="py-20 bg-gradient-to-r from-gray-900 to-blue-900 text-white">
-        <div className="container mx-auto px-6 text-center">
-          <div className="max-w-4xl mx-auto">
-            <h2 className="text-3xl lg:text-4xl font-bold mb-6">
-              Ready to Enhance Patient Safety?
-            </h2>
-            <p className="text-xl text-blue-100 mb-8 leading-relaxed">
-              Join leading healthcare institutions using SmartPolyCare for evidence-based geriatric care management.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-              <Link 
-                href="/clinical-trial" 
-                className="bg-white text-gray-900 px-8 py-4 rounded-lg hover:shadow-2xl transition-all duration-200 font-semibold"
-              >
-                Start Clinical Trial
-              </Link>
-              <Link 
-                href="/contact-sales" 
-                className="border-2 border-white text-white px-8 py-4 rounded-lg hover:bg-white hover:text-gray-900 transition-all duration-200 font-semibold"
-              >
-                Contact Sales
-              </Link>
-            </div>
-            <p className="text-blue-200 mt-6 text-sm">
-              HIPAA compliant • Clinical validation ongoing • Provider network available
-            </p>
-          </div>
-        </div>
-      </section>
+     
     </div>
   );
 };
