@@ -6,6 +6,8 @@ import { useAuthForm } from '../Hooks/useAuth';
 
 const SignupForm = ({ onToggleMode }) => {
   const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
     email: '',
     password: '',
     confirmPassword: ''
@@ -21,13 +23,19 @@ const SignupForm = ({ onToggleMode }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Call handleEmailSignUp with the correct parameters
     const result = await handleEmailSignUp(
+      formData.firstName,
+      formData.lastName,
       formData.email, 
       formData.password, 
       formData.confirmPassword
     );
+    
     if (result.success) {
       console.log('Signup successful');
+      // You can redirect or show success message here
     }
   };
 
@@ -50,6 +58,34 @@ const SignupForm = ({ onToggleMode }) => {
 
       <form onSubmit={handleSubmit}>
         <div className="form-group">
+          <label htmlFor="firstName">First Name</label>
+          <input
+            type="text"
+            id="firstName"
+            name="firstName"
+            value={formData.firstName}
+            onChange={handleChange}
+            required
+            disabled={loading}
+            placeholder="Enter your first name"
+          />
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="lastName">Last Name</label>
+          <input
+            type="text"
+            id="lastName"
+            name="lastName"
+            value={formData.lastName}
+            onChange={handleChange}
+            required
+            disabled={loading}
+            placeholder="Enter your last name"
+          />
+        </div>
+
+        <div className="form-group">
           <label htmlFor="email">Email</label>
           <input
             type="email"
@@ -59,6 +95,7 @@ const SignupForm = ({ onToggleMode }) => {
             onChange={handleChange}
             required
             disabled={loading}
+            placeholder="Enter your email"
           />
         </div>
 
@@ -73,6 +110,7 @@ const SignupForm = ({ onToggleMode }) => {
             required
             minLength="6"
             disabled={loading}
+            placeholder="Enter your password"
           />
           <small>Password must be at least 6 characters</small>
         </div>
@@ -87,6 +125,7 @@ const SignupForm = ({ onToggleMode }) => {
             onChange={handleChange}
             required
             disabled={loading}
+            placeholder="Confirm your password"
           />
         </div>
 
