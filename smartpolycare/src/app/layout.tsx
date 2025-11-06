@@ -2,11 +2,14 @@
 import { ReactNode } from 'react';
 import Link from 'next/link';
 import './globals.css';
-
+import Image from 'next/image';
 
 export const metadata = {
   title: 'SmartPolyCare - Intelligent Geriatric Care System',
   description: 'AI-powered polypharmacy management and vitamin deficiency detection for elderly patients',
+  icons: {
+    icon: "images/favicon.ico",
+  },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
@@ -17,11 +20,16 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <header className="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
           <div className="container mx-auto flex justify-between items-center py-4 px-6">
             <Link href="/" className="flex items-center space-x-3 group">
-              <div className="w-12 h-12 bg-gradient-to-br from-teal-600 to-blue-700 rounded-xl flex items-center justify-center shadow-md group-hover:shadow-lg transition-shadow">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2v16z" />
-                </svg>
-              </div>
+              
+<div className="w-15 h-15 bg-gradient-to-br from-teal-600 to-blue-500 rounded-xl flex items-center justify-center shadow-md group-hover:shadow-lg transition-shadow">
+  <Image
+    src="/images/favicon.ico"       // path relative to /public
+    alt="SmartPolyCare logo"
+    width={50}            // adjust to fit your layout
+    height={50}
+    className="object-contain"
+  />
+</div>
               <div className="flex flex-col">
                 <span className="text-2xl font-bold text-gray-900">SmartPolyCare</span>
                 <span className="text-xs text-teal-600 font-medium">Geriatric Health Intelligence</span>
