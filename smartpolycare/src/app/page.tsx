@@ -1,12 +1,9 @@
-import Home from '@/components/Home/Home'
+import Home from '@/app/components/Home/page'
 import React from 'react'
-import Polydash from '@/Pages/Polypharmacy/polydash/polydash'
 const page = () => {
   return (
     <div>
       <Home />
-      <Polydash />
-      
     </div>
   )
 }

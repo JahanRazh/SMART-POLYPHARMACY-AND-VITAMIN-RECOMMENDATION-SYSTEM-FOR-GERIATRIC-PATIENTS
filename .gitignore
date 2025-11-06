@@ -41,7 +41,8 @@ yarn-error.log*
 next-env.d.ts
 
 # Ignore Firebase service account
-serviceAccountKey.json
+
+
 # pytest cache
 .pytest_cache/
 __pycache__/
