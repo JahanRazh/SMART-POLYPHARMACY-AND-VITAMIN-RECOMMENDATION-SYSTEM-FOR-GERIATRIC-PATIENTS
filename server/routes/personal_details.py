@@ -48,35 +48,18 @@ def create_personal_detail():
 
         try:
             db = _db()
-
-            # 🔹 Create doc reference first to get its auto ID
-            doc_ref = db.collection("personal_details").document()
-            payload["id"] = doc_ref.id  # ✅ store the ID in the document
-            doc_ref.set(payload)
-
-            # Fetch the newly created document
+            _, doc_ref = db.collection("personal_details").add(payload)
             created = doc_ref.get()
             data = created.to_dict() or {}
-            data["id"] = created.id  # redundant but keeps response consistent
-
-            return jsonify({
-                "message": "Personal detail created successfully",
-                "data": data,
-                "storage": "firestore"
-            }), 201
-
+            data["id"] = created.id
+            return jsonify({"message": "Personal detail created successfully", "data": data, "storage": "firestore"}), 201
         except Exception:
-            # 🔸 Fallback to in-memory store (for dev mode)
+            # Fallback to in-memory store (dev)
             global next_id
             new_item = {**payload, "id": str(next_id)}
             dev_storage.append(new_item)
             next_id += 1
-            return jsonify({
-                "message": "Personal detail created successfully",
-                "data": new_item,
-                "storage": "memory"
-            }), 201
-
+            return jsonify({"message": "Personal detail created successfully", "data": new_item, "storage": "memory"}), 201
     except Exception as e:
         return jsonify({"error": f"Server error: {str(e)}"}), 500
 
