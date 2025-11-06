@@ -5,11 +5,11 @@ import { useState } from 'react';
 import { useAuth } from '../Contexts/AuthContext';
 
 export const useAuthForm = () => {
-  const { login, signup, signInWithGoogle } = useAuth();
+  const { login, signup, signInWithGoogle, updateUserProfile } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleEmailSignUp = async (email, password, confirmPassword) => {
+  const handleEmailSignUp = async (firstName, lastName, email, password, confirmPassword) => {
     if (password !== confirmPassword) {
       setError('Passwords do not match');
       return { success: false, error: 'Passwords do not match' };
@@ -20,11 +20,27 @@ export const useAuthForm = () => {
       return { success: false, error: 'Password should be at least 6 characters' };
     }
 
+    if (!firstName || !lastName) {
+      setError('First name and last name are required');
+      return { success: false, error: 'First name and last name are required' };
+    }
+
     setLoading(true);
     setError('');
     
     try {
-      await signup(email, password);
+      // Create user with email/password
+      const userCredential = await signup(email, password);
+      const user = userCredential.user;
+      
+      // Update user profile with name (photoURL will be null for email signup)
+      await updateUserProfile({
+        displayName: `${firstName} ${lastName}`,
+        firstName: firstName,
+        lastName: lastName,
+        email: email
+      });
+      
       return { success: true };
     } catch (error) {
       const errorMessage = getAuthErrorMessage(error.code);
