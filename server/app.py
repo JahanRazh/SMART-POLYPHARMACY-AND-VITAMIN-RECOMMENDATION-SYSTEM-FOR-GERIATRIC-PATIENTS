@@ -1,94 +1,66 @@
 from flask import Flask, jsonify, request
 from flask_cors import CORS
+import os
 
 # Firebase Admin / Firestore
 import firebase_admin
 from firebase_admin import credentials, firestore
 
-app = Flask(__name__)
-CORS(app, resources={r"/api/*": {"origins": ["http://localhost:3000", "http://127.0.0.1:3000"]}})
+# Import the blueprint
+from routes.personal_details import personal_details_bp
 
 
 def get_db():
     """Initialize Firestore client once and reuse."""
     if not firebase_admin._apps:
-        cred = credentials.Certificate("serviceAccountKey.json")
+        # Get the absolute path to the service account key
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        service_account_path = os.path.join(current_dir, "serviceAccountKey.json")
+        
+        cred = credentials.Certificate(service_account_path)
         firebase_admin.initialize_app(cred)
+
+        # ✅ Connection check at startup
+        try:
+            db = firestore.client()
+            # Try reading a small test query
+            db.collection('test').limit(1).get()
+            print("✅ Firebase connected successfully!")
+        except Exception as e:
+            print("❌ Firebase connection failed:", e)
     return firestore.client()
 
 
-@app.route("/")
-def home():
-    return "Smart PolyCare Flask API is running"
+# Create Flask app
+app = Flask(__name__)
+CORS(app)
+
+# Register blueprints
+app.register_blueprint(personal_details_bp)
 
 
-# ---------------------------
-# Personal Details CRUD (Firestore: collection `personal_details`)
-# ---------------------------
-
-@app.route("/api/personal-details", methods=["GET"])  # list all
-def list_personal_details():
-    db = get_db()
-    docs = db.collection("personal_details").stream()
-    items = []
-    for doc in docs:
-        data = doc.to_dict()
-        data["id"] = doc.id
-        items.append(data)
-    return jsonify(items), 200
+@app.route('/')
+def health_check():
+    return jsonify({"status": "Server is running", "message": "Smart Polycare API"}), 200
 
 
-@app.route("/api/personal-details", methods=["POST"])  # create
-def create_personal_detail():
-    payload = request.get_json(silent=True) or {}
-    required_fields = ["firstName", "lastName", "age", "email"]
-    missing = [f for f in required_fields if f not in payload]
-    if missing:
-        return jsonify({"error": "Missing fields", "fields": missing}), 400
-
-    db = get_db()
-    doc_ref = db.collection("personal_details").add(payload)[1]
-    created = doc_ref.get()
-    data = created.to_dict() or {}
-    data["id"] = created.id
-    return jsonify(data), 201
-
-
-@app.route("/api/personal-details/<doc_id>", methods=["GET"])  # read one
-def get_personal_detail(doc_id: str):
-    db = get_db()
-    doc = db.collection("personal_details").document(doc_id).get()
-    if not doc.exists:
-        return jsonify({"error": "Not found"}), 404
-    data = doc.to_dict() or {}
-    data["id"] = doc.id
-    return jsonify(data), 200
-
-
-@app.route("/api/personal-details/<doc_id>", methods=["PUT", "PATCH"])  # update
-def update_personal_detail(doc_id: str):
-    payload = request.get_json(silent=True) or {}
-    if not payload:
-        return jsonify({"error": "Empty body"}), 400
-    db = get_db()
-    ref = db.collection("personal_details").document(doc_id)
-    if not ref.get().exists:
-        return jsonify({"error": "Not found"}), 404
-    ref.update(payload)
-    updated = ref.get()
-    data = updated.to_dict() or {}
-    data["id"] = updated.id
-    return jsonify(data), 200
-
-
-@app.route("/api/personal-details/<doc_id>", methods=["DELETE"])  # delete
-def delete_personal_detail(doc_id: str):
-    db = get_db()
-    ref = db.collection("personal_details").document(doc_id)
-    if not ref.get().exists:
-        return jsonify({"error": "Not found"}), 404
-    ref.delete()
-    return jsonify({"ok": True, "id": doc_id}), 200
+# ✅ Add Firebase connection check endpoint
+@app.route('/check-firebase')
+def check_firebase():
+    try:
+        db = get_db()
+        # Try reading from Firestore
+        test_ref = db.collection('test').limit(1).get()
+        return jsonify({
+            "status": "success",
+            "message": "Connected to Firebase Firestore!",
+            "documents_found": len(test_ref)
+        }), 200
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
 
 
 if __name__ == "__main__":
