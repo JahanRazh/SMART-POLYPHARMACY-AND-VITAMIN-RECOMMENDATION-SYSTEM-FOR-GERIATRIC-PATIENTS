@@ -3,6 +3,7 @@ import { ReactNode } from 'react';
 import Link from 'next/link';
 import './globals.css';
 
+
 export const metadata = {
   title: 'SmartPolyCare - Intelligent Geriatric Care System',
   description: 'AI-powered polypharmacy management and vitamin deficiency detection for elderly patients',
@@ -11,7 +12,7 @@ export const metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
-      <body className="flex flex-col min-h-screen bg-white text-gray-900 antialiased">
+      <body className="flex flex-col min-h-screen bg-white text-gray-900 ">
         {/* HEADER */}
         <header className="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
           <div className="container mx-auto flex justify-between items-center py-4 px-6">
@@ -37,11 +38,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               <Link href="/research" className="text-gray-700 hover:text-teal-600 font-medium transition-colors duration-200">
                 Research
               </Link>
-              <Link href="/healthcare-providers" className="text-gray-700 hover:text-teal-600 font-medium transition-colors duration-200">
-                For Providers
-              </Link>
-              <Link href="/contact" className="text-gray-700 hover:text-teal-600 font-medium transition-colors duration-200">
-                Contact
+              <Link href="/Pages/About" className="text-gray-700 hover:text-teal-600 font-medium transition-colors duration-200">
+                About
               </Link>
             </nav>
 
@@ -52,12 +50,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               >
                 Sign In
               </Link>
-              <Link 
-                href="/demo-request" 
-                className="bg-gradient-to-r from-teal-600 to-blue-700 text-white px-6 py-3 rounded-lg hover:shadow-lg transition-all duration-200 font-medium"
-              >
-                Request Demo
-              </Link>
+              
             </div>
           </div>
         </header>
@@ -67,7 +60,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
 
         {/* FOOTER */}
         <footer className="bg-gray-900 text-white">
-          <div className="container mx-auto px-6 py-12">
+          <div className="container mx-auto px-6 py-5">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
               <div className="col-span-1 md:col-span-2">
                 <div className="flex items-center space-x-3 mb-6">
@@ -85,8 +78,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               </div>
               
               <div>
-                <h3 className="text-white font-semibold mb-6 text-lg">Clinical Solutions</h3>
-                <div className="flex flex-col space-y-4">
+                <h3 className="text-white font-semibold mb-2 text-lg">Clinical Solutions</h3>
+                <div className="flex flex-col space-y-1">
                   <Link href="/polypharmacy-risk" className="text-gray-400 hover:text-white transition text-base">Risk Assessment</Link>
                   <Link href="/vitamin-deficiency" className="text-gray-400 hover:text-white transition text-base">Vitamin Analysis</Link>
                   <Link href="/drug-interactions" className="text-gray-400 hover:text-white transition text-base">Drug Interactions</Link>
@@ -95,8 +88,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               </div>
               
               <div>
-                <h3 className="text-white font-semibold mb-6 text-lg">Connect</h3>
-                <div className="flex flex-col space-y-4">
+                <h3 className="text-white font-semibold mb-2 text-lg">Connect</h3>
+                <div className="flex flex-col space-y-1">
                   <Link href="/research-papers" className="text-gray-400 hover:text-white transition text-base">Research</Link>
                   <Link href="/clinical-trials" className="text-gray-400 hover:text-white transition text-base">Clinical Trials</Link>
                   <Link href="/provider-network" className="text-gray-400 hover:text-white transition text-base">Provider Network</Link>
@@ -105,7 +98,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               </div>
             </div>
             
-            <div className="border-t border-gray-800 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center">
+            <div className="border-t border-gray-800 mt-2 pt-4 flex flex-col md:flex-row justify-between items-center">
               <p className="text-gray-400 text-base">&copy; 2024 SmartPolyCare. Clinical-grade AI solutions.</p>
               <div className="flex space-x-6 mt-4 md:mt-0">
                 <Link href="/privacy" className="text-gray-400 hover:text-white transition text-sm">Privacy Policy</Link>

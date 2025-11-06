@@ -2,6 +2,7 @@
 'use client';
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from '../images/polycare.jpg';
 
 const Home = () => {
   const [activeFeature, setActiveFeature] = useState(0);
@@ -112,17 +113,15 @@ const Home = () => {
             </div>
 
             <div className="relative">
-              <div className="bg-gradient-to-br from-teal-50 to-blue-50 rounded-2xl p-8 shadow-lg border border-gray-100">
-                <div className="grid grid-cols-2 gap-6">
-                  {clinicalStats.map((stat, index) => (
-                    <div key={index} className="text-center p-6 bg-white rounded-xl shadow-sm border border-gray-100">
-                      <div className="text-2xl font-bold text-gray-900 mb-2">{stat.value}</div>
-                      <div className="text-sm font-semibold text-gray-700 mb-1">{stat.label}</div>
-                      <div className="text-xs text-gray-500">{stat.description}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+             
+                  <div className="flex items-center justify-center">
+                    <img
+                      src="/images/polycare.jpg"
+                      alt="Clinical illustration"
+                      
+                    />
+                  </div>
+              
             </div>
           </div>
         </div>
