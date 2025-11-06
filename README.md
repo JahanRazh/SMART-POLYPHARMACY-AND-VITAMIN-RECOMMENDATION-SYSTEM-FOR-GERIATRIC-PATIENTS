@@ -2,7 +2,9 @@
 Smart Polypharmacy &amp; Vitamin Recommendation System for Geriatric Patients helps manage multiple medications by detecting drug interactions, assessing polypharmacy risk, and giving tailored vitamin suggestions. It enhances safety, reduces adverse events, and improves elderly care
 
 Next.js Frontend → Flask Backend API → Firebase
+
      ↑                    ↑               ↑
+     
     UI Layer        Business Logic    Database Layer
   (React/Next.js)   (Python/Flask)   (Firestore)
   
