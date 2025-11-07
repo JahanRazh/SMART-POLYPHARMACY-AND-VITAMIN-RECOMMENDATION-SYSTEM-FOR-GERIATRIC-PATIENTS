@@ -29,7 +29,6 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [firestoreError, setFirestoreError] = useState(null);
 
   // Sign up with email/password
   const signup = (email, password) => {
@@ -57,18 +56,17 @@ export function AuthProvider({ children }) {
       const firstName = nameParts[0] || '';
       const lastName = nameParts.slice(1).join(' ') || '';
       
-      // Save user profile to Firestore
+      // Save user profile to Firestore - FIX: Ensure photoURL is not undefined
       await saveUserProfile(result.user.uid, {
         firstName,
         lastName,
         email: result.user.email,
         displayName,
-        photoURL: result.user.photoURL || null, // Ensure photoURL is not undefined
+        photoURL: result.user.photoURL || null, // ✅ FIX: Use null instead of undefined
         provider: 'google'
       });
     } catch (error) {
       console.warn('Could not save user profile to Firestore:', error.message);
-      // Continue even if Firestore fails - user is still authenticated
     }
     
     return result;
@@ -78,20 +76,20 @@ export function AuthProvider({ children }) {
   const updateUserProfile = async (profileData) => {
     if (!auth.currentUser) throw new Error('No user logged in');
     
-    // Update Firebase auth profile
+    // Update Firebase auth profile - FIX: Ensure photoURL is not undefined
     await updateProfile(auth.currentUser, {
       displayName: profileData.displayName,
-      photoURL: profileData.photoURL || null // Ensure photoURL is not undefined
+      photoURL: profileData.photoURL || null // ✅ FIX: Use null instead of undefined
     });
     
     try {
-      // Save additional profile data to Firestore
+      // Save additional profile data to Firestore - FIX: Ensure photoURL is not undefined
       await saveUserProfile(auth.currentUser.uid, {
         firstName: profileData.firstName,
         lastName: profileData.lastName,
         email: auth.currentUser.email,
         displayName: profileData.displayName,
-        photoURL: profileData.photoURL || null, // Ensure photoURL is not undefined
+        photoURL: profileData.photoURL || null, // ✅ FIX: Use null instead of undefined
         provider: 'email'
       });
     } catch (error) {
@@ -100,52 +98,52 @@ export function AuthProvider({ children }) {
     }
   };
 
-  // Save user profile to Firestore with proper data validation
+  // ✅ FIXED: Save user profile to Firestore with proper data cleaning
   const saveUserProfile = async (userId, profileData) => {
     try {
-      // Clean the data to remove undefined values
-      const cleanProfileData = {
-        firstName: profileData.firstName || '',
-        lastName: profileData.lastName || '',
-        email: profileData.email || '',
-        displayName: profileData.displayName || '',
-        photoURL: profileData.photoURL || null, // Explicitly set to null if undefined
-        provider: profileData.provider || 'email',
-        createdAt: new Date(),
-        updatedAt: new Date()
-      };
-
-      // Remove any undefined values
-      Object.keys(cleanProfileData).forEach(key => {
-        if (cleanProfileData[key] === undefined) {
-          delete cleanProfileData[key];
+      // Clean the data - remove any undefined values
+      const cleanData = { ...profileData };
+      
+      // Remove undefined fields
+      Object.keys(cleanData).forEach(key => {
+        if (cleanData[key] === undefined) {
+          delete cleanData[key];
         }
       });
 
+      // Ensure required fields have values
+      const userProfile = {
+        firstName: cleanData.firstName || '',
+        lastName: cleanData.lastName || '',
+        email: cleanData.email || '',
+        displayName: cleanData.displayName || '',
+        photoURL: cleanData.photoURL || null, // Explicitly set to null if not provided
+        provider: cleanData.provider || 'email',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        ...cleanData
+      };
+
       const userRef = doc(db, 'users', userId);
-      await setDoc(userRef, cleanProfileData, { merge: true });
-      setFirestoreError(null);
+      await setDoc(userRef, userProfile, { merge: true });
     } catch (error) {
       console.error('Firestore error:', error);
-      setFirestoreError(error.message);
       throw error;
     }
   };
 
-  // Get user profile from Firestore with error handling
+  // Get user profile from Firestore
   const getUserProfile = async (userId) => {
     try {
       const userRef = doc(db, 'users', userId);
       const userSnap = await getDoc(userRef);
       
       if (userSnap.exists()) {
-        setFirestoreError(null);
         return userSnap.data();
       }
       return null;
     } catch (error) {
       console.warn('Could not load user profile from Firestore:', error.message);
-      setFirestoreError(error.message);
       return null;
     }
   };
@@ -159,7 +157,6 @@ export function AuthProvider({ children }) {
       updatedAt: new Date()
     });
     
-    // Refresh user profile data
     await loadUserProfile(user.uid);
   };
 
@@ -173,7 +170,6 @@ export function AuthProvider({ children }) {
   // Logout
   const logout = () => {
     setUserProfile(null);
-    setFirestoreError(null);
     return signOut(auth);
   };
 
@@ -187,11 +183,9 @@ export function AuthProvider({ children }) {
       setUser(user);
       
       if (user) {
-        // Load user profile from Firestore
         await loadUserProfile(user.uid);
       } else {
         setUserProfile(null);
-        setFirestoreError(null);
       }
       
       setLoading(false);
@@ -203,7 +197,6 @@ export function AuthProvider({ children }) {
   const value = {
     user,
     userProfile,
-    firestoreError,
     signup,
     login,
     logout,
