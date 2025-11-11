@@ -49,6 +49,6 @@ __pycache__/
 *.pyc       
 .pyc 
 
-
+.venv/
 .vscode/
 .qodo
