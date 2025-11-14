@@ -1,5 +1,6 @@
 'use client';
 import React from "react";
+import Link from "next/link";
 import { motion } from "framer-motion";
 
 // Simple icon components to replace Lucide React
@@ -27,17 +28,37 @@ const CardContent = ({ children, className = "" }: { children: React.ReactNode; 
   <div className={`p-6 ${className}`}>{children}</div>
 );
 
-const Button = ({ children, className = "", variant = "default" }: { children: React.ReactNode; className?: string; variant?: string }) => (
-  <button className={`
-    px-6 py-3 rounded-lg font-semibold transition-all duration-200
-    ${variant === "default" 
-      ? "bg-teal-600 hover:bg-teal-700 text-white" 
+const Button = ({
+  children,
+  className = "",
+  variant = "default",
+  href,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  variant?: "default" | "outline";
+  href?: string;
+}) => {
+  const baseStyles = `inline-flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all duration-200 ${
+    variant === "default"
+      ? "bg-teal-600 hover:bg-teal-700 text-white"
       : "border-2 border-gray-300 text-gray-700 hover:border-teal-500 hover:text-teal-600"
-    } ${className}
-  `}>
-    {children}
-  </button>
-);
+  } ${className}`;
+
+  if (href) {
+    return (
+      <Link href={href} className={baseStyles}>
+        {children}
+      </Link>
+    );
+  }
+
+  return (
+    <button type="button" className={baseStyles}>
+      {children}
+    </button>
+  );
+};
 
 const features = [
   {
@@ -280,11 +301,18 @@ export default function AboutUs() {
               </p>
             </div>
             <div className="flex md:justify-end gap-3">
-              <Button className="bg-teal-600 hover:bg-teal-700 text-white">
+              <Button>
                 <Mail /> Contact Team
               </Button>
               <Button variant="outline" className="border-gray-300 text-gray-700 hover:border-teal-500">
                 <BarChart3 /> View Demo
+              </Button>
+              <Button
+                href="/Pages/LifestyleAdvice/adviceMain"
+                variant="outline"
+                className="border-teal-300 text-teal-700 hover:border-teal-500 hover:text-teal-600"
+              >
+                <BookOpen /> Research Insights
               </Button>
             </div>
           </div>
