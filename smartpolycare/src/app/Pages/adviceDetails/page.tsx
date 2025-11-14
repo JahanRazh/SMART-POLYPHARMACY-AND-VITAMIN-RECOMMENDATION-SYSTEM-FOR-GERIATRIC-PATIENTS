@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import axios from 'axios';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 type PatientAdviceData = {
   id?: string;
@@ -20,6 +21,7 @@ type PatientAdviceData = {
 };
 
 export default function AdviceDetailsPage() {
+  const router = useRouter();
   const [formData, setFormData] = useState<PatientAdviceData>({
     career: '',
     sleepTime: '',
@@ -33,7 +35,6 @@ export default function AdviceDetailsPage() {
     notes: '',
   });
   const [loading, setLoading] = useState<boolean>(false);
-  const [submitted, setSubmitted] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
 
   const api = axios.create({ baseURL: 'http://127.0.0.1:5000/api' });
@@ -56,27 +57,18 @@ export default function AdviceDetailsPage() {
     setError('');
 
     try {
-      await api.post('/advice-details', formData);
-      setSubmitted(true);
-      setFormData({
-        career: '',
-        sleepTime: '',
-        sleepDuration: 0,
-        activityLevel: '',
-        stressLevel: '',
-        mealFrequency: 0,
-        waterIntake: 0,
-        smokingStatus: '',
-        alcoholConsumption: '',
-        notes: '',
-      });
+      const response = await api.post('/advice-details', formData);
+      const patientId = response.data?.id || response.data?.patientId;
       
-      setTimeout(() => {
-        setSubmitted(false);
-      }, 3000);
+      // Navigate to patient advice page with patient ID
+      if (patientId) {
+        router.push(`/Pages/patientAdvice?patientId=${patientId}`);
+      } else {
+        // If no ID returned, navigate anyway (backend might use session or other method)
+        router.push('/Pages/patientAdvice');
+      }
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to submit data. Please try again.');
-    } finally {
       setLoading(false);
     }
   };
@@ -114,12 +106,6 @@ export default function AdviceDetailsPage() {
             transition={{ duration: 0.5, delay: 0.2 }}
             className="mt-10 rounded-2xl bg-white border border-teal-100 shadow-lg p-8"
           >
-            {submitted && (
-              <div className="mb-6 rounded-lg bg-green-50 border border-green-200 px-4 py-3 text-green-800">
-                ✓ Data submitted successfully! Your personalized advice will be generated.
-              </div>
-            )}
-
             {error && (
               <div className="mb-6 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-red-800">
                 {error}
