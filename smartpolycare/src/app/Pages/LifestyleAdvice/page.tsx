@@ -177,10 +177,10 @@ export default function LifestyleAdvicePage() {
           </p>
 
           <Link
-            href="/Pages/About"
+            href="/Pages/adviceDetails"
             className="mt-6 inline-flex items-center gap-2 rounded-lg bg-teal-600 px-5 py-3 text-sm font-semibold text-white transition-colors duration-200 hover:bg-teal-700"
           >
-            Return to About & Research
+            Advice Form
           </Link>
         </motion.div>
 
