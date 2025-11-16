@@ -47,7 +47,7 @@ const Home = () => {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
       ),
-      title: "Mental Health Monitoring",
+      title: "Lifestyle Advice System",
       description: "Comprehensive wellness support with emotional tracking and lifestyle recommendations.",
       metrics: "Holistic care approach",
       color: "purple"
@@ -99,13 +99,13 @@ const Home = () => {
                   href="/clinical-demo" 
                   className="bg-gradient-to-r from-teal-600 to-blue-700 text-white px-8 py-4 rounded-lg hover:shadow-xl transition-all duration-200 font-semibold text-center"
                 >
-                  Start Clinical Assessment
+                  Vitamin deficiency assessment
                 </Link>
                 <Link 
                   href="/provider-information" 
                   className="border-2 border-gray-300 text-gray-700 px-8 py-4 rounded-lg hover:border-teal-500 hover:text-teal-600 transition-all duration-200 font-semibold text-center"
                 >
-                  For Healthcare Providers
+                  Meal plan Providers
                 </Link>
               </div>
 
