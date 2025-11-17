@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 // Import necessary modules and libraries
 import React, { useMemo, useState } from "react";
@@ -191,9 +191,9 @@ export default function LifestyleAdvicePage() {
 
           {/* Page description */}
           <p className="mt-4 text-gray-600 md:text-lg leading-relaxed">
-            Explore simple, evidence-informed actions that harmonize with
-            complex medication plans. Tabs keep it easy to focus on the area
-            that matters most today—nutrition, movement, or rest.
+            Explore simple, evidence-informed actions that harmonize with complex
+            medication plans. Tabs keep it easy to focus on the area that matters
+            most today—nutrition, movement, or rest.
           </p>
 
           {/* Link to the Advice Form page */}
