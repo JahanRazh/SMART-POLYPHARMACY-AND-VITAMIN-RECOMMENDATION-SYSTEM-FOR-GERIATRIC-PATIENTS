@@ -6,8 +6,9 @@ import os
 import firebase_admin
 from firebase_admin import credentials, firestore
 
-# Import the blueprint
+# Import the blueprints
 from routes.personal_details import personal_details_bp
+# from routes.patients import patients_bp  # Uncomment when patients route is created
 
 
 def get_db():
@@ -37,6 +38,7 @@ CORS(app)
 
 # Register blueprints
 app.register_blueprint(personal_details_bp)
+# app.register_blueprint(patients_bp)  # Uncomment when patients route is created
 
 
 @app.route('/')
