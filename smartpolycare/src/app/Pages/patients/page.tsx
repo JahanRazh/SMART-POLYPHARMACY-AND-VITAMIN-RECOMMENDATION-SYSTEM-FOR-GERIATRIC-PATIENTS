@@ -6,15 +6,53 @@ import { collection, addDoc, query, where, getDocs, updateDoc, doc, Timestamp } 
 import { db } from '../../lib/firebaseConfig';
 import axios from 'axios';
 
+// Type definitions
+interface PatientFormData {
+  firstName: string;
+  lastName: string;
+  dateOfBirth: string;
+  age: string;
+  gender: string;
+  phoneNumber: string;
+  address: string;
+  city: string;
+  zipCode: string;
+  bloodType: string;
+  height: string;
+  weight: string;
+  bmi: string;
+  chronicConditions: string[];
+  allergies: string[];
+  currentMedications: string[];
+  previousSurgeries: string[];
+  smokingStatus: string;
+  alcoholConsumption: string;
+  exerciseFrequency: string;
+  dietType: string;
+  emergencyContactName: string;
+  emergencyContactPhone: string;
+  emergencyContactRelationship: string;
+  additionalNotes: string;
+  userId: string;
+}
+
+interface ExistingPatient {
+  id: string;
+  createdAt?: Timestamp;
+  [key: string]: any;
+}
+
+type ArrayField = 'chronicConditions' | 'allergies' | 'currentMedications' | 'previousSurgeries';
+
 const PatientDataForm = () => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
-  const [existingPatient, setExistingPatient] = useState(null);
+  const [existingPatient, setExistingPatient] = useState<ExistingPatient | null>(null);
   const [isEditing, setIsEditing] = useState(false);
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<PatientFormData>({
     // Basic Information
     firstName: '',
     lastName: '',
@@ -69,15 +107,45 @@ const PatientDataForm = () => {
   }, [user]);
 
   const checkExistingPatient = async () => {
+    if (!user?.uid) return;
+    
     try {
       const q = query(collection(db, 'patients'), where('userId', '==', user.uid));
       const querySnapshot = await getDocs(q);
       
       if (!querySnapshot.empty) {
-        const patientData = querySnapshot.docs[0].data();
+        const patientData = querySnapshot.docs[0].data() as Partial<PatientFormData>;
         const patientId = querySnapshot.docs[0].id;
-        setExistingPatient({ id: patientId, ...patientData });
-        setFormData({ ...patientData, userId: user.uid });
+        setExistingPatient({ id: patientId, ...patientData } as ExistingPatient);
+        setFormData({ 
+          firstName: '',
+          lastName: '',
+          dateOfBirth: '',
+          age: '',
+          gender: '',
+          phoneNumber: '',
+          address: '',
+          city: '',
+          zipCode: '',
+          bloodType: '',
+          height: '',
+          weight: '',
+          bmi: '',
+          chronicConditions: [],
+          allergies: [],
+          currentMedications: [],
+          previousSurgeries: [],
+          smokingStatus: '',
+          alcoholConsumption: '',
+          exerciseFrequency: '',
+          dietType: '',
+          emergencyContactName: '',
+          emergencyContactPhone: '',
+          emergencyContactRelationship: '',
+          additionalNotes: '',
+          userId: user.uid,
+          ...patientData 
+        } as PatientFormData);
         setIsEditing(true);
       }
     } catch (err) {
@@ -101,15 +169,15 @@ const PatientDataForm = () => {
     }
   }, [formData.height, formData.weight]);
 
-  const handleChange = (e) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
       [name]: value
-    }));
+    } as PatientFormData));
   };
 
-  const addItem = (field, value, setter) => {
+  const addItem = (field: ArrayField, value: string, setter: (value: string) => void) => {
     if (value.trim()) {
       setFormData(prev => ({
         ...prev,
@@ -119,14 +187,14 @@ const PatientDataForm = () => {
     }
   };
 
-  const removeItem = (field, index) => {
+  const removeItem = (field: ArrayField, index: number) => {
     setFormData(prev => ({
       ...prev,
-      [field]: prev[field].filter((_, i) => i !== index)
+      [field]: prev[field].filter((_: string, i: number) => i !== index)
     }));
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
     if (!user) {
@@ -139,7 +207,7 @@ const PatientDataForm = () => {
     setSuccess('');
 
     try {
-      const patientData = {
+      const patientData: any = {
         ...formData,
         userId: user.uid,
         updatedAt: Timestamp.now()
@@ -153,7 +221,7 @@ const PatientDataForm = () => {
       }
 
       // Remove empty arrays and null values
-      Object.keys(patientData).forEach(key => {
+      Object.keys(patientData).forEach((key: string) => {
         if (Array.isArray(patientData[key]) && patientData[key].length === 0) {
           delete patientData[key];
         }
@@ -722,7 +790,7 @@ const PatientDataForm = () => {
               name="additionalNotes"
               value={formData.additionalNotes}
               onChange={handleChange}
-              rows="4"
+              rows={4}
               placeholder="Any additional information that might be relevant..."
               disabled={loading}
             />
