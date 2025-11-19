@@ -20,9 +20,9 @@ const AuthModal = ({ isOpen, onClose }) => {
 
         <div className="modal-body">
           {isLogin ? (
-            <LoginForm onToggleMode={() => setIsLogin(false)} />
+            <LoginForm onToggleMode={() => setIsLogin(false)} onClose={onClose} />
           ) : (
-            <SignupForm onToggleMode={() => setIsLogin(true)} />
+            <SignupForm onToggleMode={() => setIsLogin(true)} onClose={onClose} />
           )}
         </div>
       </div>
