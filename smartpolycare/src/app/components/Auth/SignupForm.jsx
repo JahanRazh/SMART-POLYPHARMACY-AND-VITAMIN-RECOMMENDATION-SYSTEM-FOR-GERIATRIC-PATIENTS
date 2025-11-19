@@ -2,9 +2,10 @@
 "use client";
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuthForm } from '../Hooks/useAuth';
 
-const SignupForm = ({ onToggleMode }) => {
+const SignupForm = ({ onToggleMode, onClose }) => {
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -12,6 +13,7 @@ const SignupForm = ({ onToggleMode }) => {
     password: '',
     confirmPassword: ''
   });
+  const router = useRouter();
   const { loading, error, handleEmailSignUp, handleGoogleSignIn } = useAuthForm();
 
   const handleChange = (e) => {
@@ -34,15 +36,18 @@ const SignupForm = ({ onToggleMode }) => {
     );
     
     if (result.success) {
-      console.log('Signup successful');
-      // You can redirect or show success message here
+      // Close modal and redirect to home
+      onClose();
+      router.push('/');
     }
   };
 
   const handleGoogleSignUp = async () => {
     const result = await handleGoogleSignIn();
     if (result.success) {
-      console.log('Google signup successful');
+      // Close modal and redirect to home
+      onClose();
+      router.push('/');
     }
   };
 
