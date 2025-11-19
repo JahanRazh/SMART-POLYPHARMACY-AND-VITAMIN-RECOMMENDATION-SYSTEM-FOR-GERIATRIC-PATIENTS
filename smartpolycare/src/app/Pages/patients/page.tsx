@@ -1,3 +1,4 @@
+//pages/patients/page.tsx
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -6,53 +7,15 @@ import { collection, addDoc, query, where, getDocs, updateDoc, doc, Timestamp } 
 import { db } from '../../lib/firebaseConfig';
 import axios from 'axios';
 
-// Type definitions
-interface PatientFormData {
-  firstName: string;
-  lastName: string;
-  dateOfBirth: string;
-  age: string;
-  gender: string;
-  phoneNumber: string;
-  address: string;
-  city: string;
-  zipCode: string;
-  bloodType: string;
-  height: string;
-  weight: string;
-  bmi: string;
-  chronicConditions: string[];
-  allergies: string[];
-  currentMedications: string[];
-  previousSurgeries: string[];
-  smokingStatus: string;
-  alcoholConsumption: string;
-  exerciseFrequency: string;
-  dietType: string;
-  emergencyContactName: string;
-  emergencyContactPhone: string;
-  emergencyContactRelationship: string;
-  additionalNotes: string;
-  userId: string;
-}
-
-interface ExistingPatient {
-  id: string;
-  createdAt?: Timestamp;
-  [key: string]: any;
-}
-
-type ArrayField = 'chronicConditions' | 'allergies' | 'currentMedications' | 'previousSurgeries';
-
 const PatientDataForm = () => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
-  const [existingPatient, setExistingPatient] = useState<ExistingPatient | null>(null);
+  const [existingPatient, setExistingPatient] = useState<any>(null);
   const [isEditing, setIsEditing] = useState(false);
 
-  const [formData, setFormData] = useState<PatientFormData>({
+  const [formData, setFormData] = useState({
     // Basic Information
     firstName: '',
     lastName: '',
@@ -63,6 +26,7 @@ const PatientDataForm = () => {
     address: '',
     city: '',
     zipCode: '',
+    email: '',
     
     // Medical Information
     bloodType: '',
@@ -71,10 +35,10 @@ const PatientDataForm = () => {
     bmi: '',
     
     // Medical History
-    chronicConditions: [],
-    allergies: [],
-    currentMedications: [],
-    previousSurgeries: [],
+    chronicConditions: [] as string[],
+    allergies: [] as string[],
+    currentMedications: [] as string[],
+    previousSurgeries: [] as string[],
     
     // Lifestyle
     smokingStatus: '',
@@ -107,45 +71,37 @@ const PatientDataForm = () => {
   }, [user]);
 
   const checkExistingPatient = async () => {
-    if (!user?.uid) return;
-    
     try {
       const q = query(collection(db, 'patients'), where('userId', '==', user.uid));
       const querySnapshot = await getDocs(q);
       
       if (!querySnapshot.empty) {
-        const patientData = querySnapshot.docs[0].data() as Partial<PatientFormData>;
+        const patientData = querySnapshot.docs[0].data();
         const patientId = querySnapshot.docs[0].id;
-        setExistingPatient({ id: patientId, ...patientData } as ExistingPatient);
+        setExistingPatient({ id: patientId, ...patientData });
+        
+        // Convert Firestore timestamps to string values for form
+        const formattedData: any = { ...patientData };
+        Object.keys(formattedData).forEach(key => {
+          if (formattedData[key]?.toDate) {
+            formattedData[key] = formattedData[key].toDate().toISOString().split('T')[0];
+          }
+          if (key === 'age' && typeof formattedData[key] === 'number') {
+            formattedData[key] = formattedData[key].toString();
+          }
+          if (key === 'height' && typeof formattedData[key] === 'number') {
+            formattedData[key] = formattedData[key].toString();
+          }
+          if (key === 'weight' && typeof formattedData[key] === 'number') {
+            formattedData[key] = formattedData[key].toString();
+          }
+        });
+        
         setFormData({ 
-          firstName: '',
-          lastName: '',
-          dateOfBirth: '',
-          age: '',
-          gender: '',
-          phoneNumber: '',
-          address: '',
-          city: '',
-          zipCode: '',
-          bloodType: '',
-          height: '',
-          weight: '',
-          bmi: '',
-          chronicConditions: [],
-          allergies: [],
-          currentMedications: [],
-          previousSurgeries: [],
-          smokingStatus: '',
-          alcoholConsumption: '',
-          exerciseFrequency: '',
-          dietType: '',
-          emergencyContactName: '',
-          emergencyContactPhone: '',
-          emergencyContactRelationship: '',
-          additionalNotes: '',
-          userId: user.uid,
-          ...patientData 
-        } as PatientFormData);
+          ...formData, 
+          ...formattedData, 
+          userId: user.uid 
+        });
         setIsEditing(true);
       }
     } catch (err) {
@@ -174,27 +130,27 @@ const PatientDataForm = () => {
     setFormData(prev => ({
       ...prev,
       [name]: value
-    } as PatientFormData));
+    }));
   };
 
-  const addItem = (field: ArrayField, value: string, setter: (value: string) => void) => {
+  const addItem = (field: keyof typeof formData, value: string, setter: React.Dispatch<React.SetStateAction<string>>) => {
     if (value.trim()) {
       setFormData(prev => ({
         ...prev,
-        [field]: [...prev[field], value.trim()]
+        [field]: [...(prev[field] as string[]), value.trim()]
       }));
       setter('');
     }
   };
 
-  const removeItem = (field: ArrayField, index: number) => {
+  const removeItem = (field: keyof typeof formData, index: number) => {
     setFormData(prev => ({
       ...prev,
-      [field]: prev[field].filter((_: string, i: number) => i !== index)
+      [field]: (prev[field] as string[]).filter((_, i) => i !== index)
     }));
   };
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!user) {
@@ -207,57 +163,70 @@ const PatientDataForm = () => {
     setSuccess('');
 
     try {
-      const patientData: any = {
+      // Prepare data for submission
+      const submissionData: any = {
         ...formData,
         userId: user.uid,
         updatedAt: Timestamp.now()
       };
-      
-      // Preserve original createdAt if updating, otherwise set new one
-      if (existingPatient?.createdAt) {
-        patientData.createdAt = existingPatient.createdAt;
-      } else {
-        patientData.createdAt = Timestamp.now();
-      }
 
-      // Remove empty arrays and null values
-      Object.keys(patientData).forEach((key: string) => {
-        if (Array.isArray(patientData[key]) && patientData[key].length === 0) {
-          delete patientData[key];
+      // Convert string values to appropriate types
+      if (submissionData.age) submissionData.age = parseInt(submissionData.age);
+      if (submissionData.height) submissionData.height = parseFloat(submissionData.height);
+      if (submissionData.weight) submissionData.weight = parseFloat(submissionData.weight);
+      if (submissionData.bmi) submissionData.bmi = parseFloat(submissionData.bmi);
+
+      // Remove empty values
+      Object.keys(submissionData).forEach(key => {
+        if (submissionData[key] === '' || submissionData[key] === null || submissionData[key] === undefined) {
+          delete submissionData[key];
         }
-        if (patientData[key] === '' || patientData[key] === null) {
-          delete patientData[key];
+        if (Array.isArray(submissionData[key]) && submissionData[key].length === 0) {
+          delete submissionData[key];
         }
       });
 
+      // Preserve original createdAt if updating
+      if (existingPatient?.createdAt) {
+        submissionData.createdAt = existingPatient.createdAt;
+      } else {
+        submissionData.createdAt = Timestamp.now();
+      }
+
+      let savedPatientId = existingPatient?.id;
+
+      // Save to Firestore
       if (existingPatient) {
         // Update existing patient
         const patientRef = doc(db, 'patients', existingPatient.id);
-        await updateDoc(patientRef, patientData);
+        await updateDoc(patientRef, submissionData);
         setSuccess('Patient data updated successfully!');
+        savedPatientId = existingPatient.id;
       } else {
         // Create new patient
-        await addDoc(collection(db, 'patients'), patientData);
+        const docRef = await addDoc(collection(db, 'patients'), submissionData);
         setSuccess('Patient data saved successfully!');
+        savedPatientId = docRef.id;
         setIsEditing(true);
+      }
+
+      // Also save to backend API
+      try {
+        const api = axios.create({ baseURL: 'http://127.0.0.1:5000' });
+        if (existingPatient) {
+          await api.put(`/api/patients_details/${existingPatient.id}`, submissionData);
+        } else {
+          await api.post('/api/patients_details', submissionData);
+        }
+        console.log('Data synchronized with backend API');
+      } catch (apiError) {
+        console.warn('Backend API save failed, but Firestore save succeeded:', apiError);
       }
 
       // Refresh existing patient data
       await checkExistingPatient();
       
-      // Optionally, also save to backend API
-      try {
-        const api = axios.create({ baseURL: 'http://127.0.0.1:5000/api' });
-        if (existingPatient) {
-          await api.put(`/patients/${existingPatient.id}`, patientData);
-        } else {
-          await api.post('/patients', patientData);
-        }
-      } catch (apiError) {
-        console.warn('Backend API save failed, but Firestore save succeeded:', apiError);
-      }
-
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error saving patient data:', err);
       setError('Failed to save patient data. Please try again.');
     } finally {
@@ -328,14 +297,25 @@ const PatientDataForm = () => {
             </div>
 
             <div className="form-group">
-              <label htmlFor="dateOfBirth">Date of Birth *</label>
+              <label htmlFor="email">Email</label>
+              <input
+                type="email"
+                id="email"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                disabled={loading}
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="dateOfBirth">Date of Birth</label>
               <input
                 type="date"
                 id="dateOfBirth"
                 name="dateOfBirth"
                 value={formData.dateOfBirth}
                 onChange={handleChange}
-                required
                 disabled={loading}
               />
             </div>
@@ -355,13 +335,12 @@ const PatientDataForm = () => {
             </div>
 
             <div className="form-group">
-              <label htmlFor="gender">Gender *</label>
+              <label htmlFor="gender">Gender</label>
               <select
                 id="gender"
                 name="gender"
                 value={formData.gender}
                 onChange={handleChange}
-                required
                 disabled={loading}
               >
                 <option value="">Select Gender</option>
@@ -807,9 +786,199 @@ const PatientDataForm = () => {
           </button>
         </div>
       </form>
+
+      <style jsx>{`
+        .patient-form-container {
+          max-width: 1200px;
+          margin: 0 auto;
+          padding: 2rem;
+        }
+
+        .patient-form-header {
+          text-align: center;
+          margin-bottom: 2rem;
+        }
+
+        .patient-form-header h2 {
+          color: #2d3748;
+          margin-bottom: 0.5rem;
+        }
+
+        .form-subtitle {
+          color: #718096;
+        }
+
+        .patient-form {
+          background: white;
+          padding: 2rem;
+          border-radius: 8px;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .form-section {
+          margin-bottom: 2rem;
+          padding-bottom: 2rem;
+          border-bottom: 1px solid #e2e8f0;
+        }
+
+        .section-title {
+          color: #2d3748;
+          margin-bottom: 1rem;
+          font-size: 1.25rem;
+          font-weight: 600;
+        }
+
+        .form-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+          gap: 1rem;
+        }
+
+        .form-group {
+          display: flex;
+          flex-direction: column;
+        }
+
+        .form-group.full-width {
+          grid-column: 1 / -1;
+        }
+
+        .form-group label {
+          margin-bottom: 0.5rem;
+          font-weight: 500;
+          color: #4a5568;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+          padding: 0.75rem;
+          border: 1px solid #cbd5e0;
+          border-radius: 4px;
+          font-size: 1rem;
+        }
+
+        .form-group input:disabled,
+        .form-group select:disabled,
+        .form-group textarea:disabled {
+          background-color: #f7fafc;
+          cursor: not-allowed;
+        }
+
+        .disabled-input {
+          background-color: #f7fafc !important;
+          color: #a0aec0 !important;
+        }
+
+        .array-input-group {
+          display: flex;
+          gap: 0.5rem;
+          margin-bottom: 0.5rem;
+        }
+
+        .array-input-group input {
+          flex: 1;
+        }
+
+        .btn-add {
+          padding: 0.5rem 1rem;
+          background-color: #48bb78;
+          color: white;
+          border: none;
+          border-radius: 4px;
+          cursor: pointer;
+        }
+
+        .btn-add:disabled {
+          background-color: #a0aec0;
+          cursor: not-allowed;
+        }
+
+        .btn-add:hover:not(:disabled) {
+          background-color: #38a169;
+        }
+
+        .tag-list {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 0.5rem;
+        }
+
+        .tag {
+          display: inline-flex;
+          align-items: center;
+          background-color: #edf2f7;
+          padding: 0.25rem 0.5rem;
+          border-radius: 9999px;
+          font-size: 0.875rem;
+        }
+
+        .tag-remove {
+          margin-left: 0.25rem;
+          background: none;
+          border: none;
+          cursor: pointer;
+          color: #718096;
+        }
+
+        .tag-remove:hover {
+          color: #e53e3e;
+        }
+
+        .tag-remove:disabled {
+          cursor: not-allowed;
+          color: #a0aec0;
+        }
+
+        .form-actions {
+          margin-top: 2rem;
+        }
+
+        .btn {
+          padding: 0.75rem 1.5rem;
+          border: none;
+          border-radius: 4px;
+          font-size: 1rem;
+          cursor: pointer;
+          transition: background-color 0.2s;
+        }
+
+        .btn-primary {
+          background-color: #4299e1;
+          color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+          background-color: #3182ce;
+        }
+
+        .btn-primary:disabled {
+          background-color: #a0aec0;
+          cursor: not-allowed;
+        }
+
+        .btn-full {
+          width: 100%;
+        }
+
+        .error-message {
+          background-color: #fed7d7;
+          color: #c53030;
+          padding: 1rem;
+          border-radius: 4px;
+          border: 1px solid #feb2b2;
+        }
+
+        .success-message {
+          background-color: #c6f6d5;
+          color: #276749;
+          padding: 1rem;
+          border-radius: 4px;
+          border: 1px solid #9ae6b4;
+        }
+      `}</style>
     </div>
   );
 };
 
 export default PatientDataForm;
-
