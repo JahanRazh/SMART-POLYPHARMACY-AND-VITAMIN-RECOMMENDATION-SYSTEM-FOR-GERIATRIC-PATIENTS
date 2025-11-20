@@ -47,6 +47,11 @@ export function AuthProvider({ children }) {
       prompt: 'select_account'
     });
     
+    // Add additional scopes for People API to get more profile information
+    provider.addScope('https://www.googleapis.com/auth/user.birthday.read');
+    provider.addScope('https://www.googleapis.com/auth/user.gender.read');
+    provider.addScope('profile');
+    
     const result = await signInWithPopup(auth, provider);
     
     try {
@@ -56,6 +61,54 @@ export function AuthProvider({ children }) {
       const firstName = nameParts[0] || '';
       const lastName = nameParts.slice(1).join(' ') || '';
       
+      // Try to get age and gender from Google People API
+      let age = null;
+      let gender = null;
+      
+      try {
+        // Get the access token from the credential
+        const credential = GoogleAuthProvider.credentialFromResult(result);
+        if (credential?.accessToken) {
+          // Try to fetch from Google People API
+          const peopleApiResponse = await fetch(
+            `https://people.googleapis.com/v1/people/me?personFields=birthdays,genders`,
+            {
+              headers: {
+                'Authorization': `Bearer ${credential.accessToken}`
+              }
+            }
+          );
+          
+          if (peopleApiResponse.ok) {
+            const peopleData = await peopleApiResponse.json();
+            
+            // Extract gender
+            if (peopleData.genders && peopleData.genders.length > 0) {
+              const genderValue = peopleData.genders[0].value;
+              if (genderValue) {
+                gender = genderValue.toLowerCase();
+              }
+            }
+            
+            // Extract age from birthday
+            if (peopleData.birthdays && peopleData.birthdays.length > 0) {
+              const birthday = peopleData.birthdays[0];
+              if (birthday.date) {
+                const birthYear = birthday.date.year;
+                if (birthYear) {
+                  const currentYear = new Date().getFullYear();
+                  age = currentYear - birthYear;
+                }
+              }
+            }
+          }
+        }
+      } catch (peopleApiError) {
+        // If People API fails, we'll just continue without age/gender
+        // The user will be prompted to provide them
+        console.warn('Could not fetch age/gender from Google People API:', peopleApiError.message);
+      }
+      
       // Save user profile to Firestore - FIX: Ensure photoURL is not undefined
       await saveUserProfile(result.user.uid, {
         firstName,
@@ -63,13 +116,23 @@ export function AuthProvider({ children }) {
         email: result.user.email,
         displayName,
         photoURL: result.user.photoURL || null, // ✅ FIX: Use null instead of undefined
-        provider: 'google'
+        provider: 'google',
+        age: age,
+        gender: gender
       });
+      
+      // Return result with age and gender info
+      return {
+        ...result,
+        needsAgeGender: !age || !gender
+      };
     } catch (error) {
       console.warn('Could not save user profile to Firestore:', error.message);
+      return {
+        ...result,
+        needsAgeGender: true
+      };
     }
-    
-    return result;
   };
 
   // Update user profile for email signup
@@ -101,6 +164,9 @@ export function AuthProvider({ children }) {
   // ✅ FIXED: Save user profile to Firestore with proper data cleaning
   const saveUserProfile = async (userId, profileData) => {
     try {
+      // Get existing profile to preserve fields that aren't being updated
+      const existingProfile = await getUserProfile(userId) || {};
+      
       // Clean the data - remove any undefined values
       const cleanData = { ...profileData };
       
@@ -111,18 +177,18 @@ export function AuthProvider({ children }) {
         }
       });
 
-      // Ensure required fields have values
+      // Merge existing profile with new data
+      // Only include fields that are provided in cleanData or exist in existingProfile
       const userProfile = {
-        firstName: cleanData.firstName || '',
-        lastName: cleanData.lastName || '',
-        email: cleanData.email || '',
-        displayName: cleanData.displayName || '',
-        photoURL: cleanData.photoURL || null, // Explicitly set to null if not provided
-        provider: cleanData.provider || 'email',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        ...cleanData
+        ...existingProfile,
+        ...cleanData,
+        updatedAt: new Date()
       };
+      
+      // Set createdAt only if it doesn't exist (for new profiles)
+      if (!userProfile.createdAt) {
+        userProfile.createdAt = new Date();
+      }
 
       const userRef = doc(db, 'users', userId);
       await setDoc(userRef, userProfile, { merge: true });
@@ -152,10 +218,22 @@ export function AuthProvider({ children }) {
   const updateProfileData = async (profileData) => {
     if (!user) throw new Error('No user logged in');
     
-    await saveUserProfile(user.uid, {
+    // Get existing profile to preserve fields that aren't being updated
+    const existingProfile = await getUserProfile(user.uid) || {};
+    
+    // Merge existing profile with new data, preserving existing fields
+    const mergedProfile = {
+      ...existingProfile,
       ...profileData,
       updatedAt: new Date()
-    });
+    };
+    
+    // Only update createdAt if it doesn't exist (for new profiles)
+    if (!mergedProfile.createdAt) {
+      mergedProfile.createdAt = new Date();
+    }
+    
+    await saveUserProfile(user.uid, mergedProfile);
     
     await loadUserProfile(user.uid);
   };
