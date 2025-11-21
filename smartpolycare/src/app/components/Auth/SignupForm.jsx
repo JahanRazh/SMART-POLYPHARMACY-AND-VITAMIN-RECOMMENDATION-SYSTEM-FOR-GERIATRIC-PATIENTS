@@ -2,16 +2,22 @@
 "use client";
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuthForm } from '../Hooks/useAuth';
+import AgeGenderModal from './AgeGenderModal';
 
-const SignupForm = ({ onToggleMode }) => {
+const SignupForm = ({ onToggleMode, onClose }) => {
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
     email: '',
     password: '',
-    confirmPassword: ''
+    confirmPassword: '',
+    age: '',
+    gender: ''
   });
+  const [showAgeGenderModal, setShowAgeGenderModal] = useState(false);
+  const router = useRouter();
   const { loading, error, handleEmailSignUp, handleGoogleSignIn } = useAuthForm();
 
   const handleChange = (e) => {
@@ -30,20 +36,37 @@ const SignupForm = ({ onToggleMode }) => {
       formData.lastName,
       formData.email, 
       formData.password, 
-      formData.confirmPassword
+      formData.confirmPassword,
+      formData.age,
+      formData.gender
     );
     
     if (result.success) {
-      console.log('Signup successful');
-      // You can redirect or show success message here
+      // Close modal and redirect to home
+      onClose();
+      router.push('/');
     }
   };
 
   const handleGoogleSignUp = async () => {
     const result = await handleGoogleSignIn();
     if (result.success) {
-      console.log('Google signup successful');
+      // Check if age and gender are needed
+      if (result.needsAgeGender) {
+        // Show modal to collect age and gender
+        setShowAgeGenderModal(true);
+      } else {
+        // Close modal and redirect to home
+        onClose();
+        router.push('/');
+      }
     }
+  };
+
+  const handleAgeGenderComplete = () => {
+    setShowAgeGenderModal(false);
+    onClose();
+    router.push('/');
   };
 
   return (
@@ -129,6 +152,39 @@ const SignupForm = ({ onToggleMode }) => {
           />
         </div>
 
+        <div className="form-group">
+          <label htmlFor="age">Age</label>
+          <input
+            type="number"
+            id="age"
+            name="age"
+            value={formData.age}
+            onChange={handleChange}
+            required
+            min="1"
+            max="150"
+            disabled={loading}
+            placeholder="Enter your age"
+          />
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="gender">Gender</label>
+          <select
+            id="gender"
+            name="gender"
+            value={formData.gender}
+            onChange={handleChange}
+            required
+            disabled={loading}
+          >
+            <option value="">Select Gender</option>
+            <option value="male">Male</option>
+            <option value="female">Female</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+
         <button 
           type="submit" 
           className="btn btn-primary btn-full"
@@ -169,6 +225,16 @@ const SignupForm = ({ onToggleMode }) => {
           </button>
         </p>
       </div>
+
+      <AgeGenderModal
+        isOpen={showAgeGenderModal}
+        onClose={() => {
+          setShowAgeGenderModal(false);
+          onClose();
+          router.push('/');
+        }}
+        onComplete={handleAgeGenderComplete}
+      />
     </div>
   );
 };

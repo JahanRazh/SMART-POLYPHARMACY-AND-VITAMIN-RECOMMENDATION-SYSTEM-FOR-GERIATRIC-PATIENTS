@@ -6,9 +6,8 @@ import os
 import firebase_admin
 from firebase_admin import credentials, firestore
 
-# Import the blueprint
-from routes.personal_details import personal_details_bp
-
+# Import the blueprints
+from routes.patients_details import patients_details_bp 
 
 def get_db():
     """Initialize Firestore client once and reuse."""
@@ -36,7 +35,7 @@ app = Flask(__name__)
 CORS(app)
 
 # Register blueprints
-app.register_blueprint(personal_details_bp)
+app.register_blueprint(patients_details_bp)
 
 
 @app.route('/')
