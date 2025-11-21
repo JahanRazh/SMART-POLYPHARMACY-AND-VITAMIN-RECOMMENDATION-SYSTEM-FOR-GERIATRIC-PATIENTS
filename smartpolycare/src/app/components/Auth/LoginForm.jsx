@@ -2,26 +2,31 @@
 "use client";
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuthForm } from '../Hooks/useAuth';
 
-const LoginForm = ({ onToggleMode }) => {
+const LoginForm = ({ onToggleMode, onClose }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const router = useRouter();
   const { loading, error, handleEmailLogin, handleGoogleSignIn } = useAuthForm();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     const result = await handleEmailLogin(email, password);
     if (result.success) {
-      // Success - user will be redirected via AuthContext
-      console.log('Login successful');
+      // Close modal and redirect to home
+      onClose();
+      router.push('/');
     }
   };
 
   const handleGoogleLogin = async () => {
     const result = await handleGoogleSignIn();
     if (result.success) {
-      console.log('Google login successful');
+      // Close modal and redirect to home
+      onClose();
+      router.push('/');
     }
   };
 
