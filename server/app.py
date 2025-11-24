@@ -1,42 +1,17 @@
-from flask import Flask, jsonify, request
+# app.py
+from flask import Flask, jsonify
 from flask_cors import CORS
-import os
-
-# Firebase Admin / Firestore
-import firebase_admin
-from firebase_admin import credentials, firestore
 
 # Import the blueprints
-from routes.patients_details import patients_details_bp 
-
-def get_db():
-    """Initialize Firestore client once and reuse."""
-    if not firebase_admin._apps:
-        # Get the absolute path to the service account key
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        service_account_path = os.path.join(current_dir, "serviceAccountKey.json")
-        
-        cred = credentials.Certificate(service_account_path)
-        firebase_admin.initialize_app(cred)
-
-        # ✅ Connection check at startup
-        try:
-            db = firestore.client()
-            # Try reading a small test query
-            db.collection('test').limit(1).get()
-            print("✅ Firebase connected successfully!")
-        except Exception as e:
-            print("❌ Firebase connection failed:", e)
-    return firestore.client()
-
+from routes.polyphamacy_risk_route import polypharmacy_bp
+from db import get_db
 
 # Create Flask app
 app = Flask(__name__)
 CORS(app)
 
 # Register blueprints
-app.register_blueprint(patients_details_bp)
-
+app.register_blueprint(polypharmacy_bp)
 
 @app.route('/')
 def health_check():
