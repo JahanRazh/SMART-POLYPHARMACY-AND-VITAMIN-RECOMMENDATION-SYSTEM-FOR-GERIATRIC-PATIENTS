@@ -29,7 +29,7 @@ export default function HeaderWithAuth() {
           <Link href="/" className="text-gray-700 hover:text-teal-600 font-medium transition-colors duration-200">
             Home
           </Link>
-          <Link href="/research" className="text-gray-700 hover:text-teal-600 font-medium transition-colors duration-200">
+          <Link href="/Pages/Polypharmacy" className="text-gray-700 hover:text-teal-600 font-medium transition-colors duration-200">
             Polypharmacy Risk
           </Link>
           <Link href="/Pages/LifestyleAdvice" className="text-gray-700 hover:text-teal-600 font-medium transition-colors duration-200">
