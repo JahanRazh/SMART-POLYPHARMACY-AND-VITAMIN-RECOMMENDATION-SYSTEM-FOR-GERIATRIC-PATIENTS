@@ -1,4 +1,4 @@
-DDInterID_A,Drug_A,DDInterID_B,Drug_B,Level
+DDInterID_A,Drug_A,DDInterID_B,Drug_B,SeverityLevel
 DDInter1263,Naltrexone,DDInter1,Abacavir,Moderate
 DDInter1,Abacavir,DDInter1348,Orlistat,Moderate
 DDInter58,Aluminum hydroxide,DDInter582,Dolutegravir,Major
