@@ -136,8 +136,8 @@ const PolypharmacyPage = () => {
           <p className="text-xs uppercase tracking-wide text-indigo-500">Polypharmacy Risk</p>
           <h1 className="text-3xl font-bold text-gray-900">Personalized Drug Interaction Checker</h1>
           <p className="mt-3 text-gray-600">
-            We automatically pull your profile details and let you enter up to 20 medications. Our engine cross-checks
-            every combination against the curated Drug Interaction dataset and highlights the severity in real time.
+            Our engine cross-checks
+            every combination against the curated Drug Interaction and highlights the severity in real time.
           </p>
         </div>
 
@@ -219,7 +219,7 @@ const PolypharmacyPage = () => {
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
                 <h2 className="text-lg font-semibold text-gray-900">Medication List</h2>
-                <p className="text-sm text-gray-500">Add up to 20 drugs you are currently taking.</p>
+                <p className="text-sm text-gray-500">Add drugs you are currently taking use Format (ex; Conjugated estrogens).</p>
               </div>
               <button
                 type="button"
