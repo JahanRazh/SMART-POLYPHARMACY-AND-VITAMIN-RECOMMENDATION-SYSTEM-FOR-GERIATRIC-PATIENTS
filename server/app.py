@@ -3,7 +3,7 @@ from flask import Flask, jsonify
 from flask_cors import CORS
 
 # Import the blueprints
-#from routes.polyphamacy_risk_route import polypharmacy_bp
+from routes.polyphamacy_risk_route import polypharmacy_bp
 from db import get_db
 
 # Create Flask app
@@ -11,7 +11,7 @@ app = Flask(__name__)
 CORS(app)
 
 # Register blueprints
-#app.register_blueprint(polypharmacy_bp)
+app.register_blueprint(polypharmacy_bp)
 
 @app.route('/')
 def health_check():
