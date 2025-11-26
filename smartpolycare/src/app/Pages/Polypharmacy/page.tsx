@@ -184,7 +184,7 @@ const PolypharmacyPage = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-600">Display Name</label>
+                <label className="block text-sm font-medium text-gray-600">Full Name</label>
                 <input
                   type="text"
                   readOnly
