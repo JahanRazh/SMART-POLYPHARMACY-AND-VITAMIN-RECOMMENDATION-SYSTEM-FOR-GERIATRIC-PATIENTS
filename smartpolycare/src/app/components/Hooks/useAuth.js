@@ -9,7 +9,7 @@ export const useAuthForm = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleEmailSignUp = async (firstName, lastName, email, password, confirmPassword) => {
+  const handleEmailSignUp = async (firstName, lastName, email, password, confirmPassword, age, gender) => {
     if (password !== confirmPassword) {
       setError('Passwords do not match');
       return { success: false, error: 'Passwords do not match' };
@@ -25,6 +25,16 @@ export const useAuthForm = () => {
       return { success: false, error: 'First name and last name are required' };
     }
 
+    if (!age || age < 1 || age > 150) {
+      setError('Please enter a valid age (1-150)');
+      return { success: false, error: 'Please enter a valid age (1-150)' };
+    }
+
+    if (!gender) {
+      setError('Please select your gender');
+      return { success: false, error: 'Please select your gender' };
+    }
+
     setLoading(true);
     setError('');
     
@@ -33,12 +43,14 @@ export const useAuthForm = () => {
       const userCredential = await signup(email, password);
       const user = userCredential.user;
       
-      // Update user profile with name (photoURL will be null for email signup)
+      // Update user profile with name, age, and gender (photoURL will be null for email signup)
       await updateUserProfile({
         displayName: `${firstName} ${lastName}`,
         firstName: firstName,
         lastName: lastName,
-        email: email
+        email: email,
+        age: parseInt(age),
+        gender: gender
       });
       
       return { success: true };
@@ -72,8 +84,11 @@ export const useAuthForm = () => {
     setError('');
     
     try {
-      await signInWithGoogle();
-      return { success: true };
+      const result = await signInWithGoogle();
+      return { 
+        success: true, 
+        needsAgeGender: result?.needsAgeGender || false 
+      };
     } catch (error) {
       const errorMessage = getAuthErrorMessage(error.code);
       setError(errorMessage);
