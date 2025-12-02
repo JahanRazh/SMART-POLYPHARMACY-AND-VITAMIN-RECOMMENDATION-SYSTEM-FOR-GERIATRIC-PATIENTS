@@ -403,7 +403,7 @@ const PolypharmacyPage = () => {
                     <div className="flex flex-wrap items-center justify-between gap-4">
                       <div>
                         <p className="text-sm text-indigo-600">Polypharmacy Risk Score</p>
-                        <p className="text-4xl font-bold text-indigo-900">{analysis.riskCalculation.riskScore}</p>
+                        <p className="text-4xl font-bold text-indigo-900">{analysis.riskCalculation.riskScore} %</p>
                       </div>
                       <div className="text-right">
                         <p className="text-sm text-indigo-600">Risk Level</p>
