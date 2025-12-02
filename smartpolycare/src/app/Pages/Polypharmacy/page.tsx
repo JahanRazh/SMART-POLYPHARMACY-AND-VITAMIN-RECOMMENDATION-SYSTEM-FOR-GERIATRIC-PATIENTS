@@ -75,6 +75,8 @@ const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000'
 const PolypharmacyPage = () => {
   const { user, userProfile } = useAuth()
   const [drugs, setDrugs] = useState<string[]>([''])
+  const [activeDrugIndex, setActiveDrugIndex] = useState<number | null>(null)
+  const [drugSuggestions, setDrugSuggestions] = useState<string[]>([])
   const [age, setAge] = useState<string>('')
   const [liverFunction, setLiverFunction] = useState<string>('')
   const [kidneyFunction, setKidneyFunction] = useState<string>('')
@@ -107,8 +109,37 @@ const PolypharmacyPage = () => {
     return `${first} ${last}`.trim()
   }, [userProfile])
 
-  const handleDrugChange = (index: number, value: string) => {
+  const handleDrugChange = async (index: number, value: string) => {
     setDrugs((prev) => prev.map((drug, idx) => (idx === index ? value : drug)))
+
+    const query = value.trim()
+    setActiveDrugIndex(index)
+
+    if (!query) {
+      setDrugSuggestions([])
+      return
+    }
+
+    try {
+      const params = new URLSearchParams({ q: query, limit: '15' })
+      const response = await fetch(`${API_BASE}/api/polypharmacy/drugs/search?${params.toString()}`, {
+        method: 'GET',
+      })
+      const data = await response.json().catch(() => null)
+      if (response.ok && data && Array.isArray(data.items)) {
+        setDrugSuggestions(data.items)
+      } else {
+        setDrugSuggestions([])
+      }
+    } catch {
+      setDrugSuggestions([])
+    }
+  }
+
+  const handleSelectSuggestion = (index: number, suggestion: string) => {
+    setDrugs((prev) => prev.map((drug, idx) => (idx === index ? suggestion : drug)))
+    setActiveDrugIndex(null)
+    setDrugSuggestions([])
   }
 
   const addDrugField = () => {
@@ -345,23 +376,46 @@ const PolypharmacyPage = () => {
 
             <div className="mt-6 space-y-4">
               {drugs.map((drug, index) => (
-                <div key={`drug-${index}`} className="flex gap-3">
-                  <input
-                    type="text"
-                    value={drug}
-                    onChange={(event) => handleDrugChange(index, event.target.value)}
-                    placeholder={`Drug ${index + 1}`}
-                    className="flex-1 rounded-xl border border-gray-200 px-4 py-2 focus:border-indigo-500 focus:outline-none"
-                  />
-                  {drugs.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => removeDrugField(index)}
-                      className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-2 text-sm text-gray-600 transition hover:bg-gray-100"
-                    >
-                      Remove
-                    </button>
-                  )}
+                <div key={`drug-${index}`} className="space-y-2">
+                  <div className="flex gap-3">
+                    <div className="relative flex-1">
+                      <input
+                        type="text"
+                        value={drug}
+                        onChange={(event) => handleDrugChange(index, event.target.value)}
+                        onFocus={() => {
+                          setActiveDrugIndex(index)
+                        }}
+                        placeholder={`Drug ${index + 1}`}
+                        className="w-full rounded-xl border border-gray-200 px-4 py-2 focus:border-indigo-500 focus:outline-none"
+                      />
+                      {activeDrugIndex === index && drugSuggestions.length > 0 && (
+                        <ul className="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-xl border border-gray-200 bg-white shadow-lg">
+                          {drugSuggestions.map((suggestion) => (
+                            <li
+                              key={suggestion}
+                              className="cursor-pointer px-3 py-2 text-sm text-gray-800 hover:bg-indigo-50"
+                              onMouseDown={(e) => {
+                                e.preventDefault()
+                                handleSelectSuggestion(index, suggestion)
+                              }}
+                            >
+                              {suggestion}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                    {drugs.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeDrugField(index)}
+                        className="h-fit rounded-xl border border-gray-200 bg-gray-50 px-4 py-2 text-sm text-gray-600 transition hover:bg-gray-100"
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -732,7 +786,7 @@ const PolypharmacyPage = () => {
                     </div>
                     <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 p-3">
                       <span className="text-sm text-gray-600">
-                        DDI Component = {analysis.riskCalculation.weights.ddiWeight} × {analysis.riskCalculation.scores.s3} × {analysis.riskCalculation.ddiCount}
+                        DDI Component = {analysis.riskCalculation.weights.ddiWeight} × {analysis.riskCalculation.scores.s3}
                       </span>
                       <span className="text-lg font-semibold text-gray-900">
                         = {analysis.riskCalculation.calculation.ddiComponent}

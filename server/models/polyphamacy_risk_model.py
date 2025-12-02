@@ -19,6 +19,9 @@ def _normalize_drug_name(value: str) -> str:
 def _load_interaction_map() -> Dict[Tuple[str, str], List[Dict]]:
     """Load the CSV once and keep it cached for subsequent lookups."""
     interaction_map: Dict[Tuple[str, str], List[Dict]] = {}
+    # We also collect a unique set of all drug names for fuzzy search.
+    global _DRUG_NAME_INDEX
+    drug_name_set = set()
 
     if not os.path.exists(DATA_FILE):
         raise FileNotFoundError(f"Drug interaction dataset not found at {DATA_FILE}")
@@ -41,7 +44,73 @@ def _load_interaction_map() -> Dict[Tuple[str, str], List[Dict]]:
                 "severity": severity or "Unknown",
             }
             interaction_map.setdefault(normalized_key, []).append(interaction)
+
+            # Collect raw labels for the drug-name index
+            drug_name_set.add(drug_a)
+            drug_name_set.add(drug_b)
+
+    # Build a cached list of unique drug names (label + normalized) for search
+    _DRUG_NAME_INDEX = [
+        {"label": name, "normalized": _normalize_drug_name(name)}
+        for name in sorted(drug_name_set)
+        if name
+    ]
+
     return interaction_map
+
+
+# Will be populated when _load_interaction_map() runs
+_DRUG_NAME_INDEX: List[Dict[str, str]] = []
+
+
+def search_drug_names(query: str, limit: int = 15) -> List[str]:
+    """
+    Simple fuzzy search over drug names from the Drug_interaction.csv file.
+
+    - Case-insensitive
+    - Scores prefix matches highest, then substring matches
+    - Returns up to `limit` unique labels
+    """
+    if not query or not isinstance(query, str):
+        return []
+
+    interaction_map = _load_interaction_map()  # ensures _DRUG_NAME_INDEX is populated
+    _ = interaction_map  # silence unused variable warning
+
+    normalized_query = _normalize_drug_name(query)
+    if not normalized_query:
+        return []
+
+    # Very lightweight scoring: prefix > substring > others
+    prefix_matches: List[Tuple[int, str]] = []
+    substring_matches: List[Tuple[int, str]] = []
+
+    for entry in _DRUG_NAME_INDEX:
+        label = entry["label"]
+        norm = entry["normalized"]
+        if norm.startswith(normalized_query):
+            prefix_matches.append((len(label), label))
+        elif normalized_query in norm:
+            substring_matches.append((len(label), label))
+
+    # Sort shorter labels first within each group
+    prefix_matches.sort(key=lambda x: x[0])
+    substring_matches.sort(key=lambda x: x[0])
+
+    ordered = [label for _, label in prefix_matches] + [label for _, label in substring_matches]
+
+    # Preserve uniqueness and limit
+    seen = set()
+    results: List[str] = []
+    for label in ordered:
+        if label in seen:
+            continue
+        seen.add(label)
+        results.append(label)
+        if len(results) >= limit:
+            break
+
+    return results
 
 
 def find_drug_interactions(drugs: List[str]) -> Tuple[List[Dict], Dict[str, int]]:
@@ -271,7 +340,7 @@ def calculate_polypharmacy_risk(
     
     Formula:
     Polypharmacy Risk = (Drug Weight * S1) + (Age Weight * S2) + 
-                       (DDI Weight * S3 * DDI Count) + 
+                       (DDI Weight * S3 ) + 
                        (Liver Weight * S4) + (Kidney Weight * S5)
     
     Risk categories:
@@ -380,12 +449,12 @@ def calculate_polypharmacy_risk(
         s5_explanation = f"S5 = 0.0 (Stage 1: eGFR 90)"
 
     # Calculate weighted score
-    # Formula: DDI Weight * S3 score * DDI Count
+    # Formula: DDI Weight * S3 score calculate by severity DDI Count
     # S3 already includes weighted counts for all severities
     risk_score = (
         (drug_weight * s1) +
         (age_weight * s2) +
-        (ddi_weight * s3 * total_ddi_count) +
+        (ddi_weight * s3) +
         (liver_weight * s4) +
         (kidney_weight * s5)
     )
@@ -422,7 +491,7 @@ def calculate_polypharmacy_risk(
         "calculation": {
             "drugComponent": round(drug_weight * s1, 2),
             "ageComponent": round(age_weight * s2, 2),
-            "ddiComponent": round(ddi_weight * s3 * total_ddi_count, 2),
+            "ddiComponent": round(ddi_weight * s3, 2),
             "liverComponent": round(liver_weight * s4, 2),
             "kidneyComponent": round(kidney_weight * s5, 2),
             "s1Explanation": s1_explanation,
