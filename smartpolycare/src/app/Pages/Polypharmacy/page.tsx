@@ -70,7 +70,7 @@ type AssessmentResponse = {
 }
 
 const MAX_DRUGS = 20
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_LOCAL_API_URL
 
 const PolypharmacyPage = () => {
   const { user, userProfile } = useAuth()
