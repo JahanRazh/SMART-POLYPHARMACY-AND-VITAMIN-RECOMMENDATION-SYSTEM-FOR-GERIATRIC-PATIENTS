@@ -13,6 +13,39 @@ type Interaction = {
   ddinterIdB?: string
 }
 
+type RiskCalculation = {
+  scores: {
+    s1: number
+    s2: number
+    s3: number
+    s4: number
+    s5: number
+  }
+  weights: {
+    drugWeight: number
+    ageWeight: number
+    ddiWeight: number
+    liverWeight: number
+    kidneyWeight: number
+  }
+  drugCount: number
+  ddiCount: number
+  riskScore: number
+  riskLevel: string
+  calculation: {
+    drugComponent: number
+    ageComponent: number
+    ddiComponent: number
+    liverComponent: number
+    kidneyComponent: number
+    s1Explanation?: string
+    s2Explanation?: string
+    s3Explanation?: string
+    s4Explanation?: string
+    s5Explanation?: string
+  }
+}
+
 type AssessmentResponse = {
   assessmentId: string
   user: {
@@ -28,6 +61,10 @@ type AssessmentResponse = {
   interactionsFound: number
   interactions: Interaction[]
   severitySummary: SeveritySummary
+  age: number
+  liverFunction: string
+  kidneyFunction: string
+  riskCalculation: RiskCalculation
   createdAt: string
   source?: string
 }
@@ -38,10 +75,29 @@ const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000'
 const PolypharmacyPage = () => {
   const { user, userProfile } = useAuth()
   const [drugs, setDrugs] = useState<string[]>([''])
+  const [age, setAge] = useState<string>('')
+  const [liverFunction, setLiverFunction] = useState<string>('')
+  const [kidneyFunction, setKidneyFunction] = useState<string>('')
   const [analysis, setAnalysis] = useState<AssessmentResponse | null>(null)
   const [error, setError] = useState<string>('')
   const [successMessage, setSuccessMessage] = useState<string>('')
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false)
+
+  const liverFunctionOptions = [
+    { value: 'Normal (<40 IU/L)', label: 'Normal (<40 IU/L)' },
+    { value: 'Mild risk (40-80 IU/L)', label: 'Mild risk (40-80 IU/L)' },
+    { value: 'Moderate risk (80-150 IU/L)', label: 'Moderate risk (80-150 IU/L)' },
+    { value: 'Severe risk (>150 IU/L)', label: 'Severe risk (>150 IU/L)' },
+  ]
+
+  const kidneyFunctionOptions = [
+    { value: 'Stage 1: eGFR of 90', label: 'Stage 1: eGFR of 90' },
+    { value: 'Stage 2: eGFR of 60-89', label: 'Stage 2: eGFR of 60-89' },
+    { value: 'Stage 3a: eGFR of 45-59', label: 'Stage 3a: eGFR of 45-59' },
+    { value: 'Stage 3b: eGFR of 30-44', label: 'Stage 3b: eGFR of 30-44' },
+    { value: 'Stage 4: eGFR of 15-29', label: 'Stage 4: eGFR of 15-29' },
+    { value: 'Stage 5: eGFR below 15', label: 'Stage 5: eGFR below 15' },
+  ]
 
   const displayName = useMemo(() => {
     if (!userProfile) return ''
@@ -89,6 +145,22 @@ const PolypharmacyPage = () => {
       return
     }
 
+    const ageNum = parseInt(age, 10)
+    if (!age || isNaN(ageNum) || ageNum < 0) {
+      setError('Please enter a valid age.')
+      return
+    }
+
+    if (!liverFunction) {
+      setError('Please select a liver function level.')
+      return
+    }
+
+    if (!kidneyFunction) {
+      setError('Please select a kidney function level.')
+      return
+    }
+
     setIsSubmitting(true)
     try {
       const response = await fetch(`${API_BASE}/api/polypharmacy/analyze`, {
@@ -99,6 +171,9 @@ const PolypharmacyPage = () => {
         body: JSON.stringify({
           userId: user.uid,
           drugs: cleanedDrugs,
+          age: ageNum,
+          liverFunction: liverFunction,
+          kidneyFunction: kidneyFunction,
         }),
       })
 
@@ -194,15 +269,6 @@ const PolypharmacyPage = () => {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-600">Age</label>
-                  <input
-                    type="text"
-                    readOnly
-                    value={userProfile?.age ? `${userProfile.age}` : '—'}
-                    className="mt-1 w-full rounded-xl border border-gray-200 bg-white px-4 py-2 text-gray-900"
-                  />
-                </div>
-                <div>
                   <label className="block text-sm font-medium text-gray-600">Gender</label>
                   <input
                     type="text"
@@ -210,6 +276,52 @@ const PolypharmacyPage = () => {
                     value={userProfile?.gender || '—'}
                     className="mt-1 w-full rounded-xl border border-gray-200 bg-white px-4 py-2 text-gray-900"
                   />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-600">Age *</label>
+                  <input
+                    type="number"
+                    value={age}
+                    onChange={(e) => setAge(e.target.value)}
+                    placeholder="Enter age"
+                    min="0"
+                    required
+                    className="mt-1 w-full rounded-xl border border-gray-200 bg-white px-4 py-2 text-gray-900 focus:border-indigo-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+              <div className="mt-4 grid gap-4 md:grid-cols-2">
+                <div>
+                  <label className="block text-sm font-medium text-gray-600">Liver Function (ALT/AST Level) *</label>
+                  <select
+                    value={liverFunction}
+                    onChange={(e) => setLiverFunction(e.target.value)}
+                    required
+                    className="mt-1 w-full rounded-xl border border-gray-200 bg-white px-4 py-2 text-gray-900 focus:border-indigo-500 focus:outline-none"
+                  >
+                    <option value="">Select liver function level</option>
+                    {liverFunctionOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-600">Kidney Function (CKD Stage) *</label>
+                  <select
+                    value={kidneyFunction}
+                    onChange={(e) => setKidneyFunction(e.target.value)}
+                    required
+                    className="mt-1 w-full rounded-xl border border-gray-200 bg-white px-4 py-2 text-gray-900 focus:border-indigo-500 focus:outline-none"
+                  >
+                    <option value="">Select kidney function stage</option>
+                    {kidneyFunctionOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
             </div>
@@ -269,11 +381,12 @@ const PolypharmacyPage = () => {
 
         {analysis && (
           <section className="mt-10 space-y-6">
+            {/* Risk Score and Level */}
             <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div>
-                  <p className="text-xs uppercase tracking-wide text-emerald-500">Latest Analysis</p>
-                  <h2 className="text-2xl font-semibold text-gray-900">Risk Summary</h2>
+                  <p className="text-xs uppercase tracking-wide text-emerald-500">Polypharmacy Risk Assessment</p>
+                  <h2 className="text-2xl font-semibold text-gray-900">Risk Prediction</h2>
                   <p className="text-sm text-gray-500">
                     {analysis.drugCount} drugs • {analysis.interactionsFound} interactions detected
                   </p>
@@ -284,6 +397,35 @@ const PolypharmacyPage = () => {
                 </div>
               </div>
 
+              {analysis.riskCalculation && (
+                <div className="mt-6">
+                  <div className="rounded-xl border-2 border-indigo-200 bg-indigo-50 p-6">
+                    <div className="flex flex-wrap items-center justify-between gap-4">
+                      <div>
+                        <p className="text-sm text-indigo-600">Polypharmacy Risk Score</p>
+                        <p className="text-4xl font-bold text-indigo-900">{analysis.riskCalculation.riskScore}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm text-indigo-600">Risk Level</p>
+                        <p
+                          className={`text-2xl font-bold ${
+                            analysis.riskCalculation.riskLevel === 'Very High'
+                              ? 'text-red-600'
+                              : analysis.riskCalculation.riskLevel === 'High'
+                                ? 'text-orange-600'
+                                : analysis.riskCalculation.riskLevel === 'Moderate'
+                                  ? 'text-yellow-600'
+                                  : 'text-green-600'
+                          }`}
+                        >
+                          {analysis.riskCalculation.riskLevel}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="mt-6 grid gap-4 md:grid-cols-4">
                 {renderSeverityCard('Major', severitySummary.Major || 0, 'bg-rose-50 border-rose-100')}
                 {renderSeverityCard('Moderate', severitySummary.Moderate || 0, 'bg-amber-50 border-amber-100')}
@@ -291,6 +433,360 @@ const PolypharmacyPage = () => {
                 {renderSeverityCard('Other', severitySummary.Unknown || 0, 'bg-gray-50 border-gray-100')}
               </div>
             </div>
+
+            {/* Calculation Details */}
+            {analysis.riskCalculation && (
+              <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Detailed Calculation</h3>
+                
+                {/* Sub-scores */}
+                <div className="mb-6">
+                  <h4 className="text-md font-medium text-gray-700 mb-3">Sub-Scores (S1-S5)</h4>
+                  <div className="grid gap-3 md:grid-cols-5">
+                    <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+                      <p className="text-xs text-gray-500">S1 (Medication Count)</p>
+                      <p className="text-xl font-bold text-gray-900">{analysis.riskCalculation.scores.s1}</p>
+                      <p className="text-xs text-gray-400 mt-1">From {analysis.drugCount} drugs</p>
+                      {analysis.riskCalculation.calculation.s1Explanation && (
+                        <p className="text-xs text-blue-600 mt-1 font-medium">
+                          {analysis.riskCalculation.calculation.s1Explanation}
+                        </p>
+                      )}
+                    </div>
+                    <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+                      <p className="text-xs text-gray-500">S2 (Age)</p>
+                      <p className="text-xl font-bold text-gray-900">{analysis.riskCalculation.scores.s2}</p>
+                      {analysis.riskCalculation.calculation.s2Explanation && (
+                        <p className="text-xs text-green-600 mt-1 font-medium">
+                          {analysis.riskCalculation.calculation.s2Explanation}
+                        </p>
+                      )}
+                    </div>
+                    <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+                      <p className="text-xs text-gray-500">S3 (DDI)</p>
+                      <p className="text-xl font-bold text-gray-900">{analysis.riskCalculation.scores.s3}</p>
+                      {analysis.riskCalculation.calculation.s3Explanation && (
+                        <p className="text-xs text-orange-600 mt-1 font-medium">
+                          {analysis.riskCalculation.calculation.s3Explanation}
+                        </p>
+                      )}
+                    </div>
+                    <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+                      <p className="text-xs text-gray-500">S4 (Liver)</p>
+                      <p className="text-xl font-bold text-gray-900">{analysis.riskCalculation.scores.s4}</p>
+                      {analysis.riskCalculation.calculation.s4Explanation && (
+                        <p className="text-xs text-purple-600 mt-1 font-medium">
+                          {analysis.riskCalculation.calculation.s4Explanation}
+                        </p>
+                      )}
+                    </div>
+                    <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+                      <p className="text-xs text-gray-500">S5 (Kidney)</p>
+                      <p className="text-xl font-bold text-gray-900">{analysis.riskCalculation.scores.s5}</p>
+                      {analysis.riskCalculation.calculation.s5Explanation && (
+                        <p className="text-xs text-teal-600 mt-1 font-medium">
+                          {analysis.riskCalculation.calculation.s5Explanation}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Weights */}
+                <div className="mb-6">
+                  <h4 className="text-md font-medium text-gray-700 mb-3">Weights</h4>
+                  <div className="grid gap-3 md:grid-cols-5">
+                    <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
+                      <p className="text-xs text-blue-600">Drug Weight</p>
+                      <p className="text-lg font-bold text-blue-900">{analysis.riskCalculation.weights.drugWeight}</p>
+                    </div>
+                    <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
+                      <p className="text-xs text-blue-600">Age Weight</p>
+                      <p className="text-lg font-bold text-blue-900">{analysis.riskCalculation.weights.ageWeight}</p>
+                    </div>
+                    <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
+                      <p className="text-xs text-blue-600">DDI Weight</p>
+                      <p className="text-lg font-bold text-blue-900">{analysis.riskCalculation.weights.ddiWeight}</p>
+                    </div>
+                    <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
+                      <p className="text-xs text-blue-600">Liver Weight</p>
+                      <p className="text-lg font-bold text-blue-900">{analysis.riskCalculation.weights.liverWeight}</p>
+                    </div>
+                    <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
+                      <p className="text-xs text-blue-600">Kidney Weight</p>
+                      <p className="text-lg font-bold text-blue-900">{analysis.riskCalculation.weights.kidneyWeight}</p>
+                    </div>
+                  </div>
+                  <p className="mt-2 text-xs text-gray-500">
+                    Total Weight: {Object.values(analysis.riskCalculation.weights).reduce((a, b) => a + b, 0)}
+                  </p>
+                </div>
+
+                {/* S1 Calculation Breakdown */}
+                <div className="mb-6">
+                  <h4 className="text-md font-medium text-gray-700 mb-3">S1 (Drug Sub-Score) Calculation</h4>
+                  <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-blue-900">Drug Count:</span>
+                        <span className="text-lg font-bold text-blue-900">{analysis.drugCount} drugs</span>
+                      </div>
+                      <div className="border-t border-blue-200 pt-2 mt-2">
+                        <p className="text-xs text-blue-700 mb-2">S1 Calculation Rules:</p>
+                        <ul className="text-xs text-blue-600 space-y-1 ml-4 list-disc">
+                          <li>Drug count &lt; 5: S1 = 0.0</li>
+                          <li>Drug count 5-7: S1 = 0.7</li>
+                          <li>Drug count 8-10: S1 = 1.0</li>
+                          <li>Drug count &gt; 10: S1 = 1.0 + (drug count - 10) × 0.1</li>
+                        </ul>
+                      </div>
+                      {analysis.riskCalculation.calculation.s1Explanation && (
+                        <div className="border-t border-blue-200 pt-2 mt-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium text-blue-900">Calculated S1:</span>
+                            <span className="text-lg font-bold text-blue-900">
+                              {analysis.riskCalculation.scores.s1}
+                            </span>
+                          </div>
+                          <p className="text-xs text-blue-600 mt-1 italic">
+                            {analysis.riskCalculation.calculation.s1Explanation}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* S2 Calculation Breakdown */}
+                <div className="mb-6">
+                  <h4 className="text-md font-medium text-gray-700 mb-3">S2 (Age Sub-Score) Calculation</h4>
+                  <div className="rounded-lg border border-green-200 bg-green-50 p-4">
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-green-900">Age:</span>
+                        <span className="text-lg font-bold text-green-900">{analysis.age} years</span>
+                      </div>
+                      <div className="border-t border-green-200 pt-2 mt-2">
+                        <p className="text-xs text-green-700 mb-2">S2 Calculation Rules:</p>
+                        <ul className="text-xs text-green-600 space-y-1 ml-4 list-disc">
+                          <li>Age &lt; 65: S2 = 0.0</li>
+                          <li>Age 65-74: S2 = 0.5</li>
+                          <li>Age 75-84: S2 = 0.7</li>
+                          <li>Age ≥ 85: S2 = 1.0</li>
+                        </ul>
+                      </div>
+                      {analysis.riskCalculation.calculation.s2Explanation && (
+                        <div className="border-t border-green-200 pt-2 mt-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium text-green-900">Calculated S2:</span>
+                            <span className="text-lg font-bold text-green-900">
+                              {analysis.riskCalculation.scores.s2}
+                            </span>
+                          </div>
+                          <p className="text-xs text-green-600 mt-1 italic">
+                            {analysis.riskCalculation.calculation.s2Explanation}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* S3 Calculation Breakdown */}
+                <div className="mb-6">
+                  <h4 className="text-md font-medium text-gray-700 mb-3">S3 (DDI Sub-Score) Calculation</h4>
+                  <div className="rounded-lg border border-orange-200 bg-orange-50 p-4">
+                    <div className="space-y-2">
+                      <div className="grid grid-cols-3 gap-2">
+                        <div className="text-center">
+                          <span className="text-xs text-orange-700">Major DDI:</span>
+                          <p className="text-lg font-bold text-orange-900">{severitySummary.Major || 0}</p>
+                        </div>
+                        <div className="text-center">
+                          <span className="text-xs text-orange-700">Moderate DDI:</span>
+                          <p className="text-lg font-bold text-orange-900">{severitySummary.Moderate || 0}</p>
+                        </div>
+                        <div className="text-center">
+                          <span className="text-xs text-orange-700">Minor DDI:</span>
+                          <p className="text-lg font-bold text-orange-900">{severitySummary.Minor || 0}</p>
+                        </div>
+                      </div>
+                      <div className="border-t border-orange-200 pt-2 mt-2">
+                        <p className="text-xs text-orange-700 mb-2">S3 Calculation Rules:</p>
+                        <ul className="text-xs text-orange-600 space-y-1 ml-4 list-disc">
+                          <li>Major DDI: 1.0 × Major DDI Count</li>
+                          <li>Moderate DDI: 0.6 × Moderate DDI Count</li>
+                          <li>Minor DDI: 0.3 × Minor DDI Count</li>
+                          <li>S3 = (Major × 1.0) + (Moderate × 0.6) + (Minor × 0.3)</li>
+                          <li>No DDI: S3 = 0.0</li>
+                        </ul>
+                      </div>
+                      {analysis.riskCalculation.calculation.s3Explanation && (
+                        <div className="border-t border-orange-200 pt-2 mt-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium text-orange-900">Calculated S3:</span>
+                            <span className="text-lg font-bold text-orange-900">
+                              {analysis.riskCalculation.scores.s3}
+                            </span>
+                          </div>
+                          <p className="text-xs text-orange-600 mt-1 italic">
+                            {analysis.riskCalculation.calculation.s3Explanation}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* S4 Calculation Breakdown */}
+                <div className="mb-6">
+                  <h4 className="text-md font-medium text-gray-700 mb-3">S4 (Liver Function Sub-Score) Calculation</h4>
+                  <div className="rounded-lg border border-purple-200 bg-purple-50 p-4">
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-purple-900">Liver Function:</span>
+                        <span className="text-lg font-bold text-purple-900">{analysis.liverFunction}</span>
+                      </div>
+                      <div className="border-t border-purple-200 pt-2 mt-2">
+                        <p className="text-xs text-purple-700 mb-2">S4 Calculation Rules:</p>
+                        <ul className="text-xs text-purple-600 space-y-1 ml-4 list-disc">
+                          <li>Normal (&lt;40 IU/L): S4 = 0.0</li>
+                          <li>Mild risk (40-80 IU/L): S4 = 0.3</li>
+                          <li>Moderate risk (80-150 IU/L): S4 = 0.6</li>
+                          <li>Severe risk (&gt;150 IU/L): S4 = 1.0</li>
+                        </ul>
+                      </div>
+                      {analysis.riskCalculation.calculation.s4Explanation && (
+                        <div className="border-t border-purple-200 pt-2 mt-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium text-purple-900">Calculated S4:</span>
+                            <span className="text-lg font-bold text-purple-900">
+                              {analysis.riskCalculation.scores.s4}
+                            </span>
+                          </div>
+                          <p className="text-xs text-purple-600 mt-1 italic">
+                            {analysis.riskCalculation.calculation.s4Explanation}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* S5 Calculation Breakdown */}
+                <div className="mb-6">
+                  <h4 className="text-md font-medium text-gray-700 mb-3">S5 (Kidney Function Sub-Score) Calculation</h4>
+                  <div className="rounded-lg border border-teal-200 bg-teal-50 p-4">
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-teal-900">Kidney Function:</span>
+                        <span className="text-lg font-bold text-teal-900">{analysis.kidneyFunction}</span>
+                      </div>
+                      <div className="border-t border-teal-200 pt-2 mt-2">
+                        <p className="text-xs text-teal-700 mb-2">S5 Calculation Rules:</p>
+                        <ul className="text-xs text-teal-600 space-y-1 ml-4 list-disc">
+                          <li>Stage 1 (eGFR 90): S5 = 0.0</li>
+                          <li>Stage 2 (eGFR 60-89): S5 = 0.3</li>
+                          <li>Stage 3a (eGFR 45-59): S5 = 0.5</li>
+                          <li>Stage 3b (eGFR 30-44): S5 = 0.7</li>
+                          <li>Stage 4 (eGFR 15-29): S5 = 0.9</li>
+                          <li>Stage 5 (eGFR &lt;15): S5 = 1.0</li>
+                        </ul>
+                      </div>
+                      {analysis.riskCalculation.calculation.s5Explanation && (
+                        <div className="border-t border-teal-200 pt-2 mt-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium text-teal-900">Calculated S5:</span>
+                            <span className="text-lg font-bold text-teal-900">
+                              {analysis.riskCalculation.scores.s5}
+                            </span>
+                          </div>
+                          <p className="text-xs text-teal-600 mt-1 italic">
+                            {analysis.riskCalculation.calculation.s5Explanation}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Calculation Components */}
+                <div className="mb-6">
+                  <h4 className="text-md font-medium text-gray-700 mb-3">Weighted Components</h4>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 p-3">
+                      <span className="text-sm text-gray-600">
+                        Drug Component = {analysis.riskCalculation.weights.drugWeight} × {analysis.riskCalculation.scores.s1} (S1 from {analysis.drugCount} drugs)
+                      </span>
+                      <span className="text-lg font-semibold text-gray-900">
+                        = {analysis.riskCalculation.calculation.drugComponent}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 p-3">
+                      <span className="text-sm text-gray-600">
+                        Age Component = {analysis.riskCalculation.weights.ageWeight} × {analysis.riskCalculation.scores.s2}
+                      </span>
+                      <span className="text-lg font-semibold text-gray-900">
+                        = {analysis.riskCalculation.calculation.ageComponent}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 p-3">
+                      <span className="text-sm text-gray-600">
+                        DDI Component = {analysis.riskCalculation.weights.ddiWeight} × {analysis.riskCalculation.scores.s3} × {analysis.riskCalculation.ddiCount}
+                      </span>
+                      <span className="text-lg font-semibold text-gray-900">
+                        = {analysis.riskCalculation.calculation.ddiComponent}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 p-3">
+                      <span className="text-sm text-gray-600">
+                        Liver Component = {analysis.riskCalculation.weights.liverWeight} × {analysis.riskCalculation.scores.s4}
+                      </span>
+                      <span className="text-lg font-semibold text-gray-900">
+                        = {analysis.riskCalculation.calculation.liverComponent}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 p-3">
+                      <span className="text-sm text-gray-600">
+                        Kidney Component = {analysis.riskCalculation.weights.kidneyWeight} × {analysis.riskCalculation.scores.s5}
+                      </span>
+                      <span className="text-lg font-semibold text-gray-900">
+                        = {analysis.riskCalculation.calculation.kidneyComponent}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between rounded-lg border-2 border-indigo-300 bg-indigo-50 p-4 mt-3">
+                      <span className="text-base font-semibold text-indigo-900">Total Risk Score</span>
+                      <span className="text-2xl font-bold text-indigo-900">
+                        = {analysis.riskCalculation.riskScore}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Risk Categories */}
+                <div>
+                  <h4 className="text-md font-medium text-gray-700 mb-3">Risk Categories</h4>
+                  <div className="grid gap-2 md:grid-cols-4">
+                    <div className={`rounded-lg border p-3 ${analysis.riskCalculation.riskScore < 30 ? 'border-green-300 bg-green-50' : 'border-gray-200 bg-gray-50'}`}>
+                      <p className="text-xs text-gray-600">Low</p>
+                      <p className="text-sm font-medium text-gray-900">0 - 29</p>
+                    </div>
+                    <div className={`rounded-lg border p-3 ${analysis.riskCalculation.riskScore >= 30 && analysis.riskCalculation.riskScore < 60 ? 'border-yellow-300 bg-yellow-50' : 'border-gray-200 bg-gray-50'}`}>
+                      <p className="text-xs text-gray-600">Moderate</p>
+                      <p className="text-sm font-medium text-gray-900">30 - 59</p>
+                    </div>
+                    <div className={`rounded-lg border p-3 ${analysis.riskCalculation.riskScore >= 60 && analysis.riskCalculation.riskScore < 80 ? 'border-orange-300 bg-orange-50' : 'border-gray-200 bg-gray-50'}`}>
+                      <p className="text-xs text-gray-600">High</p>
+                      <p className="text-sm font-medium text-gray-900">60 - 79</p>
+                    </div>
+                    <div className={`rounded-lg border p-3 ${analysis.riskCalculation.riskScore >= 80 ? 'border-red-300 bg-red-50' : 'border-gray-200 bg-gray-50'}`}>
+                      <p className="text-xs text-gray-600">Very High</p>
+                      <p className="text-sm font-medium text-gray-900">≥ 80</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
               <h3 className="text-lg font-semibold text-gray-900">Interaction Breakdown</h3>
