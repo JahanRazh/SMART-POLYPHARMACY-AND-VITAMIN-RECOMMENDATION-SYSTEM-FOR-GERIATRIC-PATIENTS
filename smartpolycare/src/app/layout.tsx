@@ -16,7 +16,9 @@ export const metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
-      <body className="flex flex-col min-h-screen bg-white text-gray-900">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+      <body className="flex flex-col min-h-screen bg-white text-gray-900" >
         <AuthProvider>
           {/* HEADER with Auth - Client Component */}
           <HeaderWithAuth />

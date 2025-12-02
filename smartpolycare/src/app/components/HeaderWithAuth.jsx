@@ -38,9 +38,6 @@ export default function HeaderWithAuth() {
           <Link href="/Pages/About" className="text-gray-700 hover:text-teal-600 font-medium transition-colors duration-200">
             About
           </Link>
-          <Link href="/Pages/patients" className="text-gray-700 hover:text-teal-600 font-medium transition-colors duration-200">
-            Patients
-          </Link>
         </nav>
 
         <div className="flex items-center space-x-4">
