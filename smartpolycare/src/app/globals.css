@@ -333,3 +333,30 @@ body {
   transform: translateY(-10px);
   transition: all 0.2s ease-in-out;
 }
+/* Use responsive CSS */
+
+/* Default for mobile */
+body {
+  font-size: 16px;
+}
+
+/* Tablet */
+@media (min-width: 600px) {
+  body {
+    font-size: 18px;
+  }
+}
+
+/* Small laptop / desktop */
+@media (min-width: 1024px) {
+  body {
+    font-size: 18px;
+  }
+}
+
+/* Large desktop */
+@media (min-width: 1440px) {
+  body {
+    font-size: 22px;
+  }
+}
