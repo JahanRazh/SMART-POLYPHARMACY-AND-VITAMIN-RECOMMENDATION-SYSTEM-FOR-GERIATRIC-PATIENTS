@@ -4,7 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import UserProfile from './UserProfile';
 import { useState } from "react";
-
+import '../globals.css';
 export default function HeaderWithAuth() {
   const [menuOpen, setMenuOpen] = useState(false);
 
