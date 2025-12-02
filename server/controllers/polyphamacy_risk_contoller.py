@@ -5,6 +5,7 @@ from models.polyphamacy_risk_model import (
     find_drug_interactions,
     get_user_profile,
     save_polypharmacy_assessment,
+    search_drug_names,
 )
 
 MAX_DRUGS = 20
@@ -101,3 +102,25 @@ def analyze_polypharmacy():
     }
 
     return jsonify(response), 200
+
+
+def search_drugs():
+    """
+    Fuzzy search endpoint for drug names based on Drug_interaction.csv.
+
+    Query params:
+      - q: search text (required)
+      - limit: max number of results (optional, default 15)
+    """
+    query = request.args.get("q", "", type=str)
+    if not query:
+        return jsonify({"items": []}), 200
+
+    limit = request.args.get("limit", 15, type=int)
+    try:
+        suggestions = search_drug_names(query, limit=limit)
+        return jsonify({"items": suggestions}), 200
+    except FileNotFoundError as file_error:
+        return jsonify({"message": str(file_error), "items": []}), 500
+    except Exception as error:
+        return jsonify({"message": f"Unable to search drugs: {error}", "items": []}), 500
