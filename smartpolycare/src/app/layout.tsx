@@ -84,7 +84,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               
               <div className="border-t border-gray-800 mt-2 pt-4 flex flex-col md:flex-row justify-between items-center">
                 <p className="text-gray-400 text-base">
-                  &copy; 2024 SmartPolyCare. Clinical-grade AI solutions.
+                  &copy; 2025 SmartPolyCare. Clinical-grade AI solutions.
                 </p>
                 <div className="flex space-x-6 mt-4 md:mt-0">
                   <Link href="/privacy" className="text-gray-400 hover:text-white transition text-sm">
@@ -92,9 +92,6 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                   </Link>
                   <Link href="/terms" className="text-gray-400 hover:text-white transition text-sm">
                     Terms of Service
-                  </Link>
-                  <Link href="/compliance" className="text-gray-400 hover:text-white transition text-sm">
-                    HIPAA Compliance
                   </Link>
                 </div>
               </div>
