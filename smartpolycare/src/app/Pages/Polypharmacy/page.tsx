@@ -1,7 +1,7 @@
 'use client'
 
 import { useAuth } from '@/app/components/Contexts/AuthContext'
-import React, { FormEvent, useMemo, useState } from 'react'
+import React, { FormEvent, useEffect, useMemo, useState } from 'react'
 
 type SeveritySummary = Record<string, number>
 
@@ -108,6 +108,13 @@ const PolypharmacyPage = () => {
     const last = userProfile.lastName || ''
     return `${first} ${last}`.trim()
   }, [userProfile])
+
+  useEffect(() => {
+    // Auto-fill age from the authenticated user's profile when available
+    if (userProfile?.age !== undefined && userProfile?.age !== null && age === '') {
+      setAge(String(userProfile.age))
+    }
+  }, [userProfile, age])
 
   const handleDrugChange = async (index: number, value: string) => {
     setDrugs((prev) => prev.map((drug, idx) => (idx === index ? value : drug)))
