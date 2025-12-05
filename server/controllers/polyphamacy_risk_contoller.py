@@ -19,6 +19,8 @@ def analyze_polypharmacy():
     age = payload.get("age")
     liver_function = payload.get("liverFunction")
     kidney_function = payload.get("kidneyFunction")
+    mode = payload.get("mode", "self")  # Default to "self" if not provided
+    patient_info = payload.get("patientInfo")  # Optional patient info for caretaker mode
 
     if not user_id:
         return jsonify({"message": "userId is required"}), 400
@@ -34,6 +36,10 @@ def analyze_polypharmacy():
 
     if not kidney_function or not isinstance(kidney_function, str):
         return jsonify({"message": "kidneyFunction is required"}), 400
+
+    # Validate mode
+    if mode not in ["self", "caretaker"]:
+        return jsonify({"message": "mode must be either 'self' or 'caretaker'"}), 400
 
     sanitized_drugs = []
     seen = set()
@@ -79,6 +85,8 @@ def analyze_polypharmacy():
             liver_function=liver_function,
             kidney_function=kidney_function,
             risk_calculation=risk_calculation,
+            mode=mode,
+            patient_info=patient_info,
         )
     except FileNotFoundError as file_error:
         return jsonify({"message": str(file_error)}), 500
@@ -87,6 +95,7 @@ def analyze_polypharmacy():
 
     response = {
         "assessmentId": assessment.get("id"),
+        "mode": assessment.get("mode", "self"),
         "user": assessment.get("user"),
         "drugCount": assessment.get("drugCount"),
         "drugs": assessment.get("drugs"),
