@@ -158,39 +158,26 @@ def save_polypharmacy_assessment(
     liver_function: str,
     kidney_function: str,
     risk_calculation: Dict,
-    mode: str = "self",
-    patient_info: Optional[Dict] = None,
 ) -> Dict:
     """Persist the assessment in Firestore."""
     db = get_db()
     doc_ref = db.collection(POLYPHARMACY_COLLECTION).document()
     timestamp = datetime.utcnow().isoformat()
 
-    # Use patient_info if provided (caretaker mode or self mode with edited fields)
-    if patient_info:
-        patient_data = {
-            "firstName": patient_info.get("firstName") or user_profile.get("firstName"),
-            "lastName": patient_info.get("lastName") or user_profile.get("lastName"),
-            "displayName": patient_info.get("displayName") or patient_info.get("fullName") or user_profile.get("displayName"),
-            "age": age,
-            "gender": patient_info.get("gender") or user_profile.get("gender"),
-            "email": user_profile.get("email") if mode == "self" else None,
-            "photoURL": user_profile.get("photoURL") if mode == "self" else None,
-        }
-    else:
-        patient_data = {
-            "firstName": user_profile.get("firstName"),
-            "lastName": user_profile.get("lastName"),
-            "displayName": user_profile.get("displayName"),
-            "age": age,
-            "gender": user_profile.get("gender"),
-            "email": user_profile.get("email"),
-            "photoURL": user_profile.get("photoURL"),
-        }
+    # Always store the logged-in user's profile (caretaker mode removed)
+    patient_data = {
+        "firstName": user_profile.get("firstName"),
+        "lastName": user_profile.get("lastName"),
+        "displayName": user_profile.get("displayName"),
+        "age": age,
+        "gender": user_profile.get("gender"),
+        "email": user_profile.get("email"),
+        "photoURL": user_profile.get("photoURL"),
+    }
 
     payload = {
         "userId": user_id,
-        "mode": mode.lower(),  # Store as lowercase: "self" or "caretaker"
+        "mode": "self",
         "user": patient_data,
         "drugs": drugs,
         "drugCount": len(drugs),

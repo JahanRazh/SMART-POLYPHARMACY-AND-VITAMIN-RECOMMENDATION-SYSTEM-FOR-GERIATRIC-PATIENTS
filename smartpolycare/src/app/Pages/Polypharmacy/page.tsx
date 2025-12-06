@@ -76,7 +76,6 @@ const API_BASE =
 
 const PolypharmacyPage = () => {
   const { user, userProfile } = useAuth();
-  const [mode, setMode] = useState<"self" | "caretaker">("self");
   const [drugs, setDrugs] = useState<string[]>([""]);
   const [activeDrugIndex, setActiveDrugIndex] = useState<number | null>(null);
   const [drugSuggestions, setDrugSuggestions] = useState<string[]>([]);
@@ -114,12 +113,7 @@ const PolypharmacyPage = () => {
   ];
 
   useEffect(() => {
-    // Only auto-fill when mode is "self"
-    if (mode === "caretaker") {
-      return;
-    }
-
-    // Auto-fill age from the authenticated user's profile when available
+    // Auto-fill from the authenticated user's profile when available
     if (
       userProfile?.age !== undefined &&
       userProfile?.age !== null &&
@@ -136,14 +130,14 @@ const PolypharmacyPage = () => {
     if (userProfile?.gender && gender === "") {
       setGender(userProfile.gender);
     }
-  }, [userProfile, age, firstName, lastName, gender, mode]);
+  }, [userProfile, age, firstName, lastName, gender]);
 
   useEffect(() => {
     // Auto-fill full name based on firstName and lastName
     const nameFromFields = `${(firstName || "").trim()} ${(lastName || "").trim()}`.trim();
     
     // In self mode, initially prefer displayName from profile if firstName/lastName are empty
-    if (mode === "self" && userProfile?.displayName && !firstName && !lastName && !fullName && !isFullNameDirty) {
+    if (userProfile?.displayName && !firstName && !lastName && !fullName && !isFullNameDirty) {
       setFullName(userProfile.displayName);
       return;
     }
@@ -161,26 +155,8 @@ const PolypharmacyPage = () => {
       if (nameFromFields !== fullName) {
         setFullName(nameFromFields);
       }
-    } else if (!nameFromFields && mode === "caretaker" && fullName) {
-      // Clear full name if both firstName and lastName are empty in caretaker mode
-      setFullName("");
     }
-  }, [userProfile, firstName, lastName, isFullNameDirty, fullName, mode]);
-
-  // Handle mode change - clear fields when switching to caretaker mode
-  const handleModeChange = (newMode: "self" | "caretaker") => {
-    setMode(newMode);
-    if (newMode === "caretaker") {
-      // Clear all fields for caretaker mode
-      setFirstName("");
-      setLastName("");
-      setFullName("");
-      setIsFullNameDirty(false);
-      setGender("");
-      setAge("");
-      setAgeError("");
-    }
-  };
+  }, [userProfile, firstName, lastName, isFullNameDirty, fullName]);
 
   const handleDrugChange = async (index: number, value: string) => {
     setDrugs((prev) => prev.map((drug, idx) => (idx === index ? value : drug)));
@@ -295,18 +271,6 @@ const PolypharmacyPage = () => {
           age: ageNum,
           liverFunction: liverFunction,
           kidneyFunction: kidneyFunction,
-          mode: mode,
-          patientInfo: mode === "caretaker" ? {
-            firstName: firstName,
-            lastName: lastName,
-            fullName: fullName,
-            gender: gender,
-          } : mode === "self" && (fullName || firstName || lastName) ? {
-            firstName: firstName,
-            lastName: lastName,
-            fullName: fullName,
-            gender: gender,
-          } : undefined,
         }),
       });
 
@@ -381,25 +345,8 @@ const PolypharmacyPage = () => {
                   Patient Snapshot
                 </h2>
                 <p className="text-sm text-gray-500">
-                  {mode === "self"
-                    ? "We auto-fill what we know about you."
-                    : "Enter patient details manually."}
+                  We auto-fill what we know about you.
                 </p>
-              </div>
-              <div className="flex items-center gap-3">
-                <label className="text-sm font-medium text-gray-700">
-                  Mode:
-                </label>
-                <select
-                  value={mode}
-                  onChange={(e) =>
-                    handleModeChange(e.target.value as "self" | "caretaker")
-                  }
-                  className="rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:outline-none"
-                >
-                  <option value="self">Self</option>
-                  <option value="caretaker">Caretaker</option>
-                </select>
               </div>
             </div>
 
