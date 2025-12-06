@@ -164,17 +164,21 @@ def save_polypharmacy_assessment(
     doc_ref = db.collection(POLYPHARMACY_COLLECTION).document()
     timestamp = datetime.utcnow().isoformat()
 
+    # Always store the logged-in user's profile (caretaker mode removed)
+    patient_data = {
+        "firstName": user_profile.get("firstName"),
+        "lastName": user_profile.get("lastName"),
+        "displayName": user_profile.get("displayName"),
+        "age": age,
+        "gender": user_profile.get("gender"),
+        "email": user_profile.get("email"),
+        "photoURL": user_profile.get("photoURL"),
+    }
+
     payload = {
         "userId": user_id,
-        "user": {
-            "firstName": user_profile.get("firstName"),
-            "lastName": user_profile.get("lastName"),
-            "displayName": user_profile.get("displayName"),
-            "age": age,
-            "gender": user_profile.get("gender"),
-            "email": user_profile.get("email"),
-            "photoURL": user_profile.get("photoURL"),
-        },
+        "mode": "self",
+        "user": patient_data,
         "drugs": drugs,
         "drugCount": len(drugs),
         "interactions": interactions,

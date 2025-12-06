@@ -19,6 +19,7 @@ def analyze_polypharmacy():
     age = payload.get("age")
     liver_function = payload.get("liverFunction")
     kidney_function = payload.get("kidneyFunction")
+    # caretaker mode removed; always treat as self
 
     if not user_id:
         return jsonify({"message": "userId is required"}), 400
@@ -68,7 +69,7 @@ def analyze_polypharmacy():
             liver_function=liver_function,
             kidney_function=kidney_function,
         )
-        
+
         assessment = save_polypharmacy_assessment(
             user_id=user_id,
             user_profile=user_profile,
@@ -87,6 +88,7 @@ def analyze_polypharmacy():
 
     response = {
         "assessmentId": assessment.get("id"),
+        "mode": "self",
         "user": assessment.get("user"),
         "drugCount": assessment.get("drugCount"),
         "drugs": assessment.get("drugs"),
