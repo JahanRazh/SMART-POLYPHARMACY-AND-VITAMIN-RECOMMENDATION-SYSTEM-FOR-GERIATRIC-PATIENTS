@@ -6,6 +6,22 @@ import { useAuth } from '../Contexts/AuthContext';
 
 const ProfileModal = ({ isOpen, onClose }) => {
   const { user, userProfile, updateProfileData } = useAuth();
+  const calculateAge = (dateString) => {
+    const dob = new Date(dateString);
+    if (Number.isNaN(dob.getTime())) return '';
+
+    const today = new Date();
+    let age = today.getFullYear() - dob.getFullYear();
+    const monthDiff = today.getMonth() - dob.getMonth();
+    const dayDiff = today.getDate() - dob.getDate();
+
+    if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) {
+      age -= 1;
+    }
+
+    return age >= 0 && age <= 150 ? age : '';
+  };
+
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -23,11 +39,15 @@ const ProfileModal = ({ isOpen, onClose }) => {
 
   useEffect(() => {
     if (userProfile) {
+      const derivedAge =
+        userProfile.age ||
+        (userProfile.dateOfBirth ? calculateAge(userProfile.dateOfBirth) : '');
+
       setFormData({
         firstName: userProfile.firstName || '',
         lastName: userProfile.lastName || '',
         email: user?.email || userProfile.email || '',
-        age: userProfile.age || '',
+        age: derivedAge || '',
         gender: userProfile.gender || '',
         phoneNumber: userProfile.phoneNumber || '',
         address: userProfile.address || '',
@@ -39,9 +59,21 @@ const ProfileModal = ({ isOpen, onClose }) => {
   }, [userProfile, user]);
 
   const handleChange = (e) => {
-    setFormData(prev => ({
+    const { name, value } = e.target;
+
+    if (name === 'dateOfBirth') {
+      const autoAge = calculateAge(value);
+      setFormData((prev) => ({
+        ...prev,
+        dateOfBirth: value,
+        age: autoAge !== '' ? autoAge : prev.age
+      }));
+      return;
+    }
+
+    setFormData((prev) => ({
       ...prev,
-      [e.target.name]: e.target.value
+      [name]: value
     }));
   };
 
