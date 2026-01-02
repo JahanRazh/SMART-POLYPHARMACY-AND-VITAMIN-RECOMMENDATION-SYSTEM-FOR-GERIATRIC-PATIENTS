@@ -159,9 +159,8 @@ def save_polypharmacy_assessment(
     kidney_function: str,
     risk_calculation: Dict,
 ) -> Dict:
-    """Persist the assessment in Firestore."""
+    """Persist the latest assessment for the user (upsert single record)."""
     db = get_db()
-    doc_ref = db.collection(POLYPHARMACY_COLLECTION).document()
     timestamp = datetime.utcnow().isoformat()
 
     # Always store the logged-in user's profile (caretaker mode removed)
@@ -188,12 +187,29 @@ def save_polypharmacy_assessment(
         "liverFunction": liver_function,
         "kidneyFunction": kidney_function,
         "riskCalculation": risk_calculation,
-        "createdAt": timestamp,
         "updatedAt": timestamp,
         "source": "Drug_interaction.csv",
     }
 
-    doc_ref.set(payload)
+    # Upsert: keep a single assessment per user
+    existing = (
+        db.collection(POLYPHARMACY_COLLECTION)
+        .where("userId", "==", user_id)
+        .limit(1)
+        .get()
+    )
+
+    if existing:
+        doc_ref = existing[0].reference
+        # Preserve original createdAt if present
+        created_at = existing[0].to_dict().get("createdAt")
+        payload["createdAt"] = created_at or timestamp
+        doc_ref.set(payload)
+    else:
+        doc_ref = db.collection(POLYPHARMACY_COLLECTION).document()
+        payload["createdAt"] = timestamp
+        doc_ref.set(payload)
+
     payload["id"] = doc_ref.id
     return payload
 
