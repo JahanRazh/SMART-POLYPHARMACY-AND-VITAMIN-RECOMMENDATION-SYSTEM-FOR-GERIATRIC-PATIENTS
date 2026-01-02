@@ -15,10 +15,10 @@ from db import get_db
 DATA_FILE = os.path.join(os.path.dirname(__file__), "..", "Data", "Drug_interaction.csv")
 POLYPHARMACY_COLLECTION = "polypharmacy_assessments"
 USERS_COLLECTION = "users"
+# Load the ML model
+ML_MODEL_PATH = os.path.join(os.path.dirname(__file__), "..", "models", "polypharmacy_risk_train_model.pkl")
+ml_model = joblib.load(ML_MODEL_PATH)               
 
-# Load ML model once at import time
-MODEL_PATH = os.path.join(os.path.dirname(__file__), 'polypharmacy_risk_train_model.pkl')
-ml_model = joblib.load(MODEL_PATH)
 
 # ------------------ All original functions (unchanged) ------------------
 def _normalize_drug_name(value: str) -> str:
