@@ -4,6 +4,8 @@ from flask_cors import CORS
 
 # Import the blueprints
 from routes.polyphamacy_risk_route import polypharmacy_bp
+from routes.emotion_route import emotion_bp
+
 from db import get_db
 
 # Create Flask app
@@ -12,6 +14,7 @@ CORS(app)
 
 # Register blueprints
 app.register_blueprint(polypharmacy_bp)
+app.register_blueprint(emotion_bp)
 
 @app.route('/')
 def health_check():
