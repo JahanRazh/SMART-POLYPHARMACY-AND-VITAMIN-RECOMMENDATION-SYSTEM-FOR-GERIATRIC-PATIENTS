@@ -16,9 +16,9 @@
     "firebase": "^12.5.0",
     "framer-motion": "^12.23.24",
     "lucide-react": "^0.545.0",
-    "next": "^16.0.2-canary.9",
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0",
+    "next": "^15.1.4",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
     "react-webcam": "^7.2.0",
     "tailwind-merge": "^3.3.1"
   },
