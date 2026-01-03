@@ -18,10 +18,15 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <head>
-        {/* important for mobile responsiveness */}
+        {/* Important for mobile responsiveness */}
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        {/* Prevent Grammarly from modifying the page */}
+        <meta name="grammarly-disable" content="true" />
       </head>
-      <body className="flex flex-col min-h-screen bg-white text-gray-900">
+      <body 
+        className="flex flex-col min-h-screen bg-white text-gray-900"
+        suppressHydrationWarning={true}
+      >
         <AuthProvider>
           {/* HEADER */}
           <HeaderWithAuth />
