@@ -5,6 +5,7 @@ from flask_cors import CORS
 from routes.polyphamacy_risk_route import polypharmacy_bp
 from routes.emotion_route import emotion_bp
 from routes.full_assessment_route import full_assessment_bp
+from routes.meal_plan_route import meal_plan_bp
 
 from db import get_db
 
@@ -15,6 +16,7 @@ CORS(app)
 app.register_blueprint(polypharmacy_bp)
 app.register_blueprint(emotion_bp)
 app.register_blueprint(full_assessment_bp)
+app.register_blueprint(meal_plan_bp)
 
 @app.route('/')
 def health_check():
