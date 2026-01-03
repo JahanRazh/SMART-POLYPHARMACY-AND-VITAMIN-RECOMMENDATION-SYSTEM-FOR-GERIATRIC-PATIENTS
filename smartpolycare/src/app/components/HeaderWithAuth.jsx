@@ -45,7 +45,7 @@ export default function HeaderWithAuth() {
             Home
           </Link>
           <Link
-            href="/Pages/Polypharmacy"
+            href="/Pages/Polypharmacy/Homepage"
             className="text-gray-700 hover:text-teal-600 font-medium transition-colors"
           >
             Polypharmacy Risk
@@ -62,12 +62,7 @@ export default function HeaderWithAuth() {
           >
             About
           </Link>
-          <Link
-            href="/Pages/patients"
-            className="text-gray-700 hover:text-teal-600 font-medium transition-colors"
-          >
-            Patients
-          </Link>
+         
         </nav>
 
         {/* RIGHT SIDE: USER + MOBILE MENU BUTTON */}
