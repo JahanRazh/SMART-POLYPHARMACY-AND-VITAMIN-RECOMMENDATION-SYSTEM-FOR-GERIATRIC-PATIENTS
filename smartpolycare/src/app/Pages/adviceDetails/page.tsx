@@ -25,11 +25,15 @@ const PatientAssessmentForm = () => {
   });
 
   const [detectedEmotion, setDetectedEmotion] = useState("");
+  const [allPredictions, setAllPredictions] = useState<Record<string, number>>({});
   const [mentalHealthLevel, setMentalHealthLevel] = useState("");
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [cameraActive, setCameraActive] = useState(false);
+  const [detectionCount, setDetectionCount] = useState(0);
+  const [webcamReady, setWebcamReady] = useState(false);
+  const [stopDetection, setStopDetection] = useState(false);
 
   // Auto-fill from user profile
   useEffect(() => {
@@ -37,7 +41,6 @@ const PatientAssessmentForm = () => {
       setFormData((prev) => {
         const updates: Partial<typeof formData> = {};
 
-        // Auto-fill name (use displayName or combine firstName and lastName)
         if (!prev.name) {
           const fullName = userProfile.displayName || 
             `${(userProfile.firstName || "").trim()} ${(userProfile.lastName || "").trim()}`.trim();
@@ -46,15 +49,12 @@ const PatientAssessmentForm = () => {
           }
         }
 
-        // Auto-fill age
         if (userProfile.age !== undefined && userProfile.age !== null && !prev.age) {
           updates.age = String(userProfile.age);
         }
 
-        // Auto-fill gender (map to capitalize first letter to match form format)
         if (userProfile.gender && prev.gender === "Male") {
           const genderCapitalized = userProfile.gender.charAt(0).toUpperCase() + userProfile.gender.slice(1).toLowerCase();
-          // Map "Other" or other values to "Male" as default, or handle as needed
           if (genderCapitalized === "Male" || genderCapitalized === "Female") {
             updates.gender = genderCapitalized;
           }
@@ -65,46 +65,54 @@ const PatientAssessmentForm = () => {
     }
   }, [userProfile]);
 
-  // Capture webcam image every 5 seconds for emotion (background detection)
+  const handleWebcamLoad = () => {
+    console.log("✅ Webcam loaded successfully");
+    setWebcamReady(true);
+  };
+
+  const handleWebcamError = (error: string | DOMException) => {
+    console.log("⚠️ Webcam error (ignored):", error);
+  };
+
+  // Emotion detection
   useEffect(() => {
-    if (!formData.name || !formData.age) {
+    if (!formData.name || !formData.age || !webcamReady || stopDetection) {
       setCameraActive(false);
       return;
     }
 
-    // Check if webcam is available
-    const checkWebcam = () => {
-      if (webcamRef.current) {
-        const imageSrc = webcamRef.current.getScreenshot();
-        if (imageSrc) {
-          setCameraActive(true);
-          return true;
-        }
-      }
-      setCameraActive(false);
-      return false;
-    };
+    let mounted = true;
+    let detectionInterval: NodeJS.Timeout;
 
-    // Initial check after a short delay to allow webcam to initialize
-    const initTimeout = setTimeout(() => {
-      checkWebcam();
-    }, 1000);
-
-    const interval = setInterval(async () => {
-      if (!webcamRef.current) {
-        setCameraActive(false);
-        return;
-      }
-
-      const imageSrc = webcamRef.current.getScreenshot();
-      if (!imageSrc) {
-        setCameraActive(false);
-        return;
-      }
-
-      setCameraActive(true);
+    const captureAndDetect = async () => {
+      if (!mounted || stopDetection) return;
 
       try {
+        if (!webcamRef.current) {
+          console.log("⚠️ Webcam ref null (ignored)");
+          return;
+        }
+
+        const video = webcamRef.current.video;
+        if (!video || video.readyState !== 4) {
+          console.log("⚠️ Video not ready (ignored)");
+          return;
+        }
+
+        if (video.videoWidth === 0 || video.videoHeight === 0) {
+          console.log("⚠️ No video dimensions (ignored)");
+          return;
+        }
+
+        const imageSrc = webcamRef.current.getScreenshot();
+        if (!imageSrc || imageSrc.length < 5000) {
+          console.log("⚠️ Invalid screenshot (ignored)");
+          return;
+        }
+
+        console.log(`📸 Capture #${detectionCount + 1}`);
+        setCameraActive(true);
+
         const res = await fetch("http://127.0.0.1:5000/detect_emotion", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -112,37 +120,43 @@ const PatientAssessmentForm = () => {
             name: formData.name,
             age: Number(formData.age),
             image: imageSrc,
+            timestamp: Date.now(),
           }),
         });
 
         if (!res.ok) {
-          const errorData = await res.json().catch(() => ({ error: "Unknown error" }));
-          console.error("Emotion detection API error:", errorData);
-          setCameraActive(false);
+          console.log("⚠️ API error (ignored)");
           return;
         }
 
         const data = await res.json();
-        console.log("Emotion detection response:", data);
-        
+        console.log("✅ Emotion:", data.emotion);
+
         if (data.emotion) {
           setDetectedEmotion(data.emotion);
-          setCameraActive(true);
-        } else if (data.error) {
-          console.error("Emotion detection error:", data.error);
-          setCameraActive(false);
+          setAllPredictions(data.all_predictions || {});
+          setDetectionCount(prev => prev + 1);
         }
       } catch (error) {
-        console.error("Emotion detection failed:", error);
-        setCameraActive(false);
+        console.log("⚠️ Detection failed (ignored)");
       }
-    }, 5000);
+    };
+
+    const startDetection = async () => {
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      console.log("🚀 Starting emotion detection");
+      
+      await captureAndDetect();
+      detectionInterval = setInterval(captureAndDetect, 5000);
+    };
+
+    startDetection();
 
     return () => {
-      clearTimeout(initTimeout);
-      clearInterval(interval);
+      mounted = false;
+      if (detectionInterval) clearInterval(detectionInterval);
     };
-  }, [formData.name, formData.age]);
+  }, [formData.name, formData.age, webcamReady, stopDetection, detectionCount]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -153,63 +167,68 @@ const PatientAssessmentForm = () => {
     setError("");
     setSuccessMessage("");
 
-    // Validation
     if (!formData.name || !formData.age) {
       setError("Please fill in name and age fields.");
       return;
     }
 
+    // Stop emotion detection
+    setStopDetection(true);
+    console.log("🛑 Stopping emotion detection");
+
     setIsSubmitting(true);
 
     try {
-      // Send mental health data to backend
-      const res = await fetch("http://127.0.0.1:5000/full_assessment", {
+      // Get mental health assessment
+      const assessmentRes = await fetch("http://127.0.0.1:5000/full_assessment", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...formData,
           age: Number(formData.age),
-          exercise_time: Number(formData.exercise_time),
-          sleep_duration: Number(formData.sleep_duration),
-          physical_activity: Number(formData.physical_activity),
-          screen_time: Number(formData.screen_time),
-          work_hours: Number(formData.work_hours),
-          social_interaction_duration: Number(formData.social_interaction_duration),
+          exercise_time: Number(formData.exercise_time) || 0,
+          sleep_duration: Number(formData.sleep_duration) || 0,
+          physical_activity: Number(formData.physical_activity) || 0,
+          screen_time: Number(formData.screen_time) || 0,
+          work_hours: Number(formData.work_hours) || 0,
+          social_interaction_duration: Number(formData.social_interaction_duration) || 0,
         }),
       });
 
-      const data = await res.json();
-      if (res.ok) {
-        setMentalHealthLevel(data.mental_health_level);
-
-        // Now save everything (including occupation, emotion, etc.) in Firebase
-        await fetch("/api/save_patient_data", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            ...formData,
-            detectedEmotion,
-            mentalHealthLevel: data.mental_health_level,
-          }),
-        });
-
-        setSuccessMessage("Patient assessment completed successfully!");
-      } else {
-        setError("Error predicting mental health: " + (data.error || "Unknown error"));
+      const assessmentData = await assessmentRes.json();
+      
+      if (!assessmentRes.ok) {
+        throw new Error(assessmentData.error || "Assessment failed");
       }
-    } catch (error) {
-      console.error(error);
-      setError("Failed to submit data. Please try again.");
+
+      setMentalHealthLevel(assessmentData.mental_health_level);
+
+      // Save complete data including emotion
+      const completeData = {
+        ...formData,
+        detectedEmotion: detectedEmotion || "Not detected",
+        emotionConfidence: allPredictions[detectedEmotion] || 0,
+        allEmotionPredictions: allPredictions,
+        mentalHealthLevel: assessmentData.mental_health_level,
+        timestamp: new Date().toISOString(),
+      };
+
+      console.log("💾 Saving data:", completeData);
+
+      await fetch("/api/save_patient_data", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(completeData),
+      });
+
+      setSuccessMessage("Patient assessment completed successfully!");
+      
+    } catch (error: any) {
+      console.error("❌ Error:", error);
+      setError(error.message || "Failed to submit data. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const formatLabel = (key: string) => {
-    return key
-      .split("_")
-      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(" ");
   };
 
   return (
@@ -481,17 +500,53 @@ const PatientAssessmentForm = () => {
             </div>
           </section>
 
-          {/* Hidden Webcam for Background Emotion Detection */}
-          <div className="fixed -left-[9999px] opacity-0 pointer-events-none">
-            <Webcam
-              ref={webcamRef}
-              audio={false}
-              screenshotFormat="image/jpeg"
-              width={320}
-              height={240}
-              videoConstraints={{ facingMode: "user" }}
-            />
-          </div>
+          {/* Small Webcam Preview (needed for capture to work) */}
+          <section className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
+            <div className="mb-4">
+              <h2 className="text-lg font-semibold text-gray-900">
+                Camera Preview
+              </h2>
+              <p className="text-sm text-gray-500">
+                Small camera preview (required for emotion detection to work properly)
+              </p>
+            </div>
+
+            <div className="flex justify-center">
+              <div className="relative rounded-lg overflow-hidden border-2 border-indigo-300">
+                <Webcam
+                  ref={webcamRef}
+                  audio={false}
+                  screenshotFormat="image/jpeg"
+                  screenshotQuality={0.95}
+                  width={160}
+                  height={120}
+                  videoConstraints={{
+                    facingMode: "user",
+                    width: { ideal: 640 },
+                    height: { ideal: 480 },
+                  }}
+                  onUserMedia={handleWebcamLoad}
+                  onUserMediaError={handleWebcamError}
+                />
+                {webcamReady && (
+                  <div className="absolute top-2 right-2 bg-green-500 rounded-full p-1">
+                    <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {!webcamReady && (
+              <p className="text-center text-sm text-amber-600 mt-3">
+                ⏳ Waiting for camera to initialize...
+              </p>
+            )}
+            {webcamReady && (
+              <p className="text-center text-sm text-green-600 mt-3">
+                ✅ Camera ready - Emotion detection active
+              </p>
+            )}
+          </section>
 
           {/* Emotion Detection Status Section */}
           <section className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
@@ -506,12 +561,26 @@ const PatientAssessmentForm = () => {
             </div>
 
             <div className="mt-6">
-              {cameraActive && detectedEmotion && (
+              {stopDetection && (
+                <div className="rounded-xl border border-gray-200 bg-gray-50 p-6">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="h-3 w-3 rounded-full bg-gray-400"></div>
+                    <p className="text-sm font-medium text-gray-600">
+                      Detection Stopped
+                    </p>
+                  </div>
+                  <p className="text-sm text-gray-600">
+                    Emotion detection has been stopped for submission.
+                  </p>
+                </div>
+              )}
+
+              {!stopDetection && cameraActive && detectedEmotion && (
                 <div className="rounded-xl border border-indigo-200 bg-indigo-50 p-6">
                   <div className="flex items-center gap-3 mb-2">
                     <div className="h-3 w-3 rounded-full bg-green-500 animate-pulse"></div>
                     <p className="text-sm font-medium text-indigo-600">
-                      Emotion Detection Active
+                      Emotion Detection Active (#{detectionCount})
                     </p>
                   </div>
                   <p className="text-xs text-indigo-500 mb-3">
@@ -520,9 +589,28 @@ const PatientAssessmentForm = () => {
                   <p className="text-3xl font-bold text-indigo-900 capitalize">
                     {detectedEmotion}
                   </p>
+
+                  {Object.keys(allPredictions).length > 0 && (
+                    <div className="mt-4 space-y-2">
+                      <p className="text-xs text-indigo-600 font-medium">All Predictions:</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        {Object.entries(allPredictions)
+                          .sort(([, a], [, b]) => b - a)
+                          .map(([emotion, confidence]) => (
+                            <div key={emotion} className="flex justify-between text-sm bg-white rounded-lg px-3 py-2">
+                              <span className="text-gray-700 font-medium">{emotion}:</span>
+                              <span className="font-mono text-indigo-900">
+                                {(confidence * 100).toFixed(1)}%
+                              </span>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
-              {cameraActive && !detectedEmotion && (
+
+              {!stopDetection && cameraActive && !detectedEmotion && (
                 <div className="rounded-xl border border-blue-200 bg-blue-50 p-6">
                   <div className="flex items-center gap-3 mb-2">
                     <div className="h-3 w-3 rounded-full bg-blue-500 animate-pulse"></div>
@@ -535,7 +623,8 @@ const PatientAssessmentForm = () => {
                   </p>
                 </div>
               )}
-              {!cameraActive && formData.name && formData.age && (
+
+              {!stopDetection && !cameraActive && formData.name && formData.age && (
                 <div className="rounded-xl border border-amber-200 bg-amber-50 p-6">
                   <div className="flex items-center gap-3 mb-2">
                     <div className="h-3 w-3 rounded-full bg-amber-500"></div>
@@ -549,6 +638,7 @@ const PatientAssessmentForm = () => {
                   </p>
                 </div>
               )}
+
               {(!formData.name || !formData.age) && (
                 <div className="rounded-xl border border-gray-200 bg-gray-50 p-6">
                   <div className="flex items-center gap-3 mb-2">
@@ -589,7 +679,7 @@ const PatientAssessmentForm = () => {
               </h2>
             </div>
 
-            <div className="mt-6">
+            <div className="mt-6 space-y-4">
               <div className="rounded-xl border-2 border-emerald-200 bg-emerald-50 p-6">
                 <p className="text-sm font-medium text-emerald-600">
                   Mental Health Level
@@ -598,6 +688,17 @@ const PatientAssessmentForm = () => {
                   {mentalHealthLevel}
                 </p>
               </div>
+
+              {detectedEmotion && (
+                <div className="rounded-xl border-2 border-indigo-200 bg-indigo-50 p-6">
+                  <p className="text-sm font-medium text-indigo-600">
+                    Detected Emotion
+                  </p>
+                  <p className="mt-2 text-4xl font-bold text-indigo-900 capitalize">
+                    {detectedEmotion}
+                  </p>
+                </div>
+              )}
             </div>
           </section>
         )}
