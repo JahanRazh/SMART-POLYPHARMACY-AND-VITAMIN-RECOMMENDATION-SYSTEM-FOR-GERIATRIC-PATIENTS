@@ -2,6 +2,8 @@
 
 A comprehensive AI-powered healthcare platform designed to manage multiple medications, detect drug interactions, assess polypharmacy risk, and provide personalized vitamin recommendations for geriatric patients. The system enhances medication safety, reduces adverse events, and improves overall elderly care through intelligent risk assessment and lifestyle recommendations.
 
+(https://smartpolycare.vercel.app/)
+
 ## 🌟 Features
 
 ### Core Functionalities
@@ -196,13 +198,13 @@ pnpm install
 cd server
 
 # Create virtual environment (recommended)
-python -m venv emotion_env
+python -m venv venv
 
 # Activate virtual environment
 # On Windows:
-emotion_env\Scripts\activate
+venv\Scripts\activate
 # On macOS/Linux:
-source emotion_env/bin/activate
+source venv/bin/activate
 
 # Install dependencies
 pip install -r requirements.txt
@@ -245,7 +247,7 @@ const firebaseConfig = {
 ```bash
 cd server
 # Activate virtual environment if not already activated
-emotion_env\Scripts\activate  # Windows
+venv\Scripts\activate  # Windows
 # or
 source emotion_env/bin/activate  # macOS/Linux
 
@@ -400,7 +402,7 @@ The frontend is deployed on Vercel: [https://smartpolycare.vercel.app/](https://
 
 #### Option 1: Heroku
 
-1. Create `Procfile`:
+1. Create `Profile`:
 ```
 web: gunicorn -w 4 -b 0.0.0.0:$PORT app:app
 ```
