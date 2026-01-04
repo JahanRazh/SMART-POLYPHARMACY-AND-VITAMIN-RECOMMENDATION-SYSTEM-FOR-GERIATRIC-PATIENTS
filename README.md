@@ -13,7 +13,7 @@ A comprehensive AI-powered healthcare platform designed to manage multiple medic
    - Patient-specific risk factor analysis using clinical algorithms
    - Dynamic risk scoring based on medication profiles, age, and comorbidities
    - High-risk medication identification
-   - 95% clinical accuracy in risk prediction
+   - High clinical accuracy in risk prediction
 
 2. **Vitamin Deficiency Detection**
    - Early identification of nutrient deficiencies (B12, D, folate, etc.)
@@ -31,7 +31,7 @@ A comprehensive AI-powered healthcare platform designed to manage multiple medic
 4. **Lifestyle & Mental Wellness Advisor**
    - Non-medical lifestyle recommendations
    - Emotion-aware mental health support
-   - Mindfulness, sleep hygiene, and journaling guidance
+   - Mindfulness, sleep hygiene
    - Real-time emotion detection using facial recognition
    - Integrated wellness tracking
 
@@ -186,6 +186,11 @@ cd smartpolycare
 
 # Install dependencies
 npm install
+# or
+yarn install
+# or
+pnpm install
+```
 
 #### 3. Backend Setup
 
@@ -245,7 +250,7 @@ cd server
 # Activate virtual environment if not already activated
 venv\Scripts\activate  # Windows
 # or
-source emotion_env/bin/activate  # macOS/Linux
+source venv/bin/activate  # macOS/Linux
 
 # Run Flask server
 python app.py
