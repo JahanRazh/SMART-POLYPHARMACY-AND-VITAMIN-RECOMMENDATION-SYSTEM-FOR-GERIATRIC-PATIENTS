@@ -64,4 +64,4 @@ def full_assessment():
         "timestamp": datetime.utcnow()
     })
 
-    return jsonify({"mental_health_level": prediction}), 200
+    return jsonify({"mental_health_Risk": prediction}), 200
