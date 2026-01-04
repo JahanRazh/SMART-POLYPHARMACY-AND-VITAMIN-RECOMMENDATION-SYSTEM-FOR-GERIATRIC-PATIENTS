@@ -186,11 +186,6 @@ cd smartpolycare
 
 # Install dependencies
 npm install
-# or
-yarn install
-# or
-pnpm install
-```
 
 #### 3. Backend Setup
 
