@@ -155,6 +155,7 @@ SMART-POLYPHARMACY-VITAMIN-RECOMMENDATION-SYSTEM-FOR-GERIATRIC-PATIENTS/
 │
 └── README.md                   # This file
 ```
+<img width="1366" height="2416" alt="image" src="https://github.com/user-attachments/assets/e0d7cb40-c301-4bd4-b2d6-6d0c6adc89a7" />
 
 ## 🚀 Getting Started
 
