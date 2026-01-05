@@ -3,10 +3,12 @@
 import React, { useRef, useState, useEffect } from "react";
 import Webcam from "react-webcam";
 import { useAuth } from "@/app/components/Contexts/AuthContext";
+import { useRouter } from "next/navigation";
 
 const PatientAssessmentForm = () => {
   const webcamRef = useRef<Webcam | null>(null);
   const { userProfile, user } = useAuth();
+  const router = useRouter();
 
   const [formData, setFormData] = useState({
     name: "",
@@ -39,6 +41,7 @@ const PatientAssessmentForm = () => {
   const [isFetchingOccupations, setIsFetchingOccupations] = useState(false);
   const [occupationSelected, setOccupationSelected] = useState(false);
   const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null);
+   const [videoDevices, setVideoDevices] = useState<MediaDeviceInfo[]>([]);
 
   // Auto-fill from user profile
   useEffect(() => {
@@ -104,6 +107,12 @@ const PatientAssessmentForm = () => {
         const devices = await navigator.mediaDevices.enumerateDevices();
         const videoInputs = devices.filter((d) => d.kind === "videoinput");
 
+        // Prefer real webcams: exclude OBS / virtual devices when possible
+        const filtered = videoInputs.filter(
+          (d) => d.label && !d.label.toLowerCase().includes("obs") && !d.label.toLowerCase().includes("virtual")
+        );
+        setVideoDevices(filtered.length > 0 ? filtered : videoInputs);
+
         if (videoInputs.length === 0) {
           console.log("⚠️ No video input devices found");
           return;
@@ -151,6 +160,12 @@ const PatientAssessmentForm = () => {
       // Trigger a re-check for devices and select non-OBS camera
       const devices = await navigator.mediaDevices.enumerateDevices();
       const videoInputs = devices.filter((d) => d.kind === "videoinput");
+
+      // Update available devices list and prefer physical webcams
+      const filtered = videoInputs.filter(
+        (d) => d.label && !d.label.toLowerCase().includes("obs") && !d.label.toLowerCase().includes("virtual")
+      );
+      setVideoDevices(filtered.length > 0 ? filtered : videoInputs);
       
       if (videoInputs.length > 0) {
         // Filter out OBS virtual camera
@@ -359,6 +374,10 @@ const PatientAssessmentForm = () => {
       setError("Age is required.");
       return;
     }
+    if (!formData.occupation.trim()) {
+      setError("Occupation is required.");
+      return;
+    }
 
     const numericFields: { key: keyof typeof formData; label: string }[] = [
       { key: "exercise_time", label: "Exercise Time" },
@@ -393,6 +412,10 @@ const PatientAssessmentForm = () => {
 
     setIsSubmitting(true);
 
+    // Provide user's email to the assessment endpoint so the server
+    // can store it with the assessment record.
+    const userEmail = user?.email || userProfile?.email || "";
+
     try {
       // Get mental health assessment
       const assessmentRes = await fetch("http://127.0.0.1:5000/full_assessment", {
@@ -407,6 +430,7 @@ const PatientAssessmentForm = () => {
           screen_time: Number(formData.screen_time) || 0,
           work_hours: Number(formData.work_hours) || 0,
           social_interaction_duration: Number(formData.social_interaction_duration) || 0,
+          email: userEmail,
         }),
       });
 
@@ -417,9 +441,6 @@ const PatientAssessmentForm = () => {
       }
 
       setMentalHealthLevel(assessmentData.mental_health_level);
-
-      // Get user email
-      const userEmail = user?.email || userProfile?.email || "";
 
       // Save complete data including emotion and email
       const completeData = {
@@ -434,13 +455,30 @@ const PatientAssessmentForm = () => {
 
       console.log("💾 Saving data:", completeData);
 
-      await fetch("/api/save_patient_data", {
+      const saveRes = await fetch("/api/save_patient_data", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(completeData),
       });
 
+      if (!saveRes.ok) {
+        throw new Error("Failed to save patient data");
+      }
+
+      const saveJson = await saveRes.json();
+
       setSuccessMessage("Patient assessment completed successfully!");
+
+      // Redirect to patientAdvice page after successful submission
+      try {
+        const patientId = saveJson?.id || null;
+        const target = patientId
+          ? `/Pages/patientAdvice?patientId=${encodeURIComponent(patientId)}`
+          : "/Pages/patientAdvice";
+        router.push(target);
+      } catch (err) {
+        console.warn("Navigation failed:", err);
+      }
       
     } catch (error: any) {
       console.error("❌ Error:", error);
@@ -546,6 +584,7 @@ const PatientAssessmentForm = () => {
                     value={formData.occupation}
                     onChange={handleChange}
                     placeholder="Start typing occupation"
+                    required
                     className="mt-1 w-full rounded-xl border border-gray-200 bg-white px-4 py-2 text-gray-900 focus:border-indigo-500 focus:outline-none"
                     autoComplete="off"
                   />
@@ -776,6 +815,32 @@ const PatientAssessmentForm = () => {
                 <p className="text-sm text-gray-500">
                   Small camera preview (required for emotion detection to work properly)
                 </p>
+              </div>
+
+              {/* Camera device selector placed above preview */}
+              <div className="mb-3 flex justify-start">
+                {videoDevices.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <label htmlFor="camera-select" className="text-sm text-gray-700">Camera</label>
+                    <select
+                      id="camera-select"
+                      aria-label="Select camera"
+                      value={selectedDeviceId || ""}
+                      onChange={(e) => {
+                        setSelectedDeviceId(e.target.value || null);
+                        setWebcamReady(false);
+                      }}
+                      className="rounded-md bg-white px-2 py-1 text-sm border"
+                    >
+                      <option value="">Default camera</option>
+                      {videoDevices.map((d) => (
+                        <option key={d.deviceId} value={d.deviceId}>
+                          {d.label || d.deviceId}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
               </div>
 
               <div className="flex justify-center">
