@@ -7,6 +7,7 @@ from routes.emotion_route import emotion_bp
 from routes.full_assessment_route import full_assessment_bp
 from routes.meal_plan_route import meal_plan_bp
 from routes.occupation_route import occupation_bp
+from routes.advice_route import advice_bp
 
 from db import get_db
 
@@ -19,6 +20,7 @@ app.register_blueprint(emotion_bp)
 app.register_blueprint(full_assessment_bp)
 app.register_blueprint(meal_plan_bp)
 app.register_blueprint(occupation_bp)
+app.register_blueprint(advice_bp)
 
 @app.route('/')
 def health_check():
