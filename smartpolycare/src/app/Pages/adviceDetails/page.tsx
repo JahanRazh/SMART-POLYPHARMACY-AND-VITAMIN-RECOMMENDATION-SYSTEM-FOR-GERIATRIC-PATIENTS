@@ -6,7 +6,7 @@ import { useAuth } from "@/app/components/Contexts/AuthContext";
 
 const PatientAssessmentForm = () => {
   const webcamRef = useRef<Webcam | null>(null);
-  const { userProfile } = useAuth();
+  const { userProfile, user } = useAuth();
 
   const [formData, setFormData] = useState({
     name: "",
@@ -33,7 +33,12 @@ const PatientAssessmentForm = () => {
   const [cameraActive, setCameraActive] = useState(false);
   const [detectionCount, setDetectionCount] = useState(0);
   const [webcamReady, setWebcamReady] = useState(false);
+  const [cameraError, setCameraError] = useState("");
   const [stopDetection, setStopDetection] = useState(false);
+  const [occupationSuggestions, setOccupationSuggestions] = useState<string[]>([]);
+  const [isFetchingOccupations, setIsFetchingOccupations] = useState(false);
+  const [occupationSelected, setOccupationSelected] = useState(false);
+  const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null);
 
   // Auto-fill from user profile
   useEffect(() => {
@@ -42,7 +47,8 @@ const PatientAssessmentForm = () => {
         const updates: Partial<typeof formData> = {};
 
         if (!prev.name) {
-          const fullName = userProfile.displayName || 
+          const fullName =
+            userProfile.displayName ||
             `${(userProfile.firstName || "").trim()} ${(userProfile.lastName || "").trim()}`.trim();
           if (fullName) {
             updates.name = fullName;
@@ -54,7 +60,9 @@ const PatientAssessmentForm = () => {
         }
 
         if (userProfile.gender && prev.gender === "Male") {
-          const genderCapitalized = userProfile.gender.charAt(0).toUpperCase() + userProfile.gender.slice(1).toLowerCase();
+          const genderCapitalized =
+            userProfile.gender.charAt(0).toUpperCase() +
+            userProfile.gender.slice(1).toLowerCase();
           if (genderCapitalized === "Male" || genderCapitalized === "Female") {
             updates.gender = genderCapitalized;
           }
@@ -65,13 +73,116 @@ const PatientAssessmentForm = () => {
     }
   }, [userProfile]);
 
+  // Select real webcam (not OBS virtual camera)
+  useEffect(() => {
+    async function selectRealWebcam() {
+      try {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
+          console.log("⚠️ Media devices API not available");
+          return;
+        }
+
+        // First, request camera permission to get device labels.
+        // We request a temporary stream and immediately stop it so labels become available.
+        let tempStream: MediaStream | null = null;
+        try {
+          tempStream = await navigator.mediaDevices.getUserMedia({ video: true });
+          // Stop temporary tracks so the real Webcam component can open the camera.
+          tempStream.getTracks().forEach((t) => t.stop());
+        } catch (err: any) {
+          console.warn("Camera permission denied or unavailable during device selection:", err);
+          setCameraError(
+            "Camera permission denied or unavailable. Click 'Enable Camera' below and allow access."
+          );
+          return; // Exit early if permission denied
+        }
+
+        // Small delay to ensure devices are enumerated
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        // Now enumerate devices (labels will be available after permission)
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoInputs = devices.filter((d) => d.kind === "videoinput");
+
+        if (videoInputs.length === 0) {
+          console.log("⚠️ No video input devices found");
+          return;
+        }
+
+        // Filter out OBS virtual camera
+        const realCameras = videoInputs.filter(
+          (d) => d.label && 
+                 !d.label.toLowerCase().includes("obs") && 
+                 !d.label.toLowerCase().includes("virtual")
+        );
+
+        // Use first real camera, or fall back to first available if no real camera found
+        const chosen = realCameras.length > 0 ? realCameras[0] : videoInputs[0];
+        
+        setSelectedDeviceId(chosen.deviceId);
+        console.log("🎥 Selected camera:", chosen.label || chosen.deviceId);
+        setCameraError(""); // Clear any previous errors
+      } catch (err) {
+        console.warn("⚠️ Could not select camera device:", err);
+        setCameraError("Failed to detect camera devices. Please refresh the page.");
+      }
+    }
+
+    selectRealWebcam();
+  }, []);
+
+  // Explicit camera permission request triggered by the user when preview doesn't start automatically
+  const requestCameraPermission = async () => {
+    setCameraError("");
+    try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        setCameraError("Camera API not available in this browser.");
+        return;
+      }
+
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      // Stop the stream — the `Webcam` component will open the camera when it mounts.
+      stream.getTracks().forEach((t) => t.stop());
+      setCameraError("");
+      
+      // Small delay to ensure devices are enumerated
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Trigger a re-check for devices and select non-OBS camera
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videoInputs = devices.filter((d) => d.kind === "videoinput");
+      
+      if (videoInputs.length > 0) {
+        // Filter out OBS virtual camera
+        const realCameras = videoInputs.filter(
+          (d) => d.label && 
+                 !d.label.toLowerCase().includes("obs") && 
+                 !d.label.toLowerCase().includes("virtual")
+        );
+        const chosen = realCameras.length > 0 ? realCameras[0] : videoInputs[0];
+        setSelectedDeviceId(chosen.deviceId);
+        console.log("🎥 Selected camera after permission:", chosen.label || chosen.deviceId);
+      }
+      
+      // Force Webcam component to re-render by toggling webcamReady
+      setWebcamReady(false);
+    } catch (err: any) {
+      console.error("Error requesting camera permission:", err);
+      setCameraError(
+        "Unable to access camera. Check Windows privacy settings and allow camera access for your browser."
+      );
+    }
+  };
+
   const handleWebcamLoad = () => {
     console.log("✅ Webcam loaded successfully");
     setWebcamReady(true);
   };
 
   const handleWebcamError = (error: string | DOMException) => {
-    console.log("⚠️ Webcam error (ignored):", error);
+    console.error("⚠️ Webcam error:", error);
+    setCameraError("Failed to access camera. Please check permissions and try clicking 'Enable Camera'.");
+    setWebcamReady(false);
   };
 
   // Emotion detection
@@ -113,12 +224,16 @@ const PatientAssessmentForm = () => {
         console.log(`📸 Capture #${detectionCount + 1}`);
         setCameraActive(true);
 
+        // Get user email for emotion detection
+        const userEmail = user?.email || userProfile?.email || "";
+
         const res = await fetch("http://127.0.0.1:5000/detect_emotion", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             name: formData.name,
             age: Number(formData.age),
+            email: userEmail,
             image: imageSrc,
             timestamp: Date.now(),
           }),
@@ -130,12 +245,19 @@ const PatientAssessmentForm = () => {
         }
 
         const data = await res.json();
+
+        // Backend now tells us whether a real face was detected.
+        if (!data.face_detected) {
+          console.log("ℹ️ No face detected in frame – skipping emotion update.");
+          return;
+        }
+
         console.log("✅ Emotion:", data.emotion);
 
         if (data.emotion) {
           setDetectedEmotion(data.emotion);
           setAllPredictions(data.all_predictions || {});
-          setDetectionCount(prev => prev + 1);
+          setDetectionCount((prev) => prev + 1);
         }
       } catch (error) {
         console.log("⚠️ Detection failed (ignored)");
@@ -159,17 +281,110 @@ const PatientAssessmentForm = () => {
   }, [formData.name, formData.age, webcamReady, stopDetection, detectionCount]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+
+    // When user types occupation, show suggestions
+    if (name === "occupation") {
+      // User is typing again → unlock suggestions
+      setOccupationSelected(false);
+      setOccupationSuggestions([]);
+    }
   };
+
+  // Fuzzy occupation suggestions (from Flask API using occupation.csv)
+  useEffect(() => {
+    // If user already chose a suggestion, don't refetch until they type again
+    if (occupationSelected) return;
+
+    const query = formData.occupation.trim();
+
+    if (query.length < 2) {
+      setOccupationSuggestions([]);
+      return;
+    }
+
+    let active = true;
+    const fetchSuggestions = async () => {
+      try {
+        setIsFetchingOccupations(true);
+        const res = await fetch(
+          `http://127.0.0.1:5000/occupation_suggestions?q=${encodeURIComponent(
+            query
+          )}`
+        );
+
+        if (!res.ok) {
+          throw new Error("Failed to fetch occupation suggestions");
+        }
+
+        const data = await res.json();
+        if (!active) return;
+
+        const labels: string[] = (data.suggestions || []).map(
+          (item: { label: string }) => item.label
+        );
+        setOccupationSuggestions(labels);
+      } catch (err) {
+        console.warn("Occupation suggestions error:", err);
+        if (active) {
+          setOccupationSuggestions([]);
+        }
+      } finally {
+        if (active) {
+          setIsFetchingOccupations(false);
+        }
+      }
+    };
+
+    const timeoutId = setTimeout(fetchSuggestions, 250); // debounce typing
+
+    return () => {
+      active = false;
+      clearTimeout(timeoutId);
+    };
+  }, [formData.occupation]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setSuccessMessage("");
 
-    if (!formData.name || !formData.age) {
-      setError("Please fill in name and age fields.");
+    // Basic validation for required fields
+    if (!formData.name.trim()) {
+      setError("Name is required.");
       return;
+    }
+    if (!formData.age) {
+      setError("Age is required.");
+      return;
+    }
+
+    const numericFields: { key: keyof typeof formData; label: string }[] = [
+      { key: "exercise_time", label: "Exercise Time" },
+      { key: "sleep_duration", label: "Sleep Duration" },
+      { key: "physical_activity", label: "Physical Activity" },
+      { key: "screen_time", label: "Screen Time" },
+      { key: "work_hours", label: "Work Hours" },
+      {
+        key: "social_interaction_duration",
+        label: "Social Interaction Duration",
+      },
+    ];
+
+    for (const field of numericFields) {
+      const raw = (formData[field.key] as string).trim();
+      if (!raw) {
+        setError(`${field.label} is required.`);
+        return;
+      }
+      const value = Number(raw);
+      if (Number.isNaN(value) || value < 0 || value > 24) {
+        setError(
+          `${field.label} must be a number between 0 and 24 hours per day.`
+        );
+        return;
+      }
     }
 
     // Stop emotion detection
@@ -203,9 +418,13 @@ const PatientAssessmentForm = () => {
 
       setMentalHealthLevel(assessmentData.mental_health_level);
 
-      // Save complete data including emotion
+      // Get user email
+      const userEmail = user?.email || userProfile?.email || "";
+
+      // Save complete data including emotion and email
       const completeData = {
         ...formData,
+        email: userEmail,
         detectedEmotion: detectedEmotion || "Not detected",
         emotionConfidence: allPredictions[detectedEmotion] || 0,
         allEmotionPredictions: allPredictions,
@@ -320,14 +539,55 @@ const PatientAssessmentForm = () => {
                 <label className="block text-sm font-medium text-gray-600">
                   Occupation
                 </label>
-                <input
-                  type="text"
-                  name="occupation"
-                  value={formData.occupation}
-                  onChange={handleChange}
-                  placeholder="Enter occupation"
-                  className="mt-1 w-full rounded-xl border border-gray-200 bg-white px-4 py-2 text-gray-900 focus:border-indigo-500 focus:outline-none"
-                />
+                <div className="relative">
+                  <input
+                    type="text"
+                    name="occupation"
+                    value={formData.occupation}
+                    onChange={handleChange}
+                    placeholder="Start typing occupation"
+                    className="mt-1 w-full rounded-xl border border-gray-200 bg-white px-4 py-2 text-gray-900 focus:border-indigo-500 focus:outline-none"
+                    autoComplete="off"
+                  />
+
+                  {/* Suggestions dropdown */}
+                  {formData.occupation.trim().length >= 2 &&
+                    occupationSuggestions.length > 0 && !occupationSelected && (
+                      <div className="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-xl border border-gray-200 bg-white shadow-lg">
+                        {occupationSuggestions.map((occ) => (
+                          <button
+                            type="button"
+                            key={occ}
+                            onClick={() => {
+                              setFormData((prev) => ({
+                                ...prev,
+                                occupation: occ,
+                              }));
+                              setOccupationSuggestions([]);
+                              setOccupationSelected(true);
+                            }}
+                            className="block w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-indigo-50"
+                          >
+                            {occ}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                  {/* Loading / helper text */}
+                  {isFetchingOccupations && (
+                    <p className="mt-1 text-xs text-gray-400">
+                      Searching occupations...
+                    </p>
+                  )}
+                  {!isFetchingOccupations &&
+                    formData.occupation.trim().length >= 2 &&
+                    occupationSuggestions.length === 0 && (
+                      <p className="mt-1 text-xs text-gray-400">
+                        No matching occupations found.
+                      </p>
+                    )}
+                </div>
               </div>
             </div>
           </section>
@@ -414,6 +674,7 @@ const PatientAssessmentForm = () => {
                   min="0"
                   max="24"
                   step="0.5"
+                  required
                   className="mt-1 w-full rounded-xl border border-gray-200 bg-white px-4 py-2 text-gray-900 focus:border-indigo-500 focus:outline-none"
                 />
               </div>
@@ -430,6 +691,7 @@ const PatientAssessmentForm = () => {
                   min="0"
                   max="24"
                   step="0.5"
+                  required
                   className="mt-1 w-full rounded-xl border border-gray-200 bg-white px-4 py-2 text-gray-900 focus:border-indigo-500 focus:outline-none"
                 />
               </div>
@@ -446,6 +708,7 @@ const PatientAssessmentForm = () => {
                   min="0"
                   max="24"
                   step="0.5"
+                  required
                   className="mt-1 w-full rounded-xl border border-gray-200 bg-white px-4 py-2 text-gray-900 focus:border-indigo-500 focus:outline-none"
                 />
               </div>
@@ -462,6 +725,7 @@ const PatientAssessmentForm = () => {
                   min="0"
                   max="24"
                   step="0.5"
+                  required
                   className="mt-1 w-full rounded-xl border border-gray-200 bg-white px-4 py-2 text-gray-900 focus:border-indigo-500 focus:outline-none"
                 />
               </div>
@@ -478,6 +742,7 @@ const PatientAssessmentForm = () => {
                   min="0"
                   max="24"
                   step="0.5"
+                  required
                   className="mt-1 w-full rounded-xl border border-gray-200 bg-white px-4 py-2 text-gray-900 focus:border-indigo-500 focus:outline-none"
                 />
               </div>
@@ -494,6 +759,7 @@ const PatientAssessmentForm = () => {
                   min="0"
                   max="24"
                   step="0.5"
+                  required
                   className="mt-1 w-full rounded-xl border border-gray-200 bg-white px-4 py-2 text-gray-900 focus:border-indigo-500 focus:outline-none"
                 />
               </div>
@@ -501,62 +767,93 @@ const PatientAssessmentForm = () => {
           </section>
 
           {/* Small Webcam Preview (needed for capture to work) */}
-          <section className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
-            <div className="mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">
-                Camera Preview
-              </h2>
-              <p className="text-sm text-gray-500">
-                Small camera preview (required for emotion detection to work properly)
-              </p>
-            </div>
-
-            <div className="flex justify-center">
-              <div className="relative rounded-lg overflow-hidden border-2 border-indigo-300">
-                <Webcam
-                  ref={webcamRef}
-                  audio={false}
-                  screenshotFormat="image/jpeg"
-                  screenshotQuality={0.95}
-                  width={160}
-                  height={120}
-                  videoConstraints={{
-                    facingMode: "user",
-                    width: { ideal: 640 },
-                    height: { ideal: 480 },
-                  }}
-                  onUserMedia={handleWebcamLoad}
-                  onUserMediaError={handleWebcamError}
-                />
-                {webcamReady && (
-                  <div className="absolute top-2 right-2 bg-green-500 rounded-full p-1">
-                    <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-                  </div>
-                )}
+          {!stopDetection && (
+            <section className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
+              <div className="mb-4">
+                <h2 className="text-lg font-semibold text-gray-900">
+                  Camera Preview
+                </h2>
+                <p className="text-sm text-gray-500">
+                  Small camera preview (required for emotion detection to work properly)
+                </p>
               </div>
-            </div>
 
-            {!webcamReady && (
-              <p className="text-center text-sm text-amber-600 mt-3">
-                ⏳ Waiting for camera to initialize...
-              </p>
-            )}
-            {webcamReady && (
-              <p className="text-center text-sm text-green-600 mt-3">
-                ✅ Camera ready - Emotion detection active
-              </p>
-            )}
-          </section>
+              <div className="flex justify-center">
+                <div className="relative rounded-lg overflow-hidden border-2 border-indigo-300">
+                  <Webcam
+                    key={selectedDeviceId || "default"}
+                    ref={webcamRef}
+                    audio={false}
+                    screenshotFormat="image/jpeg"
+                    screenshotQuality={0.95}
+                    width={160}
+                    height={120}
+                    videoConstraints={{
+                      ...(selectedDeviceId
+                        ? { deviceId: { exact: selectedDeviceId } }
+                        : { facingMode: "user" }),
+                      width: { ideal: 640 },
+                      height: { ideal: 480 },
+                    }}
+                    onUserMedia={handleWebcamLoad}
+                    onUserMediaError={handleWebcamError}
+                  />
+                  {webcamReady && (
+                    <div className="absolute top-2 right-2 bg-green-500 rounded-full p-1">
+                      <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+                    </div>
+                  )}
+                </div>
+              </div>
 
-          {/* Emotion Detection Status Section */}
+              {!webcamReady && (
+                <div className="mt-3 text-center">
+                  <p className="text-sm text-amber-600">
+                    ⏳ Waiting for camera to initialize...
+                  </p>
+                  {cameraError && (
+                    <p className="mt-2 text-xs text-red-600">{cameraError}</p>
+                  )}
+                  <div className="mt-3 flex justify-center">
+                    <button
+                      type="button"
+                      onClick={requestCameraPermission}
+                      className="rounded-md bg-indigo-600 px-4 py-2 text-sm text-white hover:bg-indigo-700"
+                    >
+                      Enable Camera
+                    </button>
+                  </div>
+                </div>
+              )}
+              {webcamReady && (
+                <p className="text-center text-sm text-green-600 mt-3">
+                  ✅ Camera ready - Emotion detection active
+                </p>
+              )}
+            </section>
+          )}
+
+          {stopDetection && (
+            <section className="rounded-2xl border border-gray-200 bg-gray-50 p-6 shadow-sm">
+              <div className="text-center">
+                <p className="text-sm font-medium text-gray-600">
+                  📷 Camera stopped
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  Camera has been stopped after form submission
+                </p>
+              </div>
+            </section>
+          )}
+
+          {/* Emotion Detection Status Section (no emotion details shown to user) */}
           <section className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
             <div className="mb-4">
               <h2 className="text-lg font-semibold text-gray-900">
-                Emotion Detection
+                Background Analysis
               </h2>
               <p className="text-sm text-gray-500">
-                Facial emotion analysis is running in the background to ensure natural responses. 
-                Camera access will be requested automatically.
+                The system runs a brief background analysis during the assessment to improve recommendation quality.
               </p>
             </div>
 
@@ -566,60 +863,25 @@ const PatientAssessmentForm = () => {
                   <div className="flex items-center gap-3 mb-2">
                     <div className="h-3 w-3 rounded-full bg-gray-400"></div>
                     <p className="text-sm font-medium text-gray-600">
-                      Detection Stopped
+                      Background Analysis Finished
                     </p>
                   </div>
                   <p className="text-sm text-gray-600">
-                    Emotion detection has been stopped for submission.
+                    Analysis has been stopped for submission.
                   </p>
                 </div>
               )}
 
-              {!stopDetection && cameraActive && detectedEmotion && (
-                <div className="rounded-xl border border-indigo-200 bg-indigo-50 p-6">
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="h-3 w-3 rounded-full bg-green-500 animate-pulse"></div>
-                    <p className="text-sm font-medium text-indigo-600">
-                      Emotion Detection Active (#{detectionCount})
-                    </p>
-                  </div>
-                  <p className="text-xs text-indigo-500 mb-3">
-                    Last detected emotion (updated every 5 seconds)
-                  </p>
-                  <p className="text-3xl font-bold text-indigo-900 capitalize">
-                    {detectedEmotion}
-                  </p>
-
-                  {Object.keys(allPredictions).length > 0 && (
-                    <div className="mt-4 space-y-2">
-                      <p className="text-xs text-indigo-600 font-medium">All Predictions:</p>
-                      <div className="grid grid-cols-2 gap-2">
-                        {Object.entries(allPredictions)
-                          .sort(([, a], [, b]) => b - a)
-                          .map(([emotion, confidence]) => (
-                            <div key={emotion} className="flex justify-between text-sm bg-white rounded-lg px-3 py-2">
-                              <span className="text-gray-700 font-medium">{emotion}:</span>
-                              <span className="font-mono text-indigo-900">
-                                {(confidence * 100).toFixed(1)}%
-                              </span>
-                            </div>
-                          ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {!stopDetection && cameraActive && !detectedEmotion && (
+              {!stopDetection && cameraActive && (
                 <div className="rounded-xl border border-blue-200 bg-blue-50 p-6">
                   <div className="flex items-center gap-3 mb-2">
                     <div className="h-3 w-3 rounded-full bg-blue-500 animate-pulse"></div>
                     <p className="text-sm font-medium text-blue-600">
-                      Camera Active - Analyzing...
+                      Background Analysis Running
                     </p>
                   </div>
                   <p className="text-sm text-blue-600">
-                    Emotion detection is running in the background. Results will appear shortly.
+                    Please continue filling the form normally while we run a short analysis.
                   </p>
                 </div>
               )}
@@ -633,8 +895,7 @@ const PatientAssessmentForm = () => {
                     </p>
                   </div>
                   <p className="text-sm text-amber-700">
-                    Please allow camera access when prompted to enable emotion detection. 
-                    The camera feed will not be displayed to ensure natural responses.
+                    Please allow camera access when prompted to enable background analysis.
                   </p>
                 </div>
               )}
@@ -644,11 +905,11 @@ const PatientAssessmentForm = () => {
                   <div className="flex items-center gap-3 mb-2">
                     <div className="h-3 w-3 rounded-full bg-gray-400"></div>
                     <p className="text-sm font-medium text-gray-600">
-                      Emotion Detection Inactive
+                      Analysis Inactive
                     </p>
                   </div>
                   <p className="text-sm text-gray-600">
-                    Please fill in name and age to enable background emotion detection.
+                    Please fill in name and age to enable background analysis.
                   </p>
                 </div>
               )}
@@ -667,7 +928,7 @@ const PatientAssessmentForm = () => {
           </div>
         </form>
 
-        {/* Results Section */}
+        {/* Results Section (no emotion details shown) */}
         {mentalHealthLevel && (
           <section className="mt-10 rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
             <div className="mb-4">
@@ -688,17 +949,6 @@ const PatientAssessmentForm = () => {
                   {mentalHealthLevel}
                 </p>
               </div>
-
-              {detectedEmotion && (
-                <div className="rounded-xl border-2 border-indigo-200 bg-indigo-50 p-6">
-                  <p className="text-sm font-medium text-indigo-600">
-                    Detected Emotion
-                  </p>
-                  <p className="mt-2 text-4xl font-bold text-indigo-900 capitalize">
-                    {detectedEmotion}
-                  </p>
-                </div>
-              )}
             </div>
           </section>
         )}
