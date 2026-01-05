@@ -178,8 +178,6 @@ def find_drug_interactions(drugs: List[str]) -> Tuple[List[Dict], Dict[str, int]
     
     return interactions, severity_summary
 
-    return interactions, severity_summary
-
 
 def save_polypharmacy_assessment(
     user_id: str,
