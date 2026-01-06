@@ -10,6 +10,7 @@ interface BasicProfile {
   height: string;
   weight: string;
   bmi: string;
+  bmiLevel: string;
   activityLevel: string;
 }
 
@@ -68,6 +69,7 @@ const MealPlanForm: React.FC = () => {
       height: "",
       weight: "",
       bmi: "",
+      bmiLevel: "",
       activityLevel: "",
     },
     medicalConditions: {
@@ -143,6 +145,13 @@ const MealPlanForm: React.FC = () => {
     }
     return "";
   };
+  const calculateBMILevel = (bmi: number): string => {
+    if (bmi < 18.5) return "Underweight";
+    if (bmi >= 18.5 && bmi < 25) return "Normal";
+    if (bmi >= 25 && bmi < 30) return "Overweight";
+    return "Obese";
+  };
+
 
   const handleInputChange = (
     section: keyof Omit<FormData, "vitaminDeficiencies">,
@@ -164,8 +173,19 @@ const MealPlanForm: React.FC = () => {
         (field === "height" || field === "weight")
       ) {
         const profile = updated.basicProfile;
-        updated.basicProfile.bmi = calculateBMI(profile.height, profile.weight);
+        const bmiValue = calculateBMI(profile.height, profile.weight);
+
+        updated.basicProfile.bmi = bmiValue;
+
+        if (bmiValue) {
+          updated.basicProfile.bmiLevel = calculateBMILevel(
+            parseFloat(bmiValue)
+          );
+        } else {
+          updated.basicProfile.bmiLevel = "";
+        }
       }
+
 
       return updated;
     });
@@ -387,6 +407,29 @@ const MealPlanForm: React.FC = () => {
                     placeholder="Auto-calculated"
                   />
                 </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    BMI Level
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.basicProfile.bmiLevel}
+                    disabled
+                    className={`w-full px-4 py-2 border rounded-lg font-semibold ${
+                      formData.basicProfile.bmiLevel === "Normal"
+                        ? "bg-green-100 text-green-800 border-green-300"
+                        : formData.basicProfile.bmiLevel === "Overweight"
+                        ? "bg-yellow-100 text-yellow-800 border-yellow-300"
+                        : formData.basicProfile.bmiLevel === "Underweight"
+                        ? "bg-blue-100 text-blue-800 border-blue-300"
+                        : formData.basicProfile.bmiLevel === "Obese"
+                        ? "bg-red-100 text-red-800 border-red-300"
+                        : "bg-gray-100 text-gray-600"
+                    }`}
+                    placeholder="Auto-calculated"
+                  />
+                </div>
+
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Activity Level *
