@@ -1,6 +1,9 @@
 from datetime import datetime
 from typing import Dict
 from db import get_db
+from datetime import datetime
+from db import get_db
+
 
 MEAL_PLAN_COLLECTION = "meal_plans"
 
@@ -72,3 +75,16 @@ def delete_meal_plan_data(meal_plan_id: str) -> bool:
 
     doc_ref.delete()
     return True
+
+def save_meal_plan(selected_plan):
+    db = get_db()
+    doc_ref = db.collection("meal_plans").document()
+
+    payload = {
+        "selectedMealPlan": selected_plan,
+        "createdAt": datetime.utcnow().isoformat()
+    }
+
+    doc_ref.set(payload)
+    payload["id"] = doc_ref.id
+    return payload
