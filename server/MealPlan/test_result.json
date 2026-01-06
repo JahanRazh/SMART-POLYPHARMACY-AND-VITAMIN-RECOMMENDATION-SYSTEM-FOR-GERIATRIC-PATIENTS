@@ -1,0 +1,279 @@
+{
+  "success": true,
+  "patient_name": "Nimal Perera",
+  "bmi": 27,
+  "conditions": [],
+  "suitable_foods_count": 274,
+  "mealPlanOptions": [
+    {
+      "optionId": 1,
+      "name": "AI Balanced Plan 1",
+      "weeklyPlan": {
+        "Day 1": {
+          "meals": [
+            "• Kale, frozen, cooked, no added fat - 300g (~131 kcal)",
+            "• Greens, NS as to form, cooked - 300g (~186 kcal)",
+            "• Mustard greens, NS as to form, cooked - 300g (~179 kcal)",
+            "• Cereal, cooked, NFS - 200g (~128 kcal)",
+            "• Greens, fresh, cooked, fat added - 300g (~186 kcal)",
+            "• Artichoke, fresh, cooked, no added fat - 300g (~186 kcal)",
+            "• Greens, frozen, cooked, fat added - 300g (~188 kcal)"
+          ],
+          "total_calories": 2180
+        },
+        "Day 2": {
+          "meals": [
+            "• Greens, fresh, cooked, no added fat - 300g (~123 kcal)",
+            "• Artichoke, frozen, cooked, no added fat - 300g (~186 kcal)",
+            "• Kale, fresh, cooked, fat added - 200g (~138 kcal)",
+            "• Artichoke, canned, cooked, no added fat - 300g (~186 kcal)",
+            "• Broccoli, NS as to form, cooked - 300g (~196 kcal)",
+            "• Brussels sprouts, frozen, cooked, no added fat - 300g (~153 kcal)",
+            "• Brussels sprouts, fresh, cooked, no added fat - 300g (~162 kcal)"
+          ],
+          "total_calories": 2178
+        },
+        "Day 3": {
+          "meals": [
+            "• Greens, fresh, cooked, no added fat - 300g (~123 kcal)",
+            "• Greens, frozen, cooked, no added fat - 300g (~123 kcal)",
+            "• Brussels sprouts, fresh, cooked, no added fat - 300g (~162 kcal)",
+            "• Broccoli, raw - 300g (~123 kcal)",
+            "• Artichoke, canned, cooked, no added fat - 300g (~186 kcal)",
+            "• Artichoke, frozen, cooked, no added fat - 300g (~186 kcal)",
+            "• Brussels sprouts, frozen, cooked, no added fat - 300g (~153 kcal)"
+          ],
+          "total_calories": 2187
+        },
+        "Day 4": {
+          "meals": [
+            "• Oatmeal, NS as to regular, quick, or instant, no added fat - 200g (~128 kcal)",
+            "• Mustard greens, NS as to form, cooked - 300g (~179 kcal)",
+            "• Greens, fresh, cooked, no added fat - 300g (~123 kcal)",
+            "• Oatmeal, regular or quick, made with water, no added fat - 300g (~192 kcal)",
+            "• Artichoke, raw - 300g (~187 kcal)",
+            "• Kale, frozen, cooked, no added fat - 300g (~131 kcal)",
+            "• Brussels sprouts, frozen, cooked, no added fat - 300g (~153 kcal)"
+          ],
+          "total_calories": 2187
+        },
+        "Day 5": {
+          "meals": [
+            "• Mustard greens, NS as to form, cooked - 300g (~179 kcal)",
+            "• Artichoke, raw - 300g (~187 kcal)",
+            "• Cereal, cooked, NFS - 300g (~192 kcal)",
+            "• Artichoke, canned, cooked, no added fat - 300g (~186 kcal)",
+            "• Oatmeal, NS as to regular, quick, or instant, no added fat - 300g (~192 kcal)",
+            "• Artichoke, fresh, cooked, no added fat - 300g (~186 kcal)",
+            "• Mustard greens, fresh, cooked, fat added - 300g (~179 kcal)"
+          ],
+          "total_calories": 2178
+        },
+        "Day 6": {
+          "meals": [
+            "• Oatmeal, NS as to regular, quick, or instant, no added fat - 300g (~192 kcal)",
+            "• Greens, fresh, cooked, fat added - 300g (~186 kcal)",
+            "• Artichoke, frozen, cooked, no added fat - 300g (~186 kcal)",
+            "• Oatmeal, regular or quick, made with water, no added fat - 300g (~192 kcal)",
+            "• Greens, fresh, cooked, no added fat - 300g (~123 kcal)",
+            "• Broccoli, raw - 300g (~123 kcal)",
+            "• Broccoli, fresh, cooked, fat added, NS as to fat type - 300g (~196 kcal)"
+          ],
+          "total_calories": 2130
+        },
+        "Day 7": {
+          "meals": [
+            "• Cereal, nestum - 300g (~192 kcal)",
+            "• Brussels sprouts, fresh, cooked, no added fat - 300g (~162 kcal)",
+            "• Oatmeal, NS as to regular, quick, or instant, no added fat - 300g (~192 kcal)",
+            "• Greens, frozen, cooked, no added fat - 300g (~123 kcal)",
+            "• Artichoke, raw - 300g (~187 kcal)",
+            "• Mustard greens, fresh, cooked, fat added - 300g (~179 kcal)",
+            "• Greens, NS as to form, cooked - 300g (~186 kcal)"
+          ],
+          "total_calories": 2161
+        }
+      }
+    },
+    {
+      "optionId": 2,
+      "name": "AI Balanced Plan 2",
+      "weeklyPlan": {
+        "Day 1": {
+          "meals": [
+            "• Artichoke, raw - 300g (~187 kcal)",
+            "• Broccoli, fresh, cooked, fat added, NS as to fat type - 100g (~65 kcal)",
+            "• Cereal, nestum - 300g (~192 kcal)",
+            "• Greens, frozen, cooked, fat added - 300g (~188 kcal)",
+            "• Cereal, cooked, NFS - 300g (~192 kcal)",
+            "• Brussels sprouts, fresh, cooked, no added fat - 300g (~162 kcal)",
+            "• Broccoli, raw - 300g (~123 kcal)"
+          ],
+          "total_calories": 2153
+        },
+        "Day 2": {
+          "meals": [
+            "• Kale, NS as to form, cooked - 100g (~69 kcal)",
+            "• Mustard greens, fresh, cooked, fat added - 300g (~179 kcal)",
+            "• Broccoli, fresh, cooked, no added fat - 300g (~128 kcal)",
+            "• Cereal, nestum - 300g (~192 kcal)",
+            "• Broccoli, raw - 300g (~123 kcal)",
+            "• Kale, frozen, cooked, no added fat - 300g (~131 kcal)",
+            "• Broccoli, NS as to form, cooked - 300g (~196 kcal)"
+          ],
+          "total_calories": 2170
+        },
+        "Day 3": {
+          "meals": [
+            "• Artichoke, raw - 300g (~187 kcal)",
+            "• Kale, frozen, cooked, no added fat - 300g (~131 kcal)",
+            "• Greens, frozen, cooked, fat added - 300g (~188 kcal)",
+            "• Greens, NS as to form, cooked - 300g (~186 kcal)",
+            "• Broccoli, fresh, cooked, fat added, NS as to fat type - 100g (~65 kcal)",
+            "• Cereal, nestum - 300g (~192 kcal)",
+            "• Artichoke, fresh, cooked, no added fat - 300g (~186 kcal)"
+          ],
+          "total_calories": 2179
+        },
+        "Day 4": {
+          "meals": [
+            "• Broccoli, raw - 300g (~123 kcal)",
+            "• Greens, fresh, cooked, fat added - 300g (~186 kcal)",
+            "• Broccoli, fresh, cooked, no added fat - 300g (~128 kcal)",
+            "• Oatmeal, NS as to regular, quick, or instant, no added fat - 300g (~192 kcal)",
+            "• Greens, NS as to form, cooked - 300g (~186 kcal)",
+            "• Broccoli, NS as to form, cooked - 300g (~196 kcal)",
+            "• Artichoke, raw - 300g (~187 kcal)"
+          ],
+          "total_calories": 2186
+        },
+        "Day 5": {
+          "meals": [
+            "• Greens, fresh, cooked, no added fat - 300g (~123 kcal)",
+            "• Artichoke, fresh, cooked, no added fat - 300g (~186 kcal)",
+            "• Greens, frozen, cooked, no added fat - 300g (~123 kcal)",
+            "• Mustard greens, fresh, cooked, fat added - 300g (~179 kcal)",
+            "• Broccoli, fresh, cooked, no added fat - 300g (~128 kcal)",
+            "• Brussels sprouts, frozen, cooked, no added fat - 300g (~153 kcal)",
+            "• Mustard greens, NS as to form, cooked - 300g (~179 kcal)"
+          ],
+          "total_calories": 2136
+        },
+        "Day 6": {
+          "meals": [
+            "• Mustard greens, NS as to form, cooked - 300g (~179 kcal)",
+            "• Broccoli, raw - 300g (~123 kcal)",
+            "• Greens, fresh, cooked, no added fat - 300g (~123 kcal)",
+            "• Cereal, cooked, NFS - 100g (~64 kcal)",
+            "• Oatmeal, regular or quick, made with water, no added fat - 300g (~192 kcal)",
+            "• Artichoke, raw - 300g (~187 kcal)",
+            "• Mustard greens, fresh, cooked, fat added - 300g (~179 kcal)"
+          ],
+          "total_calories": 2149
+        },
+        "Day 7": {
+          "meals": [
+            "• Greens, NS as to form, cooked - 300g (~186 kcal)",
+            "• Brussels sprouts, fresh, cooked, no added fat - 300g (~162 kcal)",
+            "• Broccoli, NS as to form, cooked - 200g (~130 kcal)",
+            "• Oatmeal, NS as to regular, quick, or instant, no added fat - 300g (~192 kcal)",
+            "• Mustard greens, fresh, cooked, fat added - 300g (~179 kcal)",
+            "• Greens, frozen, cooked, no added fat - 300g (~123 kcal)",
+            "• Cereal, nestum - 300g (~192 kcal)"
+          ],
+          "total_calories": 2170
+        }
+      }
+    },
+    {
+      "optionId": 3,
+      "name": "AI Balanced Plan 3",
+      "weeklyPlan": {
+        "Day 1": {
+          "meals": [
+            "• Mustard greens, fresh, cooked, fat added - 300g (~179 kcal)",
+            "• Kale, frozen, cooked, no added fat - 300g (~131 kcal)",
+            "• Collards, frozen, cooked, fat added, NS as to fat type - 200g (~130 kcal)",
+            "• Greens, fresh, cooked, fat added - 300g (~186 kcal)",
+            "• Greens, NS as to form, cooked - 300g (~186 kcal)",
+            "• Greens, fresh, cooked, no added fat - 300g (~123 kcal)",
+            "• Cereal, cooked, NFS - 300g (~192 kcal)"
+          ],
+          "total_calories": 2166
+        },
+        "Day 2": {
+          "meals": [
+            "• Oatmeal, NS as to regular, quick, or instant, no added fat - 300g (~192 kcal)",
+            "• Artichoke, raw - 300g (~187 kcal)",
+            "• Artichoke, canned, cooked, no added fat - 300g (~186 kcal)",
+            "• Artichoke, frozen, cooked, no added fat - 300g (~186 kcal)",
+            "• Broccoli, raw - 300g (~123 kcal)",
+            "• Broccoli, fresh, cooked, fat added, NS as to fat type - 300g (~196 kcal)",
+            "• Cereal, cooked, NFS - 300g (~192 kcal)"
+          ],
+          "total_calories": 2151
+        },
+        "Day 3": {
+          "meals": [
+            "• Broccoli, raw - 300g (~123 kcal)",
+            "• Oatmeal, regular or quick, made with water, no added fat - 300g (~192 kcal)",
+            "• Artichoke, raw - 300g (~187 kcal)",
+            "• Broccoli, fresh, cooked, fat added, NS as to fat type - 300g (~196 kcal)",
+            "• Brussels sprouts, frozen, cooked, no added fat - 300g (~153 kcal)",
+            "• Greens, frozen, cooked, fat added - 300g (~188 kcal)",
+            "• Greens, fresh, cooked, no added fat - 300g (~123 kcal)"
+          ],
+          "total_calories": 2163
+        },
+        "Day 4": {
+          "meals": [
+            "• Artichoke, frozen, cooked, no added fat - 300g (~186 kcal)",
+            "• Artichoke, fresh, cooked, no added fat - 300g (~186 kcal)",
+            "• Greens, fresh, cooked, fat added - 300g (~186 kcal)",
+            "• Artichoke, raw - 300g (~187 kcal)",
+            "• Mustard greens, NS as to form, cooked - 300g (~179 kcal)",
+            "• Mustard greens, fresh, cooked, fat added - 300g (~179 kcal)",
+            "• Brussels sprouts, frozen, cooked, no added fat - 300g (~153 kcal)"
+          ],
+          "total_calories": 2137
+        },
+        "Day 5": {
+          "meals": [
+            "• Cereal, cooked, NFS - 300g (~192 kcal)",
+            "• Oatmeal, NS as to regular, quick, or instant, no added fat - 300g (~192 kcal)",
+            "• Greens, frozen, cooked, fat added - 300g (~188 kcal)",
+            "• Greens, fresh, cooked, no added fat - 300g (~123 kcal)",
+            "• Broccoli, fresh, cooked, fat added, NS as to fat type - 200g (~130 kcal)",
+            "• Artichoke, raw - 300g (~187 kcal)",
+            "• Oatmeal, regular or quick, made with water, no added fat - 300g (~192 kcal)"
+          ],
+          "total_calories": 2130
+        },
+        "Day 6": {
+          "meals": [
+            "• Artichoke, frozen, cooked, no added fat - 300g (~186 kcal)",
+            "• Broccoli, raw - 300g (~123 kcal)",
+            "• Mustard greens, NS as to form, cooked - 300g (~179 kcal)",
+            "• Cereal, nestum - 200g (~128 kcal)",
+            "• Mustard greens, fresh, cooked, fat added - 300g (~179 kcal)",
+            "• Greens, frozen, cooked, fat added - 300g (~188 kcal)",
+            "• Greens, fresh, cooked, fat added - 300g (~186 kcal)"
+          ],
+          "total_calories": 2171
+        },
+        "Day 7": {
+          "meals": [
+            "• Broccoli, raw - 300g (~123 kcal)",
+            "• Broccoli, fresh, cooked, no added fat - 300g (~128 kcal)",
+            "• Mustard greens, fresh, cooked, fat added - 300g (~179 kcal)",
+            "• Greens, fresh, cooked, fat added - 300g (~186 kcal)",
+            "• Mustard greens, NS as to form, cooked - 300g (~179 kcal)",
+            "• Greens, NS as to form, cooked - 300g (~186 kcal)",
+            "• Kale, frozen, cooked, no added fat - 300g (~131 kcal)"
+          ],
+          "total_calories": 2140
+        }
+      }
+    }
+  ]
+}
