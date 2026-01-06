@@ -1,0 +1,282 @@
+{
+  "success": true,
+  "patient_name": "John Doe",
+  "bmi": 28.5,
+  "bmi_category": "Overweight",
+  "bmi_advice": "Your BMI is slightly high. Focus on low-calorie, high-fiber foods to support healthy weight loss.",
+  "daily_calorie_range": "1500\u20131900 kcal",
+  "conditions": [],
+  "suitable_foods_count": 274,
+  "mealPlanOptions": [
+    {
+      "optionId": 1,
+      "name": "Plan 1 - Optimized for Overweight",
+      "weeklyPlan": {
+        "Day 1": {
+          "meals": [
+            "\u2022 Artichoke, fresh, cooked, no added fat - 300g (~186 kcal)",
+            "\u2022 Mustard greens, NS as to form, cooked - 300g (~179 kcal)",
+            "\u2022 Brussels sprouts, frozen, cooked, no added fat - 300g (~153 kcal)",
+            "\u2022 Greens, fresh, cooked, fat added - 300g (~186 kcal)",
+            "\u2022 Greens, fresh, cooked, no added fat - 300g (~123 kcal)",
+            "\u2022 Mustard greens, fresh, cooked, fat added - 300g (~179 kcal)",
+            "\u2022 Peas, baby food, NS as to strained or junior - 300g (~151 kcal)"
+          ],
+          "total_calories": 1848
+        },
+        "Day 2": {
+          "meals": [
+            "\u2022 Greens, NS as to form, cooked - 300g (~186 kcal)",
+            "\u2022 Mustard greens, fresh, cooked, fat added - 300g (~179 kcal)",
+            "\u2022 Greens, frozen, cooked, fat added - 100g (~62 kcal)",
+            "\u2022 Artichoke, canned, cooked, no added fat - 300g (~186 kcal)",
+            "\u2022 Artichoke, raw - 300g (~187 kcal)",
+            "\u2022 Broccoli, raw - 300g (~123 kcal)",
+            "\u2022 Artichoke, frozen, cooked, no added fat - 300g (~186 kcal)"
+          ],
+          "total_calories": 1849
+        },
+        "Day 3": {
+          "meals": [
+            "\u2022 Mustard greens, fresh, cooked, fat added - 300g (~179 kcal)",
+            "\u2022 Peas, baby food, strained - 300g (~151 kcal)",
+            "\u2022 Mustard greens, NS as to form, cooked - 300g (~179 kcal)",
+            "\u2022 Greens, frozen, cooked, no added fat - 300g (~123 kcal)",
+            "\u2022 Peas, baby food, junior - 300g (~151 kcal)",
+            "\u2022 Peas, baby food, NS as to strained or junior - 300g (~151 kcal)",
+            "\u2022 Greens, fresh, cooked, fat added - 200g (~124 kcal)"
+          ],
+          "total_calories": 1837
+        },
+        "Day 4": {
+          "meals": [
+            "\u2022 Kale, frozen, cooked, no added fat - 300g (~131 kcal)",
+            "\u2022 Artichoke, canned, cooked, no added fat - 300g (~186 kcal)",
+            "\u2022 Brussels sprouts, fresh, cooked, no added fat - 300g (~162 kcal)",
+            "\u2022 Broccoli, raw - 300g (~123 kcal)",
+            "\u2022 Oatmeal, regular or quick, made with water, no added fat - 300g (~192 kcal)",
+            "\u2022 Artichoke, raw - 300g (~187 kcal)",
+            "\u2022 Broccoli, fresh, cooked, no added fat - 300g (~128 kcal)"
+          ],
+          "total_calories": 1875
+        },
+        "Day 5": {
+          "meals": [
+            "\u2022 Mustard greens, fresh, cooked, fat added - 300g (~179 kcal)",
+            "\u2022 Oatmeal, regular or quick, made with water, no added fat - 300g (~192 kcal)",
+            "\u2022 Greens, frozen, cooked, fat added - 300g (~188 kcal)",
+            "\u2022 Mustard greens, NS as to form, cooked - 300g (~179 kcal)",
+            "\u2022 Artichoke, fresh, cooked, no added fat - 300g (~186 kcal)",
+            "\u2022 Peas, baby food, NS as to strained or junior - 300g (~151 kcal)",
+            "\u2022 Greens, fresh, cooked, fat added - 300g (~186 kcal)"
+          ],
+          "total_calories": 1870
+        },
+        "Day 6": {
+          "meals": [
+            "\u2022 Kale, frozen, cooked, no added fat - 300g (~131 kcal)",
+            "\u2022 Greens, fresh, cooked, fat added - 300g (~186 kcal)",
+            "\u2022 Greens, NS as to form, cooked - 100g (~62 kcal)",
+            "\u2022 Mustard greens, NS as to form, cooked - 300g (~179 kcal)",
+            "\u2022 Artichoke, canned, cooked, no added fat - 300g (~186 kcal)",
+            "\u2022 Brussels sprouts, fresh, cooked, no added fat - 300g (~162 kcal)",
+            "\u2022 Brussels sprouts, frozen, cooked, no added fat - 300g (~153 kcal)"
+          ],
+          "total_calories": 1849
+        },
+        "Day 7": {
+          "meals": [
+            "\u2022 Greens, fresh, cooked, no added fat - 300g (~123 kcal)",
+            "\u2022 Greens, frozen, cooked, no added fat - 300g (~123 kcal)",
+            "\u2022 Brussels sprouts, frozen, cooked, no added fat - 300g (~153 kcal)",
+            "\u2022 Broccoli, fresh, cooked, no added fat - 300g (~128 kcal)",
+            "\u2022 Artichoke, frozen, cooked, no added fat - 300g (~186 kcal)",
+            "\u2022 Kale, frozen, cooked, no added fat - 300g (~131 kcal)",
+            "\u2022 Peas, baby food, NS as to strained or junior - 300g (~151 kcal)"
+          ],
+          "total_calories": 1893
+        }
+      }
+    },
+    {
+      "optionId": 2,
+      "name": "Plan 2 - Optimized for Overweight",
+      "weeklyPlan": {
+        "Day 1": {
+          "meals": [
+            "\u2022 Greens, fresh, cooked, no added fat - 300g (~123 kcal)",
+            "\u2022 Greens, frozen, cooked, no added fat - 300g (~123 kcal)",
+            "\u2022 Cereal, cooked, NFS - 200g (~128 kcal)",
+            "\u2022 Oatmeal, regular or quick, made with water, no added fat - 300g (~192 kcal)",
+            "\u2022 Mustard greens, fresh, cooked, fat added - 300g (~179 kcal)",
+            "\u2022 Peas, baby food, strained - 300g (~151 kcal)",
+            "\u2022 Greens, fresh, cooked, fat added - 100g (~62 kcal)"
+          ],
+          "total_calories": 1852
+        },
+        "Day 2": {
+          "meals": [
+            "\u2022 Peas, baby food, NS as to strained or junior - 300g (~151 kcal)",
+            "\u2022 Peas, baby food, junior - 300g (~151 kcal)",
+            "\u2022 Greens, frozen, cooked, no added fat - 300g (~123 kcal)",
+            "\u2022 Broccoli, raw - 300g (~123 kcal)",
+            "\u2022 Greens, fresh, cooked, no added fat - 300g (~123 kcal)",
+            "\u2022 Peas, baby food, strained - 300g (~151 kcal)",
+            "\u2022 Brussels sprouts, frozen, cooked, no added fat - 300g (~153 kcal)"
+          ],
+          "total_calories": 1893
+        },
+        "Day 3": {
+          "meals": [
+            "\u2022 Oatmeal, regular or quick, made with water, no added fat - 300g (~192 kcal)",
+            "\u2022 Greens, NS as to form, cooked - 300g (~186 kcal)",
+            "\u2022 Cereal, nestum - 300g (~192 kcal)",
+            "\u2022 Brussels sprouts, frozen, cooked, no added fat - 300g (~153 kcal)",
+            "\u2022 Artichoke, canned, cooked, no added fat - 300g (~186 kcal)",
+            "\u2022 Mustard greens, fresh, cooked, fat added - 300g (~179 kcal)",
+            "\u2022 Greens, fresh, cooked, no added fat - 300g (~123 kcal)"
+          ],
+          "total_calories": 1888
+        },
+        "Day 4": {
+          "meals": [
+            "\u2022 Peas, baby food, strained - 300g (~151 kcal)",
+            "\u2022 Mustard greens, NS as to form, cooked - 300g (~179 kcal)",
+            "\u2022 Peas, baby food, junior - 300g (~151 kcal)",
+            "\u2022 Cereal, nestum - 300g (~192 kcal)",
+            "\u2022 Kale, frozen, cooked, no added fat - 300g (~131 kcal)",
+            "\u2022 Greens, frozen, cooked, no added fat - 300g (~123 kcal)",
+            "\u2022 Artichoke, fresh, cooked, no added fat - 300g (~186 kcal)"
+          ],
+          "total_calories": 1884
+        },
+        "Day 5": {
+          "meals": [
+            "\u2022 Greens, frozen, cooked, no added fat - 300g (~123 kcal)",
+            "\u2022 Broccoli, raw - 300g (~123 kcal)",
+            "\u2022 Peas, baby food, NS as to strained or junior - 300g (~151 kcal)",
+            "\u2022 Peas, baby food, junior - 300g (~151 kcal)",
+            "\u2022 Mustard greens, NS as to form, cooked - 300g (~179 kcal)",
+            "\u2022 Oatmeal, NS as to regular, quick, or instant, no added fat - 200g (~128 kcal)",
+            "\u2022 Broccoli, fresh, cooked, no added fat - 300g (~128 kcal)"
+          ],
+          "total_calories": 1871
+        },
+        "Day 6": {
+          "meals": [
+            "\u2022 Cereal, nestum - 200g (~128 kcal)",
+            "\u2022 Brussels sprouts, fresh, cooked, no added fat - 300g (~162 kcal)",
+            "\u2022 Peas, baby food, strained - 300g (~151 kcal)",
+            "\u2022 Artichoke, fresh, cooked, no added fat - 300g (~186 kcal)",
+            "\u2022 Broccoli, fresh, cooked, no added fat - 300g (~128 kcal)",
+            "\u2022 Peas, baby food, NS as to strained or junior - 300g (~151 kcal)",
+            "\u2022 Greens, NS as to form, cooked - 300g (~186 kcal)"
+          ],
+          "total_calories": 1862
+        },
+        "Day 7": {
+          "meals": [
+            "\u2022 Brussels sprouts, frozen, cooked, no added fat - 300g (~153 kcal)",
+            "\u2022 Broccoli, raw - 300g (~123 kcal)",
+            "\u2022 Peas, baby food, NS as to strained or junior - 300g (~151 kcal)",
+            "\u2022 Kale, frozen, cooked, no added fat - 300g (~131 kcal)",
+            "\u2022 Greens, fresh, cooked, no added fat - 300g (~123 kcal)",
+            "\u2022 Greens, fresh, cooked, fat added - 100g (~62 kcal)",
+            "\u2022 Greens, NS as to form, cooked - 300g (~186 kcal)"
+          ],
+          "total_calories": 1845
+        }
+      }
+    },
+    {
+      "optionId": 3,
+      "name": "Plan 3 - Optimized for Overweight",
+      "weeklyPlan": {
+        "Day 1": {
+          "meals": [
+            "\u2022 Peas, baby food, NS as to strained or junior - 300g (~151 kcal)",
+            "\u2022 Mustard greens, NS as to form, cooked - 300g (~179 kcal)",
+            "\u2022 Greens, NS as to form, cooked - 300g (~186 kcal)",
+            "\u2022 Brussels sprouts, fresh, cooked, no added fat - 300g (~162 kcal)",
+            "\u2022 Brussels sprouts, frozen, cooked, no added fat - 300g (~153 kcal)",
+            "\u2022 Mustard greens, fresh, cooked, fat added - 300g (~179 kcal)",
+            "\u2022 Greens, frozen, cooked, no added fat - 300g (~123 kcal)"
+          ],
+          "total_calories": 1843
+        },
+        "Day 2": {
+          "meals": [
+            "\u2022 Broccoli, raw - 300g (~123 kcal)",
+            "\u2022 Mustard greens, fresh, cooked, fat added - 300g (~179 kcal)",
+            "\u2022 Oatmeal, NS as to regular, quick, or instant, no added fat - 300g (~192 kcal)",
+            "\u2022 Greens, frozen, cooked, no added fat - 300g (~123 kcal)",
+            "\u2022 Brussels sprouts, fresh, cooked, no added fat - 300g (~162 kcal)",
+            "\u2022 Peas, baby food, strained - 300g (~151 kcal)",
+            "\u2022 Broccoli, fresh, cooked, no added fat - 300g (~128 kcal)"
+          ],
+          "total_calories": 1859
+        },
+        "Day 3": {
+          "meals": [
+            "\u2022 Brussels sprouts, fresh, cooked, no added fat - 300g (~162 kcal)",
+            "\u2022 Peas, baby food, strained - 300g (~151 kcal)",
+            "\u2022 Artichoke, canned, cooked, no added fat - 300g (~186 kcal)",
+            "\u2022 Artichoke, frozen, cooked, no added fat - 300g (~186 kcal)",
+            "\u2022 Broccoli, fresh, cooked, no added fat - 300g (~128 kcal)",
+            "\u2022 Greens, NS as to form, cooked - 100g (~62 kcal)",
+            "\u2022 Broccoli, raw - 300g (~123 kcal)"
+          ],
+          "total_calories": 1892
+        },
+        "Day 4": {
+          "meals": [
+            "\u2022 Artichoke, fresh, cooked, no added fat - 300g (~186 kcal)",
+            "\u2022 Brussels sprouts, fresh, cooked, no added fat - 300g (~162 kcal)",
+            "\u2022 Artichoke, frozen, cooked, no added fat - 300g (~186 kcal)",
+            "\u2022 Brussels sprouts, frozen, cooked, no added fat - 300g (~153 kcal)",
+            "\u2022 Mustard greens, NS as to form, cooked - 300g (~179 kcal)",
+            "\u2022 Mustard greens, fresh, cooked, fat added - 300g (~179 kcal)",
+            "\u2022 Peas, baby food, NS as to strained or junior - 300g (~151 kcal)"
+          ],
+          "total_calories": 1884
+        },
+        "Day 5": {
+          "meals": [
+            "\u2022 Greens, frozen, cooked, no added fat - 300g (~123 kcal)",
+            "\u2022 Artichoke, fresh, cooked, no added fat - 300g (~186 kcal)",
+            "\u2022 Greens, frozen, cooked, fat added - 300g (~188 kcal)",
+            "\u2022 Greens, fresh, cooked, fat added - 300g (~186 kcal)",
+            "\u2022 Kale, frozen, cooked, no added fat - 300g (~131 kcal)",
+            "\u2022 Brussels sprouts, frozen, cooked, no added fat - 300g (~153 kcal)",
+            "\u2022 Artichoke, canned, cooked, no added fat - 300g (~186 kcal)"
+          ],
+          "total_calories": 1833
+        },
+        "Day 6": {
+          "meals": [
+            "\u2022 Greens, NS as to form, cooked - 300g (~186 kcal)",
+            "\u2022 Broccoli, raw - 300g (~123 kcal)",
+            "\u2022 Peas, baby food, strained - 300g (~151 kcal)",
+            "\u2022 Greens, fresh, cooked, no added fat - 300g (~123 kcal)",
+            "\u2022 Peas, baby food, NS as to strained or junior - 300g (~151 kcal)",
+            "\u2022 Greens, frozen, cooked, no added fat - 300g (~123 kcal)",
+            "\u2022 Broccoli, fresh, cooked, no added fat - 300g (~128 kcal)"
+          ],
+          "total_calories": 1870
+        },
+        "Day 7": {
+          "meals": [
+            "\u2022 Brussels sprouts, fresh, cooked, no added fat - 200g (~108 kcal)",
+            "\u2022 Cereal, cooked, NFS - 300g (~192 kcal)",
+            "\u2022 Peas, baby food, strained - 300g (~151 kcal)",
+            "\u2022 Peas, baby food, junior - 300g (~151 kcal)",
+            "\u2022 Peas, baby food, NS as to strained or junior - 300g (~151 kcal)",
+            "\u2022 Greens, fresh, cooked, fat added - 100g (~62 kcal)",
+            "\u2022 Cereal, nestum - 300g (~192 kcal)"
+          ],
+          "total_calories": 1850
+        }
+      }
+    }
+  ]
+}
