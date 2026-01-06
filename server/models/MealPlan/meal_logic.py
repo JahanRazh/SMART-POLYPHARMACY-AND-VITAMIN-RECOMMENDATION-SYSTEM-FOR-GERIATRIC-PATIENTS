@@ -1,4 +1,4 @@
-# MealPlan/meal_logic.py - FINAL CLEAN & OPTIMIZED VERSION
+# MealPlan/meal_logic.py - FINAL ENGLISH VERSION WITH BMI-BASED CALORIE ADJUSTMENT
 
 import pandas as pd
 from pulp import *
@@ -12,10 +12,10 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 import warnings
 
-# Suppress the harmless sklearn warning about feature names
+# Suppress harmless sklearn warning about feature names
 warnings.filterwarnings("ignore", message="X does not have valid feature names")
 
-print("🍽️ Smart Meal Planner Starting...")
+print("Smart Meal Planner Starting...")
 
 # ==================================================
 # PATHS
@@ -35,9 +35,9 @@ scaler = None
 def load_dataset():
     global df
     if not os.path.exists(CSV_PATH):
-        raise FileNotFoundError(f"❌ food.csv not found at {CSV_PATH}")
+        raise FileNotFoundError(f"food.csv not found at {CSV_PATH}")
     
-    print(f"📁 Loading dataset: food.csv")
+    print("Loading dataset: food.csv")
     df = pd.read_csv(CSV_PATH)
     
     nutrient_cols = [
@@ -61,7 +61,7 @@ def load_dataset():
     )
     df["Calories"] = df["Calories"].fillna(0)
     
-    print(f"✅ Dataset loaded & cleaned: {len(df)} foods")
+    print(f"Dataset loaded and cleaned: {len(df)} foods")
     return df
 
 # ==================================================
@@ -69,7 +69,7 @@ def load_dataset():
 # ==================================================
 def train_and_save_model():
     global vitamin_model, scaler
-    print("🧠 Training new AI Health Model...")
+    print("Training new AI Health Model...")
     
     features = [
         "Data.Carbohydrate", "Data.Protein", "Data.Fat.Total Lipid",
@@ -98,13 +98,13 @@ def train_and_save_model():
     vitamin_model.fit(X_train, y_train)
     
     accuracy = vitamin_model.score(X_test, y_test)
-    print(f"✅ Model trained | Accuracy: {accuracy:.3f}")
+    print(f"Model trained successfully | Accuracy: {accuracy:.3f}")
     
     with open(MODEL_PATH, "wb") as f:
         pickle.dump(vitamin_model, f)
     with open(SCALER_PATH, "wb") as f:
         pickle.dump(scaler, f)
-    print("💾 New model files saved!")
+    print("New model files saved!")
 
 # ==================================================
 # LOAD DATA & MODEL
@@ -119,13 +119,13 @@ else:
             vitamin_model = pickle.load(f)
         with open(SCALER_PATH, "rb") as f:
             scaler = pickle.load(f)
-        print("🧠 Existing AI model loaded")
+        print("Existing AI model loaded")
     except Exception as e:
-        print(f"⚠️ Model load failed ({e}) – retraining...")
+        print(f"Model load failed ({e}) – retraining...")
         train_and_save_model()
 
 # ==================================================
-# AI SCORING – Fixed warning by using same structure as training
+# AI SCORING – No warning
 # ==================================================
 def ai_food_score(row):
     if vitamin_model is None or scaler is None:
@@ -137,7 +137,6 @@ def ai_food_score(row):
         row["Data.Fiber"], row["Data.Cholesterol"], row["Calories"]
     ]).reshape(1, -1)
     
-    # Create DataFrame with column names to match training exactly
     feature_df = pd.DataFrame(
         feature_values,
         columns=[
@@ -201,13 +200,13 @@ def filter_foods(patient_data, active_conditions):
         (filtered["Calories"] < 400)
     ].reset_index(drop=True)
     
-    print(f"🔍 Filtered to {len(filtered)} suitable foods")
+    print(f"Filtered to {len(filtered)} suitable foods")
     return filtered
 
 # ==================================================
-# DAILY MEAL PLAN
+# DAILY MEAL PLAN – Now accepts dynamic calorie range
 # ==================================================
-def generate_daily_plan(filtered_df, seed=42):
+def generate_daily_plan(filtered_df, seed=42, calorie_min=1800, calorie_max=2200):
     random.seed(seed)
     if len(filtered_df) < 5:
         return ["Not enough suitable foods"], 0
@@ -217,13 +216,15 @@ def generate_daily_plan(filtered_df, seed=42):
     prob = LpProblem("DailyMeal", LpMinimize)
     x = {i: LpVariable(f"x{i}", 0, 3, LpInteger) for i in range(len(foods))}
     
+    # Objective: minimize calories while maximizing AI health score
     prob += (
         lpSum(foods.iloc[i]["Calories"] * x[i] for i in x) -
         200 * lpSum(foods.iloc[i]["ai_score"] * x[i] for i in x)
     )
     
-    prob += lpSum(foods.iloc[i]["Calories"] * x[i] for i in x) >= 1500
-    prob += lpSum(foods.iloc[i]["Calories"] * x[i] for i in x) <= 2200
+    # Dynamic calorie constraints based on BMI
+    prob += lpSum(foods.iloc[i]["Calories"] * x[i] for i in x) >= calorie_min
+    prob += lpSum(foods.iloc[i]["Calories"] * x[i] for i in x) <= calorie_max
     prob += lpSum(foods.iloc[i]["Data.Protein"] * x[i] for i in x) >= 60
     prob += lpSum(foods.iloc[i]["Data.Fiber"] * x[i] for i in x) >= 25
     prob += lpSum(foods.iloc[i]["Data.Sugar Total"] * x[i] for i in x) <= 50
@@ -235,7 +236,7 @@ def generate_daily_plan(filtered_df, seed=42):
         plan = []
         for _, row in fallback.iterrows():
             plan.append(f"• {row['Description'][:60]} - 150g (~{int(row['Calories'] * 1.5)} kcal)")
-        return plan, 1800
+        return plan, int((calorie_min + calorie_max) / 2)
     
     plan = []
     total_cal = 0
@@ -252,13 +253,34 @@ def generate_daily_plan(filtered_df, seed=42):
     return plan[:7], int(total_cal)
 
 # ==================================================
-# MAIN FUNCTION
+# MAIN FUNCTION – Now uses BMI to adjust calories and give advice
 # ==================================================
 def generate_full_meal_plan(patient_data):
     basic = patient_data.get("basicProfile", {})
     medical = patient_data.get("medicalConditions", {})
     vitamin_defs = patient_data.get("vitaminDeficiencies", [])
     
+    patient_name = basic.get("name", "Patient")
+    bmi = float(basic.get("bmi", 22))
+    
+    # BMI-based calorie targets and advice
+    if bmi < 18.5:
+        bmi_category = "Underweight"
+        calorie_min, calorie_max = 2200, 2800
+        bmi_advice = "Your BMI is low. To gain healthy weight, focus on protein-rich and calorie-dense foods."
+    elif 18.5 <= bmi < 25:
+        bmi_category = "Normal Weight"
+        calorie_min, calorie_max = 1800, 2200
+        bmi_advice = "Your BMI is in the healthy range. Maintain your current weight with balanced meals."
+    elif 25 <= bmi < 30:
+        bmi_category = "Overweight"
+        calorie_min, calorie_max = 1500, 1900
+        bmi_advice = "Your BMI is slightly high. Focus on low-calorie, high-fiber foods to support healthy weight loss."
+    else:  # BMI >= 30
+        bmi_category = "Obese"
+        calorie_min, calorie_max = 1400, 1800
+        bmi_advice = "Your BMI is high. Consult a doctor and follow a low-calorie, nutrient-rich diet."
+
     active_conditions = []
     if medical.get("diabetes"): active_conditions.append("diabetes")
     if medical.get("hypertension"): active_conditions.append("hypertension")
@@ -270,6 +292,10 @@ def generate_full_meal_plan(patient_data):
     
     foods = filter_foods(patient_data, active_conditions)
     
+    # Extra fiber boost for overweight/obese patients
+    if bmi >= 25:
+        foods = foods.nlargest(500, "Data.Fiber")
+    
     if len(foods) < 8:
         return {
             "success": False,
@@ -280,29 +306,37 @@ def generate_full_meal_plan(patient_data):
     for option_id in range(1, 4):
         weekly = {}
         for day in range(1, 8):
-            meals, cal = generate_daily_plan(foods, seed=option_id * 1000 + day)
+            meals, cal = generate_daily_plan(
+                foods, 
+                seed=option_id * 1000 + day,
+                calorie_min=calorie_min,
+                calorie_max=calorie_max
+            )
             weekly[f"Day {day}"] = {"meals": meals, "total_calories": cal}
         options.append({
             "optionId": option_id,
-            "name": f"AI Balanced Plan {option_id}",
+            "name": f"Plan {option_id} - Optimized for {bmi_category}",
             "weeklyPlan": weekly
         })
     
     return {
         "success": True,
-        "patient_name": basic.get("name", "Patient"),
-        "bmi": basic.get("bmi", 22),
+        "patient_name": patient_name,
+        "bmi": round(bmi, 1),
+        "bmi_category": bmi_category,
+        "bmi_advice": bmi_advice,
+        "daily_calorie_range": f"{calorie_min}–{calorie_max} kcal",
         "conditions": active_conditions,
         "suitable_foods_count": len(foods),
         "mealPlanOptions": options
     }
 
 # ==================================================
-# TEST
+# TEST FUNCTION
 # ==================================================
 def test_meal_planner():
-    sample = {
-        "basicProfile": {"name": "Nimal Perera", "bmi": 27},
+    sample_patient = {
+        "basicProfile": {"name": "John Doe", "bmi": 28.5},
         "dietaryRestrictions": {
             "vegetarian": True,
             "dairyFree": False,
@@ -315,6 +349,9 @@ def test_meal_planner():
     }
     
 
+# ==================================================
+# RUN TEST
+# ==================================================
 if __name__ == "__main__":
     test_meal_planner()
-    print("\n✅ Meal planner is ready! Call generate_full_meal_plan() from your API.")
+    print("\nMeal planner is ready! Use generate_full_meal_plan(patient_data) in your API.")
