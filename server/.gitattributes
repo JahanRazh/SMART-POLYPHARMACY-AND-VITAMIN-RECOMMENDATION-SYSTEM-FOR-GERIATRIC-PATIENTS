@@ -1,2 +1,0 @@
-git lfs track "*.safetensors"
-*.safetensors filter=lfs diff=lfs merge=lfs -text
