@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 import { AlertCircle, CheckCircle, Loader2 } from "lucide-react";
+import MealPlanResult from "./MealPlanResult";
+
 
 interface BasicProfile {
   name: string;
@@ -104,28 +106,29 @@ const MealPlanForm: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+  const [mealPlanResult, setMealPlanResult] = useState<any>(null);
 
   const API_URL = "http://127.0.0.1:5000/api/meal-plans";
 
   const vitamins = [
     "Vitamin A",
-    "Vitamin B1 (Thiamine)",
+    /*"Vitamin B1 (Thiamine)",
     "Vitamin B2 (Riboflavin)",
     "Vitamin B3 (Niacin)",
-    "Vitamin B5 (Pantothenic Acid)",
+    "Vitamin B5 (Pantothenic Acid)",*/
     "Vitamin B6 (Pyridoxine)",
-    "Vitamin B7 (Biotin)",
-    "Vitamin B9 (Folate)",
+    /*"Vitamin B7 (Biotin)",
+    "Vitamin B9 (Folate)",*/
     "Vitamin B12 (Cobalamin)",
     "Vitamin C",
-    "Vitamin D",
+    //"Vitamin D",
     "Vitamin E",
     "Vitamin K",
-    "Calcium",
+    /*"Calcium",
     "Iron",
     "Magnesium",
     "Zinc",
-    "Omega-3",
+    "Omega-3",*/
   ];
 
   // Calculate BMI when height or weight changes
@@ -240,6 +243,7 @@ const MealPlanForm: React.FC = () => {
       }
 
       setSuccess(true);
+      setMealPlanResult(data);
       console.log("Meal Plan Created:", data);
 
       setTimeout(() => {
@@ -751,6 +755,7 @@ const MealPlanForm: React.FC = () => {
                 )}
               </button>
             </div>
+            {mealPlanResult && <MealPlanResult result={mealPlanResult} />}
           </div>
         </div>
       </div>
