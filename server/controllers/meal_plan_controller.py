@@ -1,7 +1,6 @@
 from flask import request, jsonify
-from MealPlan.meal_logic import generate_full_meal_plan
+from models.MealPlan.meal_logic import generate_full_meal_plan
 from models.meal_plan_model import save_meal_plan
-
 def create_meal_plan():
     payload = request.get_json(silent=True) or {}
 
