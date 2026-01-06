@@ -80,6 +80,27 @@ def full_assessment():
     }
     if email:
         entry["email"] = email
-    db.collection("patient_assessment").add(entry)
+
+    # If we have an email, upsert using a stable document id derived from the
+    # email so repeated requests for the same user overwrite the same record
+    # instead of creating duplicates. Fall back to `add()` for anonymous
+    # submissions.
+    try:
+        if email:
+            # sanitize email for document id
+            doc_id = email.replace("@", "_at_").replace(".", "_")
+            doc_ref = db.collection("patient_assessment").document(doc_id)
+            snap = doc_ref.get()
+            if snap.exists:
+                # Merge update so existing metadata (like createdAt) is preserved
+                doc_ref.set(entry, merge=True)
+            else:
+                entry["createdAt"] = datetime.utcnow()
+                doc_ref.set(entry, merge=True)
+        else:
+            db.collection("patient_assessment").add(entry)
+    except Exception:
+        # On any failure, still attempt to add to avoid losing data
+        db.collection("patient_assessment").add(entry)
 
     return jsonify({"mental_health_Risk": prediction}), 200
