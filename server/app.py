@@ -36,7 +36,4 @@ def check_firebase():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 if __name__ == "__main__":
-    # NOTE (Windows): The Werkzeug reloader can cause
-    # "OSError: [WinError 10038] An operation was attempted on something that is not a socket"
-    # in a background thread. Disabling the reloader avoids this noisy error.
     app.run(host="127.0.0.1", port=5000, debug=False, use_reloader=False)
