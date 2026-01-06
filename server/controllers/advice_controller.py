@@ -3,6 +3,62 @@ from datetime import datetime
 from db import get_db
 import os
 
+# Fast dataset preload for O(1) lookups during requests. Builds simple
+# in-memory maps from normalized field values to advice strings so the
+# controller avoids reading/parsing the CSV on every request.
+DATASET_LOADED = False
+DATASET_STRUCT = {
+    "exact_map": {},
+    "emotion_map": {},
+    "mh_map": {},
+    "poly_map": {},
+    "occ_map": {},
+    "advice_col": None,
+}
+try:
+    import pandas as _pd
+
+    _csv_path = os.path.join(os.path.dirname(__file__), "..", "Data", "geriatric_non_medical_advice_dataset.csv")
+    if os.path.exists(_csv_path):
+        _df = _pd.read_csv(_csv_path)
+        cols_lc = {c.lower(): c for c in _df.columns}
+
+        def _find_col(*tokens):
+            for lc, orig in cols_lc.items():
+                if any(tok in lc for tok in tokens):
+                    return orig
+            return None
+
+        _emotion_col = _find_col("emotion")
+        _mh_col = _find_col("mental_health_risk", "mental_health", "mental")
+        _poly_col = _find_col("polypharmacy_risk", "polypharmacy", "poly", "risk")
+        _occ_col = _find_col("past_occupation", "occupation", "past occupation")
+        _advice_col = _find_col("non_medical_advice", "non_medical", "non medical", "advice", "recommend")
+
+        DATASET_STRUCT["advice_col"] = _advice_col
+
+        for _, _row in _df.iterrows():
+            e = str(_row.get(_emotion_col, "") or "").strip().lower() if _emotion_col else ""
+            m = str(_row.get(_mh_col, "") or "").strip().lower() if _mh_col else ""
+            p = str(_row.get(_poly_col, "") or "").strip().lower() if _poly_col else ""
+            o = str(_row.get(_occ_col, "") or "").strip().lower() if _occ_col else ""
+            adv = str(_row.get(_advice_col, "") or "").strip() if _advice_col else ""
+
+            key = (e, m, p, o)
+            DATASET_STRUCT["exact_map"].setdefault(key, []).append(adv)
+            if e:
+                DATASET_STRUCT["emotion_map"].setdefault(e, []).append(adv)
+            if m:
+                DATASET_STRUCT["mh_map"].setdefault(m, []).append(adv)
+            if p:
+                DATASET_STRUCT["poly_map"].setdefault(p, []).append(adv)
+            if o:
+                DATASET_STRUCT["occ_map"].setdefault(o, []).append(adv)
+
+        DATASET_LOADED = True
+except Exception:
+    DATASET_LOADED = False
+
 # Optional heavy imports (transformers) will be attempted at runtime inside functions
 
 
@@ -212,7 +268,127 @@ def get_patient_advice():
 
     # Try to use a dedicated Advice_model if available; otherwise fallback
     advice_text = None
+    source = None
     model_dir = os.path.join(os.path.dirname(__file__), "..", "models", "geriatric_emotion_model")
+
+    # Attempt to find matching advice from the curated CSV dataset first
+    try:
+        csv_path = os.path.join(os.path.dirname(__file__), "..", "Data", "geriatric_non_medical_advice_dataset.csv")
+        if os.path.exists(csv_path):
+            import pandas as pd
+
+            df = pd.read_csv(csv_path)
+
+            # build lowercase mapping of column names for flexible matching
+            cols_lc = {c.lower(): c for c in df.columns}
+
+            def find_col_by_tokens(*tokens):
+                for key_lc, orig in cols_lc.items():
+                    if any(tok in key_lc for tok in tokens):
+                        return orig
+                return None
+
+            # expected columns (case-insensitive)
+            emotion_col = find_col_by_tokens("emotion")
+            mh_col = find_col_by_tokens("mental_health_risk", "mental", "mental_health")
+            poly_col = find_col_by_tokens("polypharmacy_risk", "polypharmacy", "poly")
+            occ_col = find_col_by_tokens("past_occupation", "occupation", "past occupation")
+            advice_col = find_col_by_tokens("non_medical_advice", "non medical advice", "non_medical", "advice")
+
+            # prepare lowercase series for matching when columns exist
+            for orig in (emotion_col, mh_col, poly_col, occ_col, advice_col):
+                if orig and orig in df.columns:
+                    df[orig] = df[orig].astype(str)
+                    df[orig + "_lc"] = df[orig].str.lower()
+
+            occ = (merged.get("occupation") or "").strip().lower()
+            mh_val = str(merged.get("mentalHealthLevel") or "").strip().lower()
+            em = str(merged.get("detectedEmotion") or "").strip().lower()
+            pr = str(merged.get("polypharmacyRisk") or "").strip().lower()
+
+            mask = pd.Series(True, index=df.index)
+            applied = False
+
+            if occ and occ_col and (occ_col + "_lc") in df.columns:
+                mask &= df[occ_col + "_lc"].str.contains(occ, na=False)
+                applied = True
+            if mh_val and mh_col and (mh_col + "_lc") in df.columns:
+                mask &= df[mh_col + "_lc"].str.contains(mh_val, na=False)
+                applied = True
+            if em and emotion_col and (emotion_col + "_lc") in df.columns:
+                mask &= df[emotion_col + "_lc"].str.contains(em, na=False)
+                applied = True
+            if pr and poly_col and (poly_col + "_lc") in df.columns:
+                mask &= df[poly_col + "_lc"].str.contains(pr, na=False)
+                applied = True
+
+            matched = df[mask] if applied else df.iloc[0:0]
+
+            # If no multi-field match, try single-field matches in priority order
+            if matched.empty:
+                for val, col in ((mh_val, mh_col), (em, emotion_col), (pr, poly_col), (occ, occ_col)):
+                    if val and col and (col + "_lc") in df.columns:
+                        cand = df[df[col + "_lc"].str.contains(val, na=False)]
+                        if not cand.empty:
+                            matched = cand
+                            break
+
+            if not matched.empty:
+                # Extract advice texts from the Non_Medical_Advice column if present
+                advice_texts = []
+                if advice_col and advice_col in matched.columns:
+                    advice_texts = matched[advice_col].dropna().astype(str).tolist()
+                else:
+                    # fallback to any advice-like column
+                    advice_like = [c for c in df.columns if any(x in c.lower() for x in ("advice", "recommend", "suggest", "note"))]
+                    if advice_like:
+                        advice_texts = matched[advice_like[0]].dropna().astype(str).tolist()
+
+                # flatten lines and classify into categories using keywords
+                cat_keywords = {
+                    "nutrition": ["diet", "food", "nutrition", "meal", "vitamin", "calorie"],
+                    "movement": ["exercise", "walk", "movement", "activity", "balance", "strength"],
+                    "sleep": ["sleep", "bedtime", "insomnia", "rest"],
+                    "stress": ["stress", "anxiety", "mindful", "meditation", "breath", "mood"],
+                    "general": []
+                }
+
+                buckets = {k: [] for k in cat_keywords.keys()}
+                for text in advice_texts:
+                    for line in str(text).splitlines():
+                        s = line.strip()
+                        if not s:
+                            continue
+                        low = s.lower()
+                        placed = False
+                        for cat, keys in cat_keywords.items():
+                            if keys and any(k in low for k in keys):
+                                buckets[cat].append(s)
+                                placed = True
+                                break
+                        if not placed:
+                            buckets["general"].append(s)
+
+                # Build structured advice object expected by frontend
+                structured = {}
+                for k, lines in buckets.items():
+                    if lines:
+                        # deduplicate preserving order
+                        seen = []
+                        for L in lines:
+                            if L not in seen:
+                                seen.append(L)
+                        structured[k] = {
+                            "summary": seen[0] if seen else "",
+                            "recommendations": [ {"title": f"Advice {i+1}", "detail": detail} for i, detail in enumerate(seen) ]
+                        }
+
+                if structured:
+                    advice_text = structured
+                    source = "dataset"
+    except Exception:
+        # dataset fallback silently ignored
+        pass
     try:
         # Import here to avoid hard dependency at module import time
         from transformers import AutoTokenizer, AutoModelForCausalLM
@@ -250,7 +426,6 @@ def get_patient_advice():
 
     if not advice_text:
         advice_text = generate_advice_from_data(merged)
-
     # Save generated advice to Firestore for records
     try:
         entry = {
@@ -264,4 +439,7 @@ def get_patient_advice():
     except Exception as e:
         print("❌ Error saving generated advice to Firebase:", e)
 
-    return jsonify({"advice": advice_text, "source": "model" if os.path.exists(model_dir) else "heuristic", "data": merged}), 200
+    if not source:
+        source = "model" if os.path.exists(model_dir) else "heuristic"
+
+    return jsonify({"advice": advice_text, "source": source, "data": merged}), 200
