@@ -212,7 +212,7 @@ def get_patient_advice():
 
     # Try to use a dedicated Advice_model if available; otherwise fallback
     advice_text = None
-    model_dir = os.path.join(os.path.dirname(__file__), "..", "models", "Advice_model")
+    model_dir = os.path.join(os.path.dirname(__file__), "..", "models", "geriatric_emotion_model")
     try:
         # Import here to avoid hard dependency at module import time
         from transformers import AutoTokenizer, AutoModelForCausalLM
