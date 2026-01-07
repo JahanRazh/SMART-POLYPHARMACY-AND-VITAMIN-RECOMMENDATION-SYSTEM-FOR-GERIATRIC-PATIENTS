@@ -639,11 +639,7 @@ const PolypharmacyPage = () => {
                   severitySummary.Minor || 0,
                   "bg-emerald-50 border-emerald-100"
                 )}
-                {renderSeverityCard(
-                  "Other",
-                  severitySummary.Unknown || 0,
-                  "bg-gray-50 border-gray-100"
-                )}
+               
               </div>
             </div>
 
@@ -1194,10 +1190,7 @@ const PolypharmacyPage = () => {
                               {interaction.severity}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-xs text-gray-500">
-                            {interaction.ddinterIdA || "—"} /{" "}
-                            {interaction.ddinterIdB || "—"}
-                          </td>
+                         
                         </tr>
                       ))}
                     </tbody>
