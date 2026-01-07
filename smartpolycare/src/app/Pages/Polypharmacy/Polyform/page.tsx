@@ -158,6 +158,48 @@ const PolypharmacyPage = () => {
     }
   }, [userProfile, firstName, lastName, isFullNameDirty, fullName]);
 
+  useEffect(() => {
+    // Fetch saved assessment
+    const fetchAssessment = async () => {
+      if (!user) return;
+
+      try {
+        const response = await fetch(`${API_BASE}/api/polypharmacy/assessment?userId=${user.uid}`);
+        if (response.ok) {
+          const data: AssessmentResponse = await response.json();
+          setAnalysis(data);
+          // Restore form state
+          setDrugs(data.drugs || [""]);
+          setAge(String(data.age));
+          setLiverFunction(data.liverFunction);
+          setKidneyFunction(data.kidneyFunction);
+        }
+      } catch (error) {
+        console.error("Failed to fetch assessment", error);
+      }
+    };
+
+    fetchAssessment();
+  }, [user]);
+
+  const handleClear = async () => {
+    if (!user) return;
+
+    try {
+      await fetch(`${API_BASE}/api/polypharmacy/assessment?userId=${user.uid}`, {
+        method: "DELETE",
+      });
+      setAnalysis(null);
+      setDrugs([""]);
+      setAge("");
+      setLiverFunction("");
+      setKidneyFunction("");
+      setSuccessMessage("Analysis cleared successfully.");
+    } catch (error) {
+      setError("Failed to clear analysis.");
+    }
+  };
+
   const handleDrugChange = async (index: number, value: string) => {
     setDrugs((prev) => prev.map((drug, idx) => (idx === index ? value : drug)));
 
@@ -584,6 +626,12 @@ const PolypharmacyPage = () => {
                   </p>
                 </div>
                 <div className="text-right text-sm text-gray-500">
+                  <button
+                    onClick={handleClear}
+                    className="mb-2 rounded-lg border border-red-200 bg-red-50 px-3 py-1 text-xs font-semibold text-red-600 hover:bg-red-100"
+                  >
+                    Clear Analysis
+                  </button>
                   <p>ID: {analysis.assessmentId}</p>
                   <p>{new Date(analysis.createdAt).toLocaleString()}</p>
                 </div>
@@ -605,13 +653,13 @@ const PolypharmacyPage = () => {
                         <p className="text-sm text-indigo-600">Risk Level</p>
                         <p
                           className={`text-2xl font-bold ${analysis.riskCalculation.riskLevel === "Very High"
-                              ? "text-red-600"
-                              : analysis.riskCalculation.riskLevel === "High"
-                                ? "text-orange-600"
-                                : analysis.riskCalculation.riskLevel ===
-                                  "Moderate"
-                                  ? "text-yellow-600"
-                                  : "text-green-600"
+                            ? "text-red-600"
+                            : analysis.riskCalculation.riskLevel === "High"
+                              ? "text-orange-600"
+                              : analysis.riskCalculation.riskLevel ===
+                                "Moderate"
+                                ? "text-yellow-600"
+                                : "text-green-600"
                             }`}
                         >
                           {analysis.riskCalculation.riskLevel}
@@ -1092,8 +1140,8 @@ const PolypharmacyPage = () => {
                   <div className="grid gap-2 md:grid-cols-4">
                     <div
                       className={`rounded-lg border p-3 ${analysis.riskCalculation.riskScore < 30
-                          ? "border-green-300 bg-green-50"
-                          : "border-gray-200 bg-gray-50"
+                        ? "border-green-300 bg-green-50"
+                        : "border-gray-200 bg-gray-50"
                         }`}
                     >
                       <p className="text-xs text-gray-600">Low</p>
@@ -1103,9 +1151,9 @@ const PolypharmacyPage = () => {
                     </div>
                     <div
                       className={`rounded-lg border p-3 ${analysis.riskCalculation.riskScore >= 30 &&
-                          analysis.riskCalculation.riskScore < 60
-                          ? "border-yellow-300 bg-yellow-50"
-                          : "border-gray-200 bg-gray-50"
+                        analysis.riskCalculation.riskScore < 60
+                        ? "border-yellow-300 bg-yellow-50"
+                        : "border-gray-200 bg-gray-50"
                         }`}
                     >
                       <p className="text-xs text-gray-600">Moderate</p>
@@ -1115,9 +1163,9 @@ const PolypharmacyPage = () => {
                     </div>
                     <div
                       className={`rounded-lg border p-3 ${analysis.riskCalculation.riskScore >= 60 &&
-                          analysis.riskCalculation.riskScore < 80
-                          ? "border-orange-300 bg-orange-50"
-                          : "border-gray-200 bg-gray-50"
+                        analysis.riskCalculation.riskScore < 80
+                        ? "border-orange-300 bg-orange-50"
+                        : "border-gray-200 bg-gray-50"
                         }`}
                     >
                       <p className="text-xs text-gray-600">High</p>
@@ -1127,8 +1175,8 @@ const PolypharmacyPage = () => {
                     </div>
                     <div
                       className={`rounded-lg border p-3 ${analysis.riskCalculation.riskScore >= 80
-                          ? "border-red-300 bg-red-50"
-                          : "border-gray-200 bg-gray-50"
+                        ? "border-red-300 bg-red-50"
+                        : "border-gray-200 bg-gray-50"
                         }`}
                     >
                       <p className="text-xs text-gray-600">Very High</p>
@@ -1173,12 +1221,12 @@ const PolypharmacyPage = () => {
                           <td className="px-4 py-3">
                             <span
                               className={`rounded-full px-3 py-1 text-xs font-semibold ${interaction.severity === "Major"
-                                  ? "bg-rose-100 text-rose-700"
-                                  : interaction.severity === "Moderate"
-                                    ? "bg-amber-100 text-amber-700"
-                                    : interaction.severity === "Minor"
-                                      ? "bg-emerald-100 text-emerald-700"
-                                      : "bg-gray-100 text-gray-700"
+                                ? "bg-rose-100 text-rose-700"
+                                : interaction.severity === "Moderate"
+                                  ? "bg-amber-100 text-amber-700"
+                                  : interaction.severity === "Minor"
+                                    ? "bg-emerald-100 text-emerald-700"
+                                    : "bg-gray-100 text-gray-700"
                                 }`}
                             >
                               {interaction.severity}
