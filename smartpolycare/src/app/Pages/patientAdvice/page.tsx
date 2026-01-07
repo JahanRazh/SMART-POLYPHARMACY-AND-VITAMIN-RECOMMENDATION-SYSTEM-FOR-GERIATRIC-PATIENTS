@@ -197,6 +197,24 @@ export default function PatientAdvicePage() {
             </Link>
           </div>
 
+          {/* Always-visible personalized advice card requested by user */}
+          <motion.div
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+            className="mt-8 rounded-2xl bg-white border border-teal-100 shadow-sm p-6"
+          >
+            <h2 className="text-lg font-bold text-gray-900">Personalized Advice</h2>
+            <div className="mt-3 text-sm text-gray-700">
+              <p>Hello Patient, here are some personalized recommendations:</p>
+              <ul className="mt-2 list-disc list-inside space-y-1">
+                <li>Exercise: Try to include at least 20–30 minutes of light activity most days (walking, stretching).</li>
+                <li>Mindfulness: Try short guided meditations (5–10 minutes) to help with stress and mood.</li>
+              </ul>
+              <p className="mt-3">If you'd like, we can provide a more detailed plan including meal and vitamin suggestions.</p>
+            </div>
+          </motion.div>
+
           {error && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
