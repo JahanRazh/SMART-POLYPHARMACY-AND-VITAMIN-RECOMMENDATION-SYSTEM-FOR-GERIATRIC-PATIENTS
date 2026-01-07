@@ -1164,7 +1164,6 @@ const PolypharmacyPage = () => {
                         <th className="px-4 py-2">Drug A</th>
                         <th className="px-4 py-2">Drug B</th>
                         <th className="px-4 py-2">Severity</th>
-                        <th className="px-4 py-2">Dataset IDs</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1193,10 +1192,6 @@ const PolypharmacyPage = () => {
                             >
                               {interaction.severity}
                             </span>
-                          </td>
-                          <td className="px-4 py-3 text-xs text-gray-500">
-                            {interaction.ddinterIdA || "—"} /{" "}
-                            {interaction.ddinterIdB || "—"}
                           </td>
                         </tr>
                       ))}
