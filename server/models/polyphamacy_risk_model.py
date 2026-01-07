@@ -243,6 +243,41 @@ def save_polypharmacy_assessment(
     return payload
 
 
+def get_polypharmacy_assessment(user_id: str) -> Optional[Dict]:
+    """Retrieve the latest assessment for a user."""
+    db = get_db()
+    docs = (
+        db.collection(POLYPHARMACY_COLLECTION)
+        .where("userId", "==", user_id)
+        .limit(1)
+        .get()
+    )
+    
+    if not docs:
+        return None
+    
+    data = docs[0].to_dict()
+    data["id"] = docs[0].id
+    return data
+
+
+def delete_polypharmacy_assessment(user_id: str) -> bool:
+    """Delete the assessment for a user."""
+    db = get_db()
+    docs = (
+        db.collection(POLYPHARMACY_COLLECTION)
+        .where("userId", "==", user_id)
+        .limit(1)
+        .get()
+    )
+    
+    if not docs:
+        return False
+    
+    docs[0].reference.delete()
+    return True
+
+
 def get_user_profile(user_id: str) -> Dict:
     """Fetch user profile stored in Firestore."""
     db = get_db()
