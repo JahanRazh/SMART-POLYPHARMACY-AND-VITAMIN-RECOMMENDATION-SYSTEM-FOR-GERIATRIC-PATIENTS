@@ -6,6 +6,8 @@ from models.polyphamacy_risk_model import (
     get_user_profile,
     save_polypharmacy_assessment,
     search_drug_names,
+    get_polypharmacy_assessment,
+    delete_polypharmacy_assessment,
 )
 
 MAX_DRUGS = 20
@@ -126,3 +128,35 @@ def search_drugs():
         return jsonify({"message": str(file_error), "items": []}), 500
     except Exception as error:
         return jsonify({"message": f"Unable to search drugs: {error}", "items": []}), 500
+
+
+def get_latest_assessment():
+    """Get the latest polypharmacy assessment for the logged-in user."""
+    user_id = request.args.get("userId")
+    if not user_id:
+        return jsonify({"message": "userId is required"}), 400
+        
+    try:
+        assessment = get_polypharmacy_assessment(user_id)
+        if not assessment:
+            return jsonify({"message": "No assessment found"}), 404
+            
+        return jsonify(assessment), 200
+    except Exception as error:
+        return jsonify({"message": f"Error retrieving assessment: {error}"}), 500
+
+
+def clear_assessment():
+    """Delete the polypharmacy assessment for the logged-in user."""
+    user_id = request.args.get("userId")
+    if not user_id:
+        return jsonify({"message": "userId is required"}), 400
+        
+    try:
+        success = delete_polypharmacy_assessment(user_id)
+        if not success:
+            return jsonify({"message": "No assessment found to delete"}), 404
+            
+        return jsonify({"message": "Assessment cleared successfully"}), 200
+    except Exception as error:
+        return jsonify({"message": f"Error clearing assessment: {error}"}), 500
