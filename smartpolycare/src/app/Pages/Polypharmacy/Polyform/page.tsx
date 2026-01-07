@@ -135,7 +135,7 @@ const PolypharmacyPage = () => {
   useEffect(() => {
     // Auto-fill full name based on firstName and lastName
     const nameFromFields = `${(firstName || "").trim()} ${(lastName || "").trim()}`.trim();
-    
+
     // In self mode, initially prefer displayName from profile if firstName/lastName are empty
     if (userProfile?.displayName && !firstName && !lastName && !fullName && !isFullNameDirty) {
       setFullName(userProfile.displayName);
@@ -247,7 +247,7 @@ const PolypharmacyPage = () => {
     } else {
       setAgeError("");
     }
-    
+
     if (!liverFunction) {
       setError("Please select a liver function level.");
       return;
@@ -418,7 +418,7 @@ const PolypharmacyPage = () => {
                       const val = e.target.value;
                       if (/^\d*$/.test(val)) {
                         setAge(val);
-                        
+
                         // Validation: Age must be between 1 and 120
                         if (val === "") {
                           setAgeError("Age is required");
@@ -432,9 +432,8 @@ const PolypharmacyPage = () => {
                       }
                     }}
                     placeholder="Enter age"
-                    className={`mt-1 w-full rounded-xl border px-4 py-2 text-gray-900 focus:outline-none ${
-                      ageError ? "border-red-300 focus:border-red-500" : "border-gray-200 focus:border-indigo-500"
-                    }`}
+                    className={`mt-1 w-full rounded-xl border px-4 py-2 text-gray-900 focus:outline-none ${ageError ? "border-red-300 focus:border-red-500" : "border-gray-200 focus:border-indigo-500"
+                      }`}
                   />
                   {ageError && (
                     <p className="mt-1 text-sm text-red-600">{ageError}</p>
@@ -605,16 +604,15 @@ const PolypharmacyPage = () => {
                       <div className="text-right">
                         <p className="text-sm text-indigo-600">Risk Level</p>
                         <p
-                          className={`text-2xl font-bold ${
-                            analysis.riskCalculation.riskLevel === "Very High"
+                          className={`text-2xl font-bold ${analysis.riskCalculation.riskLevel === "Very High"
                               ? "text-red-600"
                               : analysis.riskCalculation.riskLevel === "High"
-                              ? "text-orange-600"
-                              : analysis.riskCalculation.riskLevel ===
-                                "Moderate"
-                              ? "text-yellow-600"
-                              : "text-green-600"
-                          }`}
+                                ? "text-orange-600"
+                                : analysis.riskCalculation.riskLevel ===
+                                  "Moderate"
+                                  ? "text-yellow-600"
+                                  : "text-green-600"
+                            }`}
                         >
                           {analysis.riskCalculation.riskLevel}
                         </p>
@@ -624,7 +622,7 @@ const PolypharmacyPage = () => {
                 </div>
               )}
 
-              <div className="mt-6 grid gap-4 md:grid-cols-4">
+              <div className="mt-6 grid gap-4 md:grid-cols-3">
                 {renderSeverityCard(
                   "Major",
                   severitySummary.Major || 0,
@@ -640,11 +638,7 @@ const PolypharmacyPage = () => {
                   severitySummary.Minor || 0,
                   "bg-emerald-50 border-emerald-100"
                 )}
-                {renderSeverityCard(
-                  "Other",
-                  severitySummary.Unknown || 0,
-                  "bg-gray-50 border-gray-100"
-                )}
+
               </div>
             </div>
 
@@ -1097,11 +1091,10 @@ const PolypharmacyPage = () => {
                   </h4>
                   <div className="grid gap-2 md:grid-cols-4">
                     <div
-                      className={`rounded-lg border p-3 ${
-                        analysis.riskCalculation.riskScore < 30
+                      className={`rounded-lg border p-3 ${analysis.riskCalculation.riskScore < 30
                           ? "border-green-300 bg-green-50"
                           : "border-gray-200 bg-gray-50"
-                      }`}
+                        }`}
                     >
                       <p className="text-xs text-gray-600">Low</p>
                       <p className="text-sm font-medium text-gray-900">
@@ -1109,12 +1102,11 @@ const PolypharmacyPage = () => {
                       </p>
                     </div>
                     <div
-                      className={`rounded-lg border p-3 ${
-                        analysis.riskCalculation.riskScore >= 30 &&
-                        analysis.riskCalculation.riskScore < 60
+                      className={`rounded-lg border p-3 ${analysis.riskCalculation.riskScore >= 30 &&
+                          analysis.riskCalculation.riskScore < 60
                           ? "border-yellow-300 bg-yellow-50"
                           : "border-gray-200 bg-gray-50"
-                      }`}
+                        }`}
                     >
                       <p className="text-xs text-gray-600">Moderate</p>
                       <p className="text-sm font-medium text-gray-900">
@@ -1122,12 +1114,11 @@ const PolypharmacyPage = () => {
                       </p>
                     </div>
                     <div
-                      className={`rounded-lg border p-3 ${
-                        analysis.riskCalculation.riskScore >= 60 &&
-                        analysis.riskCalculation.riskScore < 80
+                      className={`rounded-lg border p-3 ${analysis.riskCalculation.riskScore >= 60 &&
+                          analysis.riskCalculation.riskScore < 80
                           ? "border-orange-300 bg-orange-50"
                           : "border-gray-200 bg-gray-50"
-                      }`}
+                        }`}
                     >
                       <p className="text-xs text-gray-600">High</p>
                       <p className="text-sm font-medium text-gray-900">
@@ -1135,11 +1126,10 @@ const PolypharmacyPage = () => {
                       </p>
                     </div>
                     <div
-                      className={`rounded-lg border p-3 ${
-                        analysis.riskCalculation.riskScore >= 80
+                      className={`rounded-lg border p-3 ${analysis.riskCalculation.riskScore >= 80
                           ? "border-red-300 bg-red-50"
                           : "border-gray-200 bg-gray-50"
-                      }`}
+                        }`}
                     >
                       <p className="text-xs text-gray-600">Very High</p>
                       <p className="text-sm font-medium text-gray-900">≥ 80</p>
@@ -1166,7 +1156,6 @@ const PolypharmacyPage = () => {
                         <th className="px-4 py-2">Drug B</th>
                         <th className="px-4 py-2">Severity</th>
                         <th className="px-4 py-2">Description</th>
-                        <th className="px-4 py-2">Dataset IDs</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1183,25 +1172,20 @@ const PolypharmacyPage = () => {
                           </td>
                           <td className="px-4 py-3">
                             <span
-                              className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                                interaction.severity === "Major"
+                              className={`rounded-full px-3 py-1 text-xs font-semibold ${interaction.severity === "Major"
                                   ? "bg-rose-100 text-rose-700"
                                   : interaction.severity === "Moderate"
-                                  ? "bg-amber-100 text-amber-700"
-                                  : interaction.severity === "Minor"
-                                  ? "bg-emerald-100 text-emerald-700"
-                                  : "bg-gray-100 text-gray-700"
-                              }`}
+                                    ? "bg-amber-100 text-amber-700"
+                                    : interaction.severity === "Minor"
+                                      ? "bg-emerald-100 text-emerald-700"
+                                      : "bg-gray-100 text-gray-700"
+                                }`}
                             >
                               {interaction.severity}
                             </span>
                           </td>
                           <td className="px-4 py-3 text-sm text-gray-700">
                             {interaction.description || "Not provided"}
-                          </td>
-                          <td className="px-4 py-3 text-xs text-gray-500">
-                            {interaction.ddinterIdA || "—"} /{" "}
-                            {interaction.ddinterIdB || "—"}
                           </td>
                         </tr>
                       ))}
