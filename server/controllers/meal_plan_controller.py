@@ -1,54 +1,92 @@
 from flask import request, jsonify
-from models.meal_plan_model import save_meal_plan
+from datetime import datetime
+import uuid
+import json
 
-REQUIRED_KEYS = [
-    "basicProfile",
-    "medicalConditions",
-    "vitaminDeficiencies",
-    "dietaryRestrictions",
-    "mealTimings",
-    "preferences",
-]
+from db import get_db
+from models.MealPlan.meal_logic import generate_full_meal_plan
+from models.meal_plan_model import save_meal_plan_assessment
 
 
+# ==================================================
+# CREATE MEAL PLAN
+# ==================================================
 def create_meal_plan():
     payload = request.get_json(silent=True) or {}
 
-    # Validate required sections
-    for key in REQUIRED_KEYS:
-        if key not in payload:
-            return jsonify({"message": f"{key} is required"}), 400
+    # ---------------- BASIC VALIDATION ----------------
+    if "basicProfile" not in payload:
+        return jsonify({"error": "basicProfile is required"}), 400
 
-    # Validate name exists in basicProfile
-    basic_profile = payload.get("basicProfile", {})
-    if not basic_profile.get("name"):
-        return jsonify({"message": "name is required in basicProfile"}), 400
+    basic = payload.get("basicProfile", {})
+    bmi = basic.get("bmi")
 
-    # Type safety
-    if not isinstance(payload.get("medicalConditions"), dict):
-        return jsonify({"message": "medicalConditions must be an object"}), 400
-
-    if not isinstance(payload.get("vitaminDeficiencies"), list):
-        return jsonify({"message": "vitaminDeficiencies must be a list"}), 400
-
-    if not isinstance(payload.get("dietaryRestrictions"), dict):
-        return jsonify({"message": "dietaryRestrictions must be an object"}), 400
+    if bmi is None:
+        return jsonify({"error": "BMI is required"}), 400
 
     try:
-        meal_plan = save_meal_plan(payload)
-    except Exception as e:
-        return jsonify({"message": f"Unable to save meal plan: {str(e)}"}), 500
+        float(bmi)
+    except (TypeError, ValueError):
+        return jsonify({"error": "BMI must be a number"}), 400
 
-    return jsonify({
-        "mealPlanId": meal_plan.get("id"),
-        "basicProfile": meal_plan.get("basicProfile"),
-        "medicalConditions": meal_plan.get("medicalConditions"),
-        "vitaminDeficiencies": meal_plan.get("vitaminDeficiencies"),
-        "dietaryRestrictions": meal_plan.get("dietaryRestrictions"),
-        "mealTimings": meal_plan.get("mealTimings"),
-        "preferences": meal_plan.get("preferences"),
-        "createdAt": meal_plan.get("createdAt"),
-        "updatedAt": meal_plan.get("updatedAt"),
-        "status": meal_plan.get("status"),
-        "source": meal_plan.get("source"),
-    }), 201
+    # ---------------- SAVE FORM DATA ----------------
+    saved_form_id = None
+    try:
+        saved_data = save_meal_plan_assessment(payload)
+        saved_form_id = saved_data["id"]
+        print(f"✅ Saved form data with ID: {saved_form_id}")
+    except Exception as db_error:
+        print(f"⚠️ Form save failed: {db_error}")
+
+    # ---------------- GENERATE MEAL PLAN ----------------
+    try:
+        result = generate_full_meal_plan(payload)
+
+        result["databaseId"] = saved_form_id
+        result["formDataSaved"] = bool(saved_form_id)
+
+        return jsonify(result), 200
+
+    except Exception as e:
+        print("❌ Controller error:", e)
+        return jsonify({"error": str(e)}), 500
+
+
+# ==================================================
+# SAVE SELECTED MEAL PLAN
+# ==================================================
+def save_selected_meal_plan_controller():
+    try:
+        payload = request.get_json(silent=True) or {}
+
+        selected_plan = payload.get("selectedPlan")
+        original_plan_id = payload.get("originalPlanId")
+        form_data_saved = payload.get("formDataSaved", False)
+
+        if not selected_plan:
+            return jsonify({
+                "success": False,
+                "message": "selectedPlan is required"
+            }), 400
+
+        db = get_db()
+        doc_id = str(uuid.uuid4())
+
+        db.collection("saved_meal_plans").document(doc_id).set({
+            "selectedPlan": selected_plan,
+            "originalPlanId": original_plan_id,
+            "formDataSaved": form_data_saved,
+            "createdAt": datetime.utcnow().isoformat()
+        })
+
+        return jsonify({
+            "success": True,
+            "data": {"id": doc_id}
+        }), 200
+
+    except Exception as e:
+        print("❌ SAVE SELECTED PLAN ERROR:", e)
+        return jsonify({
+            "success": False,
+            "message": str(e)
+        }), 500

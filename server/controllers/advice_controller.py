@@ -1,6 +1,9 @@
 from flask import request, jsonify
 from datetime import datetime
 from db import get_db
+import os
+
+# Optional heavy imports (transformers) will be attempted at runtime inside functions
 
 
 def generate_advice_from_data(data: dict) -> str:
@@ -104,3 +107,161 @@ def create_advice():
         print("❌ Error saving advice to Firebase:", e)
 
     return jsonify({"advice": advice_text}), 200
+
+
+def get_patient_advice():
+    """
+    GET /api/patient-advice?patientId=<id>&email=<email>
+
+    Aggregate latest data from Firestore collections:
+      - users (by patientId)
+      - polypharmacy_assessments (by userId)
+      - patient_assessment (mental health) (by email)
+      - patient_emotions (by email)
+
+    Attempt to generate advice using the local `Advice_model` if available,
+    otherwise fall back to `generate_advice_from_data`.
+    """
+    patient_id = request.args.get("patientId")
+    email = request.args.get("email")
+
+    db = get_db()
+    user_profile = {}
+    if patient_id:
+        try:
+            doc = db.collection("users").document(patient_id).get()
+            if doc.exists:
+                user_profile = doc.to_dict()
+                if not email:
+                    email = user_profile.get("email")
+        except Exception:
+            user_profile = {}
+
+    # Fetch latest polypharmacy assessment (by userId)
+    poly = {}
+    try:
+        if patient_id:
+            q = (
+                db.collection("polypharmacy_assessments")
+                .where("userId", "==", patient_id)
+                .order_by("updatedAt", direction="DESCENDING")
+                .limit(1)
+                .get()
+            )
+            if q:
+                poly = q[0].to_dict()
+    except Exception:
+        poly = {}
+
+    # Fetch latest mental health assessment (by email)
+    mh = {}
+    try:
+        if email:
+            q = (
+                db.collection("patient_assessment")
+                .where("email", "==", email)
+                .order_by("timestamp", direction="DESCENDING")
+                .limit(1)
+                .get()
+            )
+            if q:
+                mh = q[0].to_dict()
+    except Exception:
+        mh = {}
+
+    # Fetch latest emotion capture (by email)
+    emotion = {}
+    try:
+        if email:
+            q = (
+                db.collection("patient_emotions")
+                .where("email", "==", email)
+                .order_by("timestamp", direction="DESCENDING")
+                .limit(1)
+                .get()
+            )
+            if q:
+                emotion = q[0].to_dict()
+    except Exception:
+        emotion = {}
+
+    # Build merged data for advice generator
+    merged = {}
+    # basic profile
+    merged["name"] = user_profile.get("displayName") or user_profile.get("firstName") or user_profile.get("name")
+    merged["email"] = email or user_profile.get("email")
+    merged["occupation"] = user_profile.get("occupation") or mh.get("occupation") or ""
+    merged["age"] = mh.get("age") or poly.get("age") or user_profile.get("age")
+
+    # mental health
+    # full_assessment uses key 'mental_health_level' in controller
+    merged["mentalHealthLevel"] = mh.get("mental_health_level") or mh.get("mentalHealthLevel") or mh.get("mental_health_Risk") or mh.get("mental_health_Risk")
+
+    # emotion
+    merged["detectedEmotion"] = emotion.get("emotion") or emotion.get("detectedEmotion")
+
+    # lifestyle fields — prefer values from mental health assessment (they contain input data)
+    for k in ("sleep_duration", "exercise_time", "screen_time", "smoking_habit", "alcohol_intake", "meditation_practice"):
+        if k in mh:
+            merged[k] = mh.get(k)
+
+    # polypharmacy fields
+    if poly:
+        merged["polypharmacyRisk"] = poly.get("riskCalculation") or poly.get("riskCalculation")
+        merged["drugs"] = poly.get("drugs")
+
+    # Try to use a dedicated Advice_model if available; otherwise fallback
+    advice_text = None
+    model_dir = os.path.join(os.path.dirname(__file__), "..", "models", "Advice_model")
+    try:
+        # Import here to avoid hard dependency at module import time
+        from transformers import AutoTokenizer, AutoModelForCausalLM
+        import torch
+
+        if os.path.exists(model_dir):
+            tokenizer = AutoTokenizer.from_pretrained(model_dir)
+            model = AutoModelForCausalLM.from_pretrained(model_dir)
+
+            # Construct a compact prompt
+            prompt_parts = [f"Patient: {merged.get('name') or 'Unknown'}"]
+            if merged.get("age"):
+                prompt_parts.append(f"Age: {merged.get('age')}")
+            if merged.get("occupation"):
+                prompt_parts.append(f"Occupation: {merged.get('occupation')}")
+            if merged.get("mentalHealthLevel"):
+                prompt_parts.append(f"MentalHealth: {merged.get('mentalHealthLevel')}")
+            if merged.get("detectedEmotion"):
+                prompt_parts.append(f"RecentEmotion: {merged.get('detectedEmotion')}")
+            if merged.get("drugs"):
+                prompt_parts.append(f"Medications: {', '.join(merged.get('drugs')[:10])}")
+
+            prompt_parts.append("Provide short, non-medical lifestyle advice in bullet points.")
+            prompt = "\n".join(prompt_parts)
+
+            inputs = tokenizer(prompt, return_tensors="pt")
+            if torch.cuda.is_available():
+                model = model.to("cuda")
+                inputs = {k: v.to("cuda") for k, v in inputs.items()}
+
+            outputs = model.generate(**inputs, max_new_tokens=200, do_sample=False)
+            advice_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
+    except Exception:
+        advice_text = None
+
+    if not advice_text:
+        advice_text = generate_advice_from_data(merged)
+
+    # Save generated advice to Firestore for records
+    try:
+        entry = {
+            "name": merged.get("name"),
+            "email": merged.get("email"),
+            "input": merged,
+            "advice": advice_text,
+            "timestamp": datetime.utcnow(),
+        }
+        db.collection("patient_advice").add(entry)
+    except Exception as e:
+        print("❌ Error saving generated advice to Firebase:", e)
+
+    return jsonify({"advice": advice_text, "source": "model" if os.path.exists(model_dir) else "heuristic", "data": merged}), 200
