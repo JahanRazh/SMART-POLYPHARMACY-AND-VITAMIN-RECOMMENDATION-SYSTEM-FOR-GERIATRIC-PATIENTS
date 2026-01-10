@@ -51,13 +51,29 @@ export async function POST(req: Request) {
     const adminSdk = initFirebaseAdmin();
     const db = adminSdk.firestore();
 
-    // Persist incoming payload as a new patient_assessment document
+    // Persist incoming payload. If `email` is provided, upsert using a
+    // deterministic document id derived from the email to avoid duplicate
+    // documents for the same user. Otherwise create a new document.
     const payload = {
       ...body,
-      createdAt: adminSdk.firestore.FieldValue.serverTimestamp(),
+      updatedAt: adminSdk.firestore.FieldValue.serverTimestamp(),
     };
 
-    const docRef = await db.collection("patient_assessment").add(payload as any);
+    if (body && body.email) {
+      const docId = String(body.email).replaceAll("@", "_at_").replaceAll(".", "_");
+      const docRef = db.collection("patient_assessment").doc(docId);
+      const snap = await docRef.get();
+      if (snap.exists) {
+        await docRef.set({ ...body, updatedAt: adminSdk.firestore.FieldValue.serverTimestamp() }, { merge: true });
+      } else {
+        await docRef.set({ ...body, createdAt: adminSdk.firestore.FieldValue.serverTimestamp(), updatedAt: adminSdk.firestore.FieldValue.serverTimestamp() }, { merge: true });
+      }
+      return NextResponse.json({ success: true, id: docId });
+    }
+
+    // No email — create a new document with a createdAt timestamp
+    const anonPayload = { ...payload, createdAt: adminSdk.firestore.FieldValue.serverTimestamp() };
+    const docRef = await db.collection("patient_assessment").add(anonPayload as any);
 
     return NextResponse.json({ success: true, id: docRef.id });
   } catch (err: any) {

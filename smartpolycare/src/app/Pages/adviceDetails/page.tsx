@@ -469,12 +469,14 @@ const PatientAssessmentForm = () => {
 
       setSuccessMessage("Patient assessment completed successfully!");
 
-      // Redirect to patientAdvice page after successful submission
+      // Redirect to patientAdvice page after successful submission.
+      // Include email in query so server can lookup patient_assessment by email
       try {
         const patientId = saveJson?.id || null;
+        const emailParam = userEmail ? `&email=${encodeURIComponent(userEmail)}` : "";
         const target = patientId
-          ? `/Pages/patientAdvice?patientId=${encodeURIComponent(patientId)}`
-          : "/Pages/patientAdvice";
+          ? `/Pages/patientAdvice?patientId=${encodeURIComponent(patientId)}${emailParam}`
+          : `/Pages/patientAdvice${emailParam ? `?email=${encodeURIComponent(userEmail)}` : ""}`;
         router.push(target);
       } catch (err) {
         console.warn("Navigation failed:", err);
