@@ -68,6 +68,7 @@ Deployment Link - https://smartpolycare.vercel.app/
 │                 │  - Real-time Updates
 └─────────────────┘
 ```
+<img width="1000" height="641" alt="image" src="https://github.com/user-attachments/assets/0f1f8322-b93a-4cbd-97bb-7a868ee0e87c" />
 
 ### Technology Stack
 
