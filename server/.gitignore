@@ -16,3 +16,6 @@ __pycache__/
 # VS Code settings
 .vscode/
 
+# Secrets/credentials
+serviceAccountKey.json
+
