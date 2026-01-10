@@ -663,8 +663,6 @@ This project follows the **Git Flow** branching model for organized development 
 | feature/Nevin's Branch| Personalized Food Recommendation System | ❌ Not protected | develop | 
 | feature/Reshmi's Branch| Early Vitamin Deficiency Warning System | ❌ Not protected | develop |
 | bugfix/* | Fix bugs identified during testing | ❌ Not protected | develop |
-PERSONALIZED FOOD RECOMMENDATION  
-SYSTEM
 
 ### 🔀 Branch Types
 
