@@ -318,7 +318,7 @@ export default function PatientAdvicePage() {
               animate={{ opacity: 1, y: 0 }}
               className="mt-10 rounded-2xl bg-white border border-teal-100 shadow-sm p-8"
             >
-              <h2 className="text-lg font-bold text-gray-900">Personalized Advice</h2>
+              <h2 className="text-lg font-bold text-gray-900">Personalized Advice for you</h2>
               <div className="mt-4 text-sm text-gray-700 whitespace-pre-line">
                 {rawAdviceText}
               </div>
