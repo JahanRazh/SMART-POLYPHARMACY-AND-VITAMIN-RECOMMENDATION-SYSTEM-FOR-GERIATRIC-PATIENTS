@@ -359,6 +359,13 @@ npm install
 yarn install
 # or
 pnpm install
+
+# Run frontend development server
+npm run dev
+# or
+yarn dev
+# or
+pnpm dev
 ```
 
 #### 3. Backend Setup
@@ -378,6 +385,9 @@ source venv/bin/activate
 
 # Install dependencies
 pip install -r requirements.txt
+
+# Run Flask server
+python app.py
 ```
 
 #### 4. Firebase Configuration
@@ -642,6 +652,18 @@ This project follows the **Git Flow** branching model for organized development 
 |--------|---------|-----------|-----------|
 | `main` | Production-ready code | ✅ Protected | `release/` branches only |
 | `develop` | Integration branch for features | ✅ Protected | `feature/`, `bugfix/` branches |
+
+#### Related Feature and Bugfix Branches
+
+| Branch | Purpose | Protection | Merge Into |
+|--------|---------|-----------|-----------|
+| feature/Jahan's Dev Branch| Polypharmacy Risk Analysis module | ❌ Not protected | develop |
+| feature/Pathum's Branch | AI Lifestyle & Mental Wellness Advisory System | ❌ Not protected | develop |
+| feature/Nevin's Branch| Personalized Food Recommendation System | ❌ Not protected | develop | 
+| feature/Reshmi's Branch| Early Vitamin Deficiency Warning System | ❌ Not protected | develop |
+| bugfix/* | Fix bugs identified during testing | ❌ Not protected | develop |
+PERSONALIZED FOOD RECOMMENDATION  
+SYSTEM
 
 ### 🔀 Branch Types
 
