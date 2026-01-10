@@ -1,14 +1,8 @@
 from flask import Blueprint
-from controllers.advice_controller import create_advice, get_patient_advice
 
-advice_bp = Blueprint("advice_bp", __name__)
+from controllers.patient_advice_controller import patient_advice
 
+# Expose under /api to match frontend client baseURL
+advice_bp = Blueprint("advice_bp", __name__, url_prefix="/api")
 
-@advice_bp.route("/api/advice", methods=["POST"])
-def advice_route():
-    return create_advice()
-
-
-@advice_bp.route("/api/patient-advice", methods=["GET"])
-def patient_advice_route():
-    return get_patient_advice()
+advice_bp.add_url_rule("/patient-advice", view_func=patient_advice, methods=["GET"])

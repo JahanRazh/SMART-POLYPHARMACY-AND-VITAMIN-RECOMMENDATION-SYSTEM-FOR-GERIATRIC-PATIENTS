@@ -2,7 +2,9 @@
 
 A comprehensive AI-powered healthcare platform designed to manage multiple medications, detect drug interactions, assess polypharmacy risk, and provide personalized vitamin recommendations for geriatric patients. The system enhances medication safety, reduces adverse events, and improves overall elderly care through intelligent risk assessment and lifestyle recommendations.
 
-(https://smartpolycare.vercel.app/)
+Repository Link - https://github.com/JahanRazh/SMART-POLYPHARMACY-AND-VITAMIN-RECOMMENDATION-SYSTEM-FOR-GERIATRIC-PATIENTS.git
+
+Deployment Link - https://smartpolycare.vercel.app/
 
 ## 🌟 Features
 
