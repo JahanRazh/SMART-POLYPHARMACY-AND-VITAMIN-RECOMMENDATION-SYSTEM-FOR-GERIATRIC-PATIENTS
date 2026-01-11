@@ -45,30 +45,176 @@ Deployment Link - https://smartpolycare.vercel.app/
 
 ## 🏗️ Architecture
 
+### System Architecture Diagram
+
 ```
-┌─────────────────┐
-│   Next.js       │  Frontend (React/TypeScript)
-│   Frontend      │  - Tailwind CSS
-│                 │  - Framer Motion
-│                 │  - Firebase Auth
-└────────┬────────┘
-         │ HTTP/REST API
-         │
-┌────────▼────────┐
-│   Flask         │  Backend API (Python)
-│   Backend       │  - TensorFlow/Keras
-│                 │  - Scikit-learn
-│                 │  - Flask-CORS
-└────────┬────────┘
-         │
-┌────────▼────────┐
-│   Firebase      │  Database & Services
-│   (Firestore)   │  - Patient Data
-│                 │  - Authentication
-│                 │  - Real-time Updates
-└─────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────────────────────┐
+│                                    USER LAYER                                               │
+│                                                                                             │
+│    ┌──────────────┐          ┌──────────────┐          ┌──────────────┐                   │
+│    │  👨‍⚕️         │          │  👤          │          │  👨‍⚕️         │                   │
+│    │  Caregiver   │          │   Patient    │          │   Doctor     │                   │
+│    │              │          │              │          │              │                   │
+│    └──────┬───────┘          └──────┬───────┘          └──────▲───────┘                   │
+│           │                         │                         │                           │
+└───────────┼─────────────────────────┼─────────────────────────┼───────────────────────────┘
+            │                         │                         │
+            └─────────┬───────────────┘                         │
+                      │                                         │
+┌─────────────────────▼─────────────────────────────────────────┼───────────────────────────┐
+│                    WEB APPLICATION INTERFACE                  │                           │
+│                                                               │                           │
+│  ┌────────────────────────────┐     ┌────────────────────────▼──────────┐                │
+│  │    📋 USER INPUTS          │     │    🎭 USER DETECTION               │                │
+│  │                            │     │                                    │                │
+│  │  • Diseases                │     │  • Facial Expressions              │                │
+│  │  • Medications             │     │  • Voice Analysis                  │                │
+│  │  • Age                     │     │  • Questionnaire                   │                │
+│  │  • Symptoms                │     │                                    │                │
+│  │  • Height & Weight         │     │                                    │                │
+│  └────────────┬───────────────┘     └────────────┬───────────────────────┘                │
+│               │                                  │                                        │
+└───────────────┼──────────────────────────────────┼────────────────────────────────────────┘
+                │                                  │
+                └──────────────┬───────────────────┘
+                               │
+┌──────────────────────────────▼─────────────────────────────────────────────────────────────┐
+│                        🖥️  NODE SERVER (BACKEND COMPONENTS)                                │
+│                                                                                             │
+│  ┌─────────────────────────────────────────────────────────────────────────────────────┐   │
+│  │  💊 VITAMIN DEFICIENCY DETECTION SYSTEM                                             │   │
+│  │                                                                                     │   │
+│  │   ┌──────────────┐      ┌──────────────┐                                          │   │
+│  │   │ 🧍Symptoms   │  +   │ 💊💉         │                                          │   │
+│  │   │   Tracker    │      │ Medications  │                                          │   │
+│  │   └──────────────┘      │ + Diseases   │                                          │   │
+│  │                         └──────┬───────┘                                          │   │
+│  │                                │                                                  │   │
+│  │                         ┌──────▼───────┐                                          │   │
+│  │                         │ 📊 Vitamin   │                                          │   │
+│  │                         │  Deficiency  │                                          │   │
+│  │                         │    Report    │                                          │   │
+│  │                         └──────────────┘                                          │   │
+│  └────────────────────────────────┬────────────────────────────────────────────────────┘   │
+│                                   │                                                        │
+│  ┌────────────────────────────────▼────────────────────────────────────────────────────┐   │
+│  │  ⚠️  POLYPHARMACY RISK SCORE MODULE                                                 │   │
+│  │                                                                                     │   │
+│  │   ┌──────────────┐      ┌──────────────┐                                          │   │
+│  │   │ 💊💊        │  +   │  👴 Age      │                                          │   │
+│  │   │ Drug         │      │  🔢 Drugs    │                                          │   │
+│  │   │ Interactions │      │  ⚠️  High    │                                          │   │
+│  │   └──────────────┘      │  Risk Drugs  │                                          │   │
+│  │                         └──────┬───────┘                                          │   │
+│  │                                │                                                  │   │
+│  │                         ┌──────▼───────┐                                          │   │
+│  │                         │ 📊 Risk      │                                          │   │
+│  │                         │ Calculation  │                                          │   │
+│  │                         └──────────────┘                                          │   │
+│  └────────────────────────────────┬────────────────────────────────────────────────────┘   │
+│                                   │                                                        │
+│  ┌────────────────────────────────▼────────────────────────────────────────────────────┐   │
+│  │  🍽️  PERSONALIZED MEAL PLAN GENERATOR                                              │   │
+│  │                                                                                     │   │
+│  │   ┌──────────────┐      ┌──────────────┐                                          │   │
+│  │   │ 💊 Vitamin   │      │  ⚖️  BMI     │                                          │   │
+│  │   │  Deficiency  │      │   Calculator │                                          │   │
+│  │   └──────────────┘      └──────────────┘                                          │   │
+│  │                                                                                     │   │
+│  │   ┌──────────────────────────────────┐                                            │   │
+│  │   │  🩺 Diseases + 💊 Drugs          │                                            │   │
+│  │   └──────────────┬───────────────────┘                                            │   │
+│  │                  │                                                                 │   │
+│  │           ┌──────▼───────┐                                                        │   │
+│  │           │ 📋 Meal Plan │  ────────────────────────────────┐                    │   │
+│  │           └──────────────┘                                   │                    │   │
+│  └──────────────────────────────────────────────────────────────┼────────────────────┘   │
+│                                                                 │                        │
+│  ┌──────────────────────────────────────────────────────────────▼────────────────────┐   │
+│  │  🎯 ADVISORY SYSTEM                                                               │   │
+│  │                                                                                     │   │
+│  │              ┌──────────────────────────────────────┐                             │   │
+│  │              │    🤖 MULTI-MODEL AI SYSTEM          │                             │   │
+│  │              │                                       │                             │   │
+│  │              │  🍎 Nutrition  🧠 Mental Health      │                             │   │
+│  │              │  🏃 Physical   💊 Medications        │                             │   │
+│  │              │  😊 Emotional  🩺 Clinical           │                             │   │
+│  │              └───────────────┬──────────────────────┘                             │   │
+│  │                              │                                                     │   │
+│  │                       ┌──────▼───────┐                                            │   │
+│  │                       │ 📄 Advice    │                                            │   │
+│  │                       │    Report    │                                            │   │
+│  │                       └──────────────┘                                            │   │
+│  └─────────────────────────────┬───────────────────────────────────────────────────────┘   │
+│                                │                                                          │
+└────────────────────────────────┼──────────────────────────────────────────────────────────┘
+                                 │
+                          ┌──────▼────────┐
+                          │  🔥 FIREBASE  │
+                          │               │
+                          │  • Firestore  │
+                          │  • Auth       │
+                          │  • Storage    │
+                          └───────────────┘
+                                 │
+        ┌────────────────────────┼────────────────────────┐
+        │                        │                        │
+┌───────▼──────────┐    ┌────────▼─────────┐    ┌────────▼─────────┐
+│ 👨‍⚕️ Doctor      │    │ 👤 Patient       │    │ 👨‍⚕️ Caregiver   │
+│                  │    │                  │    │                  │
+│ • Vitamin Report │    │ • Advice Report  │    │ • Meal Plans     │
+│ • Risk Analysis  │    │ • Meal Plan      │    │ • Patient Data   │
+└──────────────────┘    └──────────────────┘    └──────────────────┘
 ```
-<img width="1000" height="641" alt="image" src="https://github.com/user-attachments/assets/0f1f8322-b93a-4cbd-97bb-7a868ee0e87c" />
+
+### Component Description
+
+**🧑‍💼 User Layer:**
+- **Caregiver**: Healthcare providers managing patient care
+- **Patient**: End users receiving recommendations
+- **Doctor**: Medical professionals reviewing reports
+
+**🌐 Web Application Interface:**
+- **User Inputs**: Collects diseases, medications, age, symptoms, height, weight
+- **User Detection**: Facial expression analysis, voice recognition, questionnaires
+
+**🖥️ Node Server Components:**
+
+1. **💊 Vitamin Deficiency Detection System**
+   - Analyzes symptoms and medication interactions
+   - Generates vitamin deficiency reports
+
+2. **⚠️ Polypharmacy Risk Score Module**
+   - Evaluates drug interactions
+   - Calculates risk based on age, drug count, and high-risk medications
+   - Produces comprehensive risk scores
+
+3. **🍽️ Personalized Meal Plan Generator**
+   - Integrates vitamin deficiency data
+   - Calculates BMI
+   - Considers diseases and medications
+   - Creates culturally appropriate meal plans
+
+4. **🎯 Advisory System**
+   - **Multi-Model AI** combining:
+     - Nutrition guidance
+     - Mental health support
+     - Physical activity recommendations
+     - Medication adherence
+     - Emotional wellness
+     - Clinical advice
+   - Generates comprehensive advice reports
+
+**🔥 Firebase Integration:**
+- Firestore database for data storage
+- Authentication service
+- Cloud storage for reports and images
+
+**📊 Output & Reports:**
+- Vitamin deficiency + risk reports → Doctor
+- Personalized advice + meal plans → Patient & Caregiver
+
+<img width="1000" height="641" alt="System Architecture Diagram" src="https://github.com/user-attachments/assets/0f1f8322-b93a-4cbd-97bb-7a868ee0e87c" />
 
 ### Technology Stack
 
