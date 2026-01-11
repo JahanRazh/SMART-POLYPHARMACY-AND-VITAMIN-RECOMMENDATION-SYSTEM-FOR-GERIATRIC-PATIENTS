@@ -94,7 +94,135 @@ Deployment Link - https://smartpolycare.vercel.app/
 - **Firebase Firestore** - NoSQL database
 - **Firebase Authentication** - User authentication
 
-## 📁 Project Structure
+## � Dependencies
+
+### Frontend Dependencies (Next.js)
+
+#### Core Dependencies
+```json
+{
+  "next": "^15.1.4",
+  "react": "^18.2.0",
+  "react-dom": "^18.2.0",
+  "typescript": "^5"
+}
+```
+
+#### UI & Styling
+- **tailwindcss**: `^4.1.14` - Utility-first CSS framework
+- **@tailwindcss/postcss**: `^4` - Tailwind CSS PostCSS plugin
+- **framer-motion**: `^12.23.24` - Animation library
+- **class-variance-authority**: `^0.7.1` - CSS variant utilities
+- **clsx**: `^2.1.1` - Utility for constructing className strings
+- **tailwind-merge**: `^3.3.1` - Merge Tailwind CSS classes
+- **lucide-react**: `^0.545.0` - Icon library
+- **@radix-ui/react-slot**: `^1.2.3` - Radix UI slot component
+
+#### Firebase & API
+- **firebase**: `^12.5.0` - Firebase SDK for authentication and database
+- **firebase-admin**: `^13.6.0` - Firebase Admin SDK
+- **axios**: `^1.12.2` - HTTP client for API requests
+
+#### Camera & Media
+- **react-webcam**: `^7.2.0` - Webcam component for emotion detection
+
+#### Dev Dependencies
+- **eslint**: `^9` - Code linting
+- **eslint-config-next**: `15.5.3` - Next.js ESLint configuration
+- **@types/node**: `^20` - TypeScript types for Node.js
+- **@types/react**: `^19` - TypeScript types for React
+- **@types/react-dom**: `^19` - TypeScript types for React DOM
+- **autoprefixer**: `^10.4.21` - PostCSS plugin for vendor prefixes
+- **postcss**: `^8.5.6` - CSS transformation tool
+
+### Backend Dependencies (Python)
+
+#### Web Framework
+- **Flask**: `3.1.2` - Lightweight WSGI web framework
+- **flask-cors**: `6.0.2` - CORS support for Flask
+- **Werkzeug**: `3.1.4` - WSGI utility library
+
+#### Machine Learning & AI
+- **tensorflow**: `2.15.0` - Deep learning framework
+- **tensorflow-intel**: `2.15.0` - TensorFlow for Intel CPUs
+- **keras**: `2.15.0` - High-level neural networks API
+- **scikit-learn**: `1.8.0` - Machine learning algorithms
+- **torch**: `2.9.1` - PyTorch deep learning framework
+- **transformers**: `4.57.3` - Hugging Face transformers for NLP
+- **huggingface-hub**: `0.36.0` - Model hub client
+
+#### Data Processing
+- **pandas**: `2.3.3` - Data manipulation and analysis
+- **numpy**: `1.26.4` - Numerical computing
+- **scipy**: `1.16.3` - Scientific computing
+- **openpyxl**: `3.1.5` - Excel file handling
+
+#### Computer Vision
+- **opencv-python**: `4.9.0.80` - Image processing and computer vision
+- **pillow**: `12.0.0` - Image processing library
+
+#### Firebase Integration
+- **firebase_admin**: `7.1.0` - Firebase Admin SDK for Python
+- **google-cloud-firestore**: `2.22.0` - Firestore database client
+- **google-cloud-storage**: `3.7.0` - Google Cloud Storage client
+- **google-auth**: `2.41.1` - Google authentication library
+
+#### Data Visualization
+- **matplotlib**: `3.10.8` - Plotting library
+- **seaborn**: `0.13.2` - Statistical data visualization
+
+#### Optimization & ML Tools
+- **PuLP**: `3.3.0` - Linear programming optimization
+- **joblib**: `1.5.3` - Pipeline and caching utilities
+- **safetensors**: `0.7.0` - Safe tensor serialization
+
+#### Jupyter Notebook Support
+- **jupyter**: - Interactive notebook environment
+- **jupyterlab**: `4.5.1` - Web-based IDE
+- **ipython**: `9.8.0` - Enhanced Python shell
+- **notebook**: `7.5.1` - Classic notebook interface
+
+#### Utilities
+- **requests**: `2.32.5` - HTTP library
+- **python-dateutil**: `2.9.0.post0` - Date/time utilities
+- **PyYAML**: `6.0.3` - YAML parser
+- **tqdm**: `4.67.1` - Progress bars
+- **Faker**: `40.1.0` - Fake data generation
+
+#### TensorBoard & Monitoring
+- **tensorboard**: `2.15.2` - TensorFlow visualization toolkit
+- **tensorboard-data-server**: `0.7.2` - TensorBoard data backend
+
+### Installation Commands
+
+#### Frontend
+```bash
+cd smartpolycare
+npm install
+# or
+yarn install
+# or
+pnpm install
+```
+
+#### Backend
+```bash
+cd server
+python -m venv venv
+venv\Scripts\activate  # Windows
+# or
+source venv/bin/activate  # macOS/Linux
+
+pip install -r requirements.txt
+```
+
+### Version Requirements
+- **Node.js**: v18.0.0 or higher
+- **Python**: 3.11 or higher
+- **npm/yarn/pnpm**: Latest stable version
+- **pip**: Latest version
+
+## �📁 Project Structure
 
 ### Directory Overview with Comments
 
