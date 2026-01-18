@@ -37,7 +37,7 @@ export default function PolypharmacyRiskHub() {
             </Link>
 
             <Link
-              href="/Pages/Polypharmacy/Polyform"
+              href="/Pages/Polypharmacy/DashBoard"
               className="rounded-lg border border-teal-300 bg-white px-5 py-3 text-sm font-semibold text-teal-700 hover:bg-teal-50 transition"
             >
               View Risk Breakdown
