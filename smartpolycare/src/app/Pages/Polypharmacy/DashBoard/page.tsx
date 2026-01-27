@@ -418,7 +418,7 @@ const DashboardPage = () => {
                                 Assessment Overview
                             </h2>
                             <p className="text-sm text-gray-500 mt-1">
-                                Based on {analysis.drugCount} medications and {analysis.interactionsFound} interactions
+                                Risk calculated based on 5 parameters: Medication Count, Age, Drug-Drug Interactions (DDI), Liver Function, and Kidney Function.
                             </p>
                         </div>
                         <div className="text-right text-xs text-gray-400">
