@@ -309,41 +309,92 @@ const DashboardPage = () => {
 
                 {/* Drug Interaction Severity Breakdown */}
                 <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
-                    <h3 className="text-lg font-semibold text-gray-800 mb-4 px-1">
+                    <h3 className="text-lg font-semibold text-gray-800 mb-1 px-1">
                         Drug Interaction Severity Breakdown
                     </h3>
+                    <div className="flex gap-6 mb-6 px-1">
+                        <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-gray-500">Drug Count:</span>
+                            <span className="text-lg font-bold text-gray-900">{analysis.drugCount}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-gray-500">Drug Interaction Count:</span>
+                            <span className="text-lg font-bold text-gray-900">
+                                {(severitySummary.Major || 0) + (severitySummary.Moderate || 0) + (severitySummary.Minor || 0)}
+                            </span>
+                        </div>
+                    </div>
                     <div className="grid gap-4 md:grid-cols-3">
-                        <div className="group rounded-xl border border-rose-100 bg-rose-50/50 p-4 transition-all hover:bg-rose-50 hover:shadow-md">
-                            <div className="flex justify-between items-start mb-2">
-                                <p className="text-xs font-semibold uppercase tracking-wider text-rose-600">Major Int.</p>
-                                <div className="w-2 h-2 rounded-full bg-rose-500"></div>
+                        <div className="group relative overflow-hidden rounded-2xl border border-gray-100 bg-white p-6 transition-all hover:scale-[1.02] hover:shadow-lg">
+                            <div className="flex items-center justify-between mb-4">
+                                <span className="inline-flex items-center rounded-full bg-rose-100 px-3 py-1 text-xs font-semibold text-rose-700">
+                                    <span className="mr-1.5 h-2 w-2 rounded-full bg-rose-500"></span>
+                                    Major
+                                </span>
+                                <div className="h-8 w-8 rounded-full bg-rose-50 flex items-center justify-center text-rose-500">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+                                        <path fillRule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zm-1.72 6.97a.75.75 0 10-1.06 1.06L10.94 12l-1.72 1.72a.75.75 0 101.06 1.06L12 13.06l1.72 1.72a.75.75 0 101.06-1.06L13.06 12l1.72-1.72a.75.75 0 10-1.06-1.06L12 10.94l-1.72-1.72z" clipRule="evenodd" />
+                                    </svg>
+                                </div>
                             </div>
-                            <p className="text-3xl font-bold text-gray-900 group-hover:text-rose-700 transition-colors">
-                                {severitySummary.Major || 0}
-                            </p>
-                            <p className="text-xs text-rose-600/70 mt-1">Requires Attention</p>
+                            <div className="flex items-baseline space-x-2">
+                                <p className="text-4xl font-extrabold text-gray-900">
+                                    {severitySummary.Major || 0}
+                                </p>
+                                <p className="text-sm text-gray-400 font-medium">interactions</p>
+                            </div>
+                            <p className="mt-2 text-xs font-medium text-rose-600/80">Requires Immediate Attention</p>
+                            <div className="absolute bottom-0 left-0 h-1 w-full bg-rose-100">
+                                <div className="h-full bg-rose-500" style={{ width: '100%' }}></div>
+                            </div>
                         </div>
 
-                        <div className="group rounded-xl border border-amber-100 bg-amber-50/50 p-4 transition-all hover:bg-amber-50 hover:shadow-md">
-                            <div className="flex justify-between items-start mb-2">
-                                <p className="text-xs font-semibold uppercase tracking-wider text-amber-600">Moderate Int.</p>
-                                <div className="w-2 h-2 rounded-full bg-amber-500"></div>
+                        <div className="group relative overflow-hidden rounded-2xl border border-gray-100 bg-white p-6 transition-all hover:scale-[1.02] hover:shadow-lg">
+                            <div className="flex items-center justify-between mb-4">
+                                <span className="inline-flex items-center rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">
+                                    <span className="mr-1.5 h-2 w-2 rounded-full bg-amber-500"></span>
+                                    Moderate
+                                </span>
+                                <div className="h-8 w-8 rounded-full bg-amber-50 flex items-center justify-center text-amber-500">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+                                        <path fillRule="evenodd" d="M9.401 3.003c1.155-2 4.043-2 5.197 0l7.355 12.748c1.154 2-.29 4.5-2.599 4.5H4.645c-2.309 0-3.752-2.5-2.598-4.5L9.4 3.003zM12 8.25a.75.75 0 01.75.75v3.75a.75.75 0 01-1.5 0V9a.75.75 0 01.75-.75zm0 8.25a.75.75 0 100-1.5.75.75 0 000 1.5z" clipRule="evenodd" />
+                                    </svg>
+                                </div>
                             </div>
-                            <p className="text-3xl font-bold text-gray-900 group-hover:text-amber-700 transition-colors">
-                                {severitySummary.Moderate || 0}
-                            </p>
-                            <p className="text-xs text-amber-600/70 mt-1">Monitor Closely</p>
+                            <div className="flex items-baseline space-x-2">
+                                <p className="text-4xl font-extrabold text-gray-900">
+                                    {severitySummary.Moderate || 0}
+                                </p>
+                                <p className="text-sm text-gray-400 font-medium">interactions</p>
+                            </div>
+                            <p className="mt-2 text-xs font-medium text-amber-600/80">Monitor Closely</p>
+                            <div className="absolute bottom-0 left-0 h-1 w-full bg-amber-100">
+                                <div className="h-full bg-amber-500" style={{ width: '60%' }}></div>
+                            </div>
                         </div>
 
-                        <div className="group rounded-xl border border-emerald-100 bg-emerald-50/50 p-4 transition-all hover:bg-emerald-50 hover:shadow-md">
-                            <div className="flex justify-between items-start mb-2">
-                                <p className="text-xs font-semibold uppercase tracking-wider text-emerald-600">Minor Int.</p>
-                                <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+                        <div className="group relative overflow-hidden rounded-2xl border border-gray-100 bg-white p-6 transition-all hover:scale-[1.02] hover:shadow-lg">
+                            <div className="flex items-center justify-between mb-4">
+                                <span className="inline-flex items-center rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
+                                    <span className="mr-1.5 h-2 w-2 rounded-full bg-emerald-500"></span>
+                                    Minor
+                                </span>
+                                <div className="h-8 w-8 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-500">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+                                        <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm13.36-1.814a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clipRule="evenodd" />
+                                    </svg>
+                                </div>
                             </div>
-                            <p className="text-3xl font-bold text-gray-900 group-hover:text-emerald-700 transition-colors">
-                                {severitySummary.Minor || 0}
-                            </p>
-                            <p className="text-xs text-emerald-600/70 mt-1">Low Priority</p>
+                            <div className="flex items-baseline space-x-2">
+                                <p className="text-4xl font-extrabold text-gray-900">
+                                    {severitySummary.Minor || 0}
+                                </p>
+                                <p className="text-sm text-gray-400 font-medium">interactions</p>
+                            </div>
+                            <p className="mt-2 text-xs font-medium text-emerald-600/80">Low Priority</p>
+                            <div className="absolute bottom-0 left-0 h-1 w-full bg-emerald-100">
+                                <div className="h-full bg-emerald-500" style={{ width: '20%' }}></div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -406,57 +457,157 @@ const DashboardPage = () => {
                 </div>
 
                 {/* Risk Score and Level */}
-                <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-lg relative overflow-hidden">
-                    <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-indigo-50 rounded-full blur-xl opacity-70"></div>
-
-                    <div className="flex flex-wrap items-center justify-between gap-4 relative z-10">
+                {/* Risk Score and Level - Professional Report Style */}
+                <div className="rounded-xl bg-white shadow-sm border-t-4 border-indigo-600 overflow-hidden">
+                    <div className="p-6 border-b border-gray-100 flex flex-wrap justify-between items-center gap-4">
                         <div>
-                            <p className="text-xs uppercase tracking-wide text-indigo-500 font-bold mb-1">
+                            <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6 text-indigo-600">
+                                    <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm11.378-3.917c-.89-.777-2.366-.777-3.255 0a.75.75 0 01-.988-1.129c1.454-1.272 3.776-1.272 5.23 0 1.513 1.324 1.513 3.518 0 4.842a3.75 3.75 0 01-.837.552c-.676.328-1.028.774-1.028 1.152v.75a.75.75 0 01-1.5 0v-.75c0-.796.709-1.35 1.226-1.595.035-.015.068-.029.096-.042a2.25 2.25 0 00.558-4.032zM12 21a.75.75 0 100-1.5.75.75 0 000 1.5z" clipRule="evenodd" />
+                                </svg>
                                 Risk Analysis Report
-                            </p>
-                            <h2 className="text-2xl font-bold text-gray-900">
-                                Assessment Overview
                             </h2>
                             <p className="text-sm text-gray-500 mt-1">
-                                Risk calculated based on 5 parameters: Medication Count, Age, Drug-Drug Interactions (DDI), Liver Function, and Kidney Function.
+                                Clinical assessment based on multiparametric analysis
                             </p>
                         </div>
-                        <div className="text-right text-xs text-gray-400">
-                            <p>Ref: {analysis.assessmentId?.substring(0, 8) || "N/A"}...</p>
-                            <p>{new Date(analysis.createdAt).toLocaleDateString()}</p>
+                        <div className="text-right">
+                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gray-50 border border-gray-200 text-xs font-medium text-gray-600">
+                                <span>Ref: {analysis.assessmentId?.substring(0, 8) || "N/A"}</span>
+                                <span className="w-1 h-1 rounded-full bg-gray-300"></span>
+                                <span>{new Date(analysis.createdAt).toLocaleDateString()}</span>
+                            </div>
                         </div>
                     </div>
 
                     {analysis.riskCalculation && (
-                        <div className="mt-8 mb-8">
-                            <div className="rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-700 p-8 text-white shadow-xl relative overflow-hidden">
-                                <div className="absolute top-0 right-0 -mt-10 -mr-10 w-40 h-40 bg-white opacity-10 rounded-full blur-2xl"></div>
-                                <div className="absolute bottom-0 left-0 -mb-10 -ml-10 w-40 h-40 bg-indigo-400 opacity-20 rounded-full blur-2xl"></div>
-
-                                <div className="flex flex-col md:flex-row items-center justify-between gap-8 relative z-10">
-                                    <div className="text-center md:text-left">
-                                        <p className="text-indigo-200 text-sm font-medium mb-1 uppercase tracking-wider">
-                                            Polypharmacy Risk Score
-                                        </p>
-                                        <div className="flex items-baseline gap-2 justify-center md:justify-start">
-                                            <span className="text-6xl font-black tracking-tight">
+                        <div className="p-8">
+                            <div className="grid md:grid-cols-2 gap-12 items-center">
+                                {/* Left Column: Score & Meter */}
+                                <div className="text-center md:text-left space-y-6">
+                                    <div>
+                                        <p className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Overall Risk Score</p>
+                                        <div className="flex items-baseline justify-center md:justify-start gap-3">
+                                            <span className="text-7xl font-light text-gray-900 tracking-tighter">
                                                 {analysis.riskCalculation.riskScore}
                                             </span>
-                                            <span className="text-2xl opacity-60 font-light">/ 100</span>
+                                            <span className="text-xl text-gray-400 font-normal">/ 100</span>
                                         </div>
                                     </div>
 
-                                    <div className="text-center md:text-right">
-                                        <p className="text-indigo-200 text-sm font-medium mb-2 uppercase tracking-wider">Current Risk Level</p>
-                                        <div className="inline-flex items-center gap-3 bg-white/10 backdrop-blur-sm px-6 py-2 rounded-full border border-white/20">
-                                            <div className={`w-3 h-3 rounded-full ${analysis.riskCalculation.riskLevel === "Very High" ? "bg-red-400 shadow-[0_0_10px_rgba(248,113,113,0.8)]" :
-                                                analysis.riskCalculation.riskLevel === "High" ? "bg-orange-400 shadow-[0_0_10px_rgba(251,146,60,0.8)]" :
-                                                    analysis.riskCalculation.riskLevel === "Moderate" ? "bg-yellow-400 shadow-[0_0_10px_rgba(250,204,21,0.8)]" :
-                                                        "bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.8)]"
-                                                }`}></div>
-                                            <span className="text-2xl font-bold tracking-wide">
-                                                {analysis.riskCalculation.riskLevel}
-                                            </span>
+                                    {/* Visual Risk Meter */}
+                                    <div className="relative pt-2">
+                                        <div className="h-3 w-full rounded-full flex overflow-hidden bg-gray-100">
+                                            <div className="w-1/4 h-full bg-emerald-400 opacity-80"></div>
+                                            <div className="w-1/4 h-full bg-yellow-400 opacity-80"></div>
+                                            <div className="w-1/4 h-full bg-orange-400 opacity-80"></div>
+                                            <div className="w-1/4 h-full bg-rose-500 opacity-80"></div>
+                                        </div>
+                                        {/* Pointer */}
+                                        <div
+                                            className="absolute top-0 w-4 h-4 -ml-2 transition-all duration-1000 ease-out"
+                                            style={{ left: `${Math.min(Math.max(analysis.riskCalculation.riskScore, 0), 100)}%` }}
+                                        >
+                                            <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[8px] border-t-gray-800 mx-auto mb-1"></div>
+                                        </div>
+
+                                        <div className="flex justify-between text-xs text-gray-400 font-medium mt-2 uppercase tracking-wide">
+                                            <span>Low</span>
+                                            <span>Moderate</span>
+                                            <span>High</span>
+                                            <span>Critical</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="inline-flex items-center gap-2.5 px-4 py-2 bg-gray-50 rounded-lg border border-gray-100">
+                                        <span className="text-sm text-gray-500">Current Status:</span>
+                                        <span className={`text-base font-bold ${analysis.riskCalculation.riskLevel === "Very High" ? "text-rose-600" :
+                                            analysis.riskCalculation.riskLevel === "High" ? "text-orange-600" :
+                                                analysis.riskCalculation.riskLevel === "Moderate" ? "text-yellow-600" :
+                                                    "text-emerald-600"
+                                            }`}>
+                                            {analysis.riskCalculation.riskLevel} Risk
+                                        </span>
+                                    </div>
+
+                                    {/* Medical Recommendation */}
+                                    <div className={`mt-6 p-4 rounded-lg border flex gap-3 ${analysis.riskCalculation.riskLevel === "Very High" ? "bg-rose-50 border-rose-100 text-rose-800" :
+                                            analysis.riskCalculation.riskLevel === "High" ? "bg-orange-50 border-orange-100 text-orange-800" :
+                                                analysis.riskCalculation.riskLevel === "Moderate" ? "bg-yellow-50 border-yellow-100 text-yellow-800" :
+                                                    "bg-emerald-50 border-emerald-100 text-emerald-800"
+                                        }`}>
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 flex-shrink-0 mt-0.5">
+                                            <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zM12 8.25a.75.75 0 01.75.75v3.75a.75.75 0 01-1.5 0V9a.75.75 0 01.75-.75zm0 8.25a.75.75 0 100-1.5.75.75 0 000 1.5z" clipRule="evenodd" />
+                                        </svg>
+                                        <div>
+                                            <h4 className="text-sm font-bold mb-1">Medical Recommendation</h4>
+                                            <p className="text-sm opacity-90 leading-relaxed">
+                                                {analysis.riskCalculation.riskLevel === "Very High"
+                                                    ? "Critical alert. Immediate comprehensive medication review (CMR) and specialist consultation advised."
+                                                    : analysis.riskCalculation.riskLevel === "High"
+                                                        ? "Urgent medication review required. Consider deprescribing non-essential drugs."
+                                                        : analysis.riskCalculation.riskLevel === "Moderate"
+                                                            ? "Review medication list for potential optimization. Monitor renal/hepatic function."
+                                                            : "Routine monitoring recommended. No immediate intervention required."
+                                                }
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Right Column: Risk Factors List */}
+                                <div className="bg-gray-50 rounded-xl p-6 border border-gray-100">
+                                    <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 text-indigo-500">
+                                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-13.5a.75.75 0 00-1.5 0v5c0 .414.336.75.75.75h4a.75.75 0 000-1.5h-3.25V4.5z" clipRule="evenodd" />
+                                        </svg>
+                                        Contributing Risk Factors
+                                    </h3>
+                                    <div className="space-y-3">
+                                        <div className="flex items-center justify-between p-2 rounded hover:bg-white hover:shadow-sm transition-all group">
+                                            <span className="text-sm text-gray-600 group-hover:text-gray-900">Medication Load</span>
+                                            <div className="flex items-center gap-3">
+                                                <span className="text-sm font-semibold text-gray-900">{analysis.drugCount} drugs</span>
+                                                <div className="w-16 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                                                    <div className="h-full bg-indigo-500" style={{ width: `${Math.min(analysis.riskCalculation.scores.s1, 100)}%` }}></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center justify-between p-2 rounded hover:bg-white hover:shadow-sm transition-all group">
+                                            <span className="text-sm text-gray-600 group-hover:text-gray-900">Patient Age</span>
+                                            <div className="flex items-center gap-3">
+                                                <span className="text-sm font-semibold text-gray-900">{analysis.age} years</span>
+                                                <div className="w-16 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                                                    <div className="h-full bg-blue-500" style={{ width: `${Math.min(analysis.riskCalculation.scores.s2, 100)}%` }}></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center justify-between p-2 rounded hover:bg-white hover:shadow-sm transition-all group">
+                                            <span className="text-sm text-gray-600 group-hover:text-gray-900">Drug Interactions</span>
+                                            <div className="flex items-center gap-3">
+                                                <span className="text-sm font-semibold text-gray-900">{analysis.interactionsFound} detected</span>
+                                                <div className="w-16 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                                                    <div className="h-full bg-orange-500" style={{ width: `${Math.min(analysis.riskCalculation.scores.s3, 100)}%` }}></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center justify-between p-2 rounded hover:bg-white hover:shadow-sm transition-all group">
+                                            <span className="text-sm text-gray-600 group-hover:text-gray-900">Liver Function</span>
+                                            <div className="flex items-center gap-3">
+                                                <span className="text-sm font-semibold text-gray-900">{analysis.liverFunction}</span>
+                                                <div className="w-16 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                                                    <div className="h-full bg-purple-500" style={{ width: `${Math.min(analysis.riskCalculation.scores.s4, 100)}%` }}></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center justify-between p-2 rounded hover:bg-white hover:shadow-sm transition-all group">
+                                            <span className="text-sm text-gray-600 group-hover:text-gray-900">Kidney Function</span>
+                                            <div className="flex items-center gap-3">
+                                                <span className="text-sm font-semibold text-gray-900">{analysis.kidneyFunction}</span>
+                                                <div className="w-16 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                                                    <div className="h-full bg-teal-500" style={{ width: `${Math.min(analysis.riskCalculation.scores.s5, 100)}%` }}></div>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
