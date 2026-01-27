@@ -82,6 +82,32 @@ const DashboardPage = () => {
     const [error, setError] = useState("");
     const router = useRouter();
 
+    // State for collapsible sections
+    const [sections, setSections] = useState({
+        detailedCalculation: true,
+        s1: false,
+        s2: false,
+        s3: false,
+        s4: false,
+        s5: false,
+    });
+
+    const toggleSection = (key: keyof typeof sections) => {
+        setSections((prev) => ({ ...prev, [key]: !prev[key] }));
+    };
+
+    const ChevronUp = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-500">
+            <polyline points="18 15 12 9 6 15"></polyline>
+        </svg>
+    );
+
+    const ChevronDown = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-500">
+            <polyline points="6 9 12 15 18 9"></polyline>
+        </svg>
+    );
+
     useEffect(() => {
         const fetchAssessment = async () => {
             if (!user) {
@@ -150,6 +176,8 @@ const DashboardPage = () => {
             </div>
         );
     }
+
+
 
     if (!analysis) {
         return (
@@ -277,6 +305,100 @@ const DashboardPage = () => {
                     </div>
 
                 </div>
+
+
+                {/* Drug Interaction Severity Breakdown */}
+                <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
+                    <h3 className="text-lg font-semibold text-gray-800 mb-1 px-1">
+                        Drug Interaction Severity Breakdown
+                    </h3>
+                    <div className="flex gap-6 mb-6 px-1">
+                        <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-gray-500">Drug Count:</span>
+                            <span className="text-lg font-bold text-gray-900">{analysis.drugCount}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-gray-500">Drug Interaction Count:</span>
+                            <span className="text-lg font-bold text-gray-900">
+                                {(severitySummary.Major || 0) + (severitySummary.Moderate || 0) + (severitySummary.Minor || 0)}
+                            </span>
+                        </div>
+                    </div>
+                    <div className="grid gap-4 md:grid-cols-3">
+                        <div className="group relative overflow-hidden rounded-2xl border border-gray-100 bg-white p-6 transition-all hover:scale-[1.02] hover:shadow-lg">
+                            <div className="flex items-center justify-between mb-4">
+                                <span className="inline-flex items-center rounded-full bg-rose-100 px-3 py-1 text-xs font-semibold text-rose-700">
+                                    <span className="mr-1.5 h-2 w-2 rounded-full bg-rose-500"></span>
+                                    Major
+                                </span>
+                                <div className="h-8 w-8 rounded-full bg-rose-50 flex items-center justify-center text-rose-500">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+                                        <path fillRule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zm-1.72 6.97a.75.75 0 10-1.06 1.06L10.94 12l-1.72 1.72a.75.75 0 101.06 1.06L12 13.06l1.72 1.72a.75.75 0 101.06-1.06L13.06 12l1.72-1.72a.75.75 0 10-1.06-1.06L12 10.94l-1.72-1.72z" clipRule="evenodd" />
+                                    </svg>
+                                </div>
+                            </div>
+                            <div className="flex items-baseline space-x-2">
+                                <p className="text-4xl font-extrabold text-gray-900">
+                                    {severitySummary.Major || 0}
+                                </p>
+                                <p className="text-sm text-gray-400 font-medium">interactions</p>
+                            </div>
+                            <p className="mt-2 text-xs font-medium text-rose-600/80">Requires Immediate Attention</p>
+                            <div className="absolute bottom-0 left-0 h-1 w-full bg-rose-100">
+                                <div className="h-full bg-rose-500" style={{ width: '100%' }}></div>
+                            </div>
+                        </div>
+
+                        <div className="group relative overflow-hidden rounded-2xl border border-gray-100 bg-white p-6 transition-all hover:scale-[1.02] hover:shadow-lg">
+                            <div className="flex items-center justify-between mb-4">
+                                <span className="inline-flex items-center rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">
+                                    <span className="mr-1.5 h-2 w-2 rounded-full bg-amber-500"></span>
+                                    Moderate
+                                </span>
+                                <div className="h-8 w-8 rounded-full bg-amber-50 flex items-center justify-center text-amber-500">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+                                        <path fillRule="evenodd" d="M9.401 3.003c1.155-2 4.043-2 5.197 0l7.355 12.748c1.154 2-.29 4.5-2.599 4.5H4.645c-2.309 0-3.752-2.5-2.598-4.5L9.4 3.003zM12 8.25a.75.75 0 01.75.75v3.75a.75.75 0 01-1.5 0V9a.75.75 0 01.75-.75zm0 8.25a.75.75 0 100-1.5.75.75 0 000 1.5z" clipRule="evenodd" />
+                                    </svg>
+                                </div>
+                            </div>
+                            <div className="flex items-baseline space-x-2">
+                                <p className="text-4xl font-extrabold text-gray-900">
+                                    {severitySummary.Moderate || 0}
+                                </p>
+                                <p className="text-sm text-gray-400 font-medium">interactions</p>
+                            </div>
+                            <p className="mt-2 text-xs font-medium text-amber-600/80">Monitor Closely</p>
+                            <div className="absolute bottom-0 left-0 h-1 w-full bg-amber-100">
+                                <div className="h-full bg-amber-500" style={{ width: '60%' }}></div>
+                            </div>
+                        </div>
+
+                        <div className="group relative overflow-hidden rounded-2xl border border-gray-100 bg-white p-6 transition-all hover:scale-[1.02] hover:shadow-lg">
+                            <div className="flex items-center justify-between mb-4">
+                                <span className="inline-flex items-center rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
+                                    <span className="mr-1.5 h-2 w-2 rounded-full bg-emerald-500"></span>
+                                    Minor
+                                </span>
+                                <div className="h-8 w-8 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-500">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+                                        <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm13.36-1.814a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clipRule="evenodd" />
+                                    </svg>
+                                </div>
+                            </div>
+                            <div className="flex items-baseline space-x-2">
+                                <p className="text-4xl font-extrabold text-gray-900">
+                                    {severitySummary.Minor || 0}
+                                </p>
+                                <p className="text-sm text-gray-400 font-medium">interactions</p>
+                            </div>
+                            <p className="mt-2 text-xs font-medium text-emerald-600/80">Low Priority</p>
+                            <div className="absolute bottom-0 left-0 h-1 w-full bg-emerald-100">
+                                <div className="h-full bg-emerald-500" style={{ width: '20%' }}></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 {/* Interaction Breakdown Table */}
                 <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
                     <h3 className="text-lg font-semibold text-gray-900">
@@ -335,572 +457,728 @@ const DashboardPage = () => {
                 </div>
 
                 {/* Risk Score and Level */}
-                <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
-                    <div className="flex flex-wrap items-center justify-between gap-4">
+                {/* Risk Score and Level - Professional Report Style */}
+                <div className="rounded-xl bg-white shadow-sm border-t-4 border-indigo-600 overflow-hidden">
+                    <div className="p-6 border-b border-gray-100 flex flex-wrap justify-between items-center gap-4">
                         <div>
-                            <p className="text-xs uppercase tracking-wide text-emerald-500">
-                                Risk Assessment
-                            </p>
-                            <h2 className="text-2xl font-semibold text-gray-900">
-                                Risk Prediction
+                            <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6 text-indigo-600">
+                                    <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm11.378-3.917c-.89-.777-2.366-.777-3.255 0a.75.75 0 01-.988-1.129c1.454-1.272 3.776-1.272 5.23 0 1.513 1.324 1.513 3.518 0 4.842a3.75 3.75 0 01-.837.552c-.676.328-1.028.774-1.028 1.152v.75a.75.75 0 01-1.5 0v-.75c0-.796.709-1.35 1.226-1.595.035-.015.068-.029.096-.042a2.25 2.25 0 00.558-4.032zM12 21a.75.75 0 100-1.5.75.75 0 000 1.5z" clipRule="evenodd" />
+                                </svg>
+                                Risk Analysis Report
                             </h2>
-                            <p className="text-sm text-gray-500">
-                                {analysis.drugCount} drugs • {analysis.interactionsFound}{" "}
-                                interactions detected
+                            <p className="text-sm text-gray-500 mt-1">
+                                Clinical assessment based on multiparametric analysis
                             </p>
                         </div>
-                        <div className="text-right text-sm text-gray-500">
-                            <p>ID: {analysis.assessmentId}</p>
-                            <p>{new Date(analysis.createdAt).toLocaleString()}</p>
+                        <div className="text-right">
+                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gray-50 border border-gray-200 text-xs font-medium text-gray-600">
+                                <span>Ref: {analysis.assessmentId?.substring(0, 8) || "N/A"}</span>
+                                <span className="w-1 h-1 rounded-full bg-gray-300"></span>
+                                <span>{new Date(analysis.createdAt).toLocaleDateString()}</span>
+                            </div>
                         </div>
                     </div>
 
                     {analysis.riskCalculation && (
-                        <div className="mt-6">
-                            <div className="rounded-xl border-2 border-indigo-200 bg-indigo-50 p-6">
-                                <div className="flex flex-wrap items-center justify-between gap-4">
+                        <div className="p-8">
+                            <div className="grid md:grid-cols-2 gap-12 items-center">
+                                {/* Left Column: Score & Meter */}
+                                <div className="text-center md:text-left space-y-6">
                                     <div>
-                                        <p className="text-sm text-indigo-600">
-                                            Polypharmacy Risk Score
-                                        </p>
-                                        <p className="text-4xl font-bold text-indigo-900">
-                                            {analysis.riskCalculation.riskScore} %
-                                        </p>
+                                        <p className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Overall Risk Score</p>
+                                        <div className="flex items-baseline justify-center md:justify-start gap-3">
+                                            <span className="text-7xl font-light text-gray-900 tracking-tighter">
+                                                {analysis.riskCalculation.riskScore}
+                                            </span>
+                                            <span className="text-xl text-gray-400 font-normal">/ 100</span>
+                                        </div>
                                     </div>
-                                    <div className="text-right">
-                                        <p className="text-sm text-indigo-600">Risk Level</p>
-                                        <p
-                                            className={`text-2xl font-bold ${analysis.riskCalculation.riskLevel === "Very High"
-                                                ? "text-red-600"
-                                                : analysis.riskCalculation.riskLevel === "High"
-                                                    ? "text-orange-600"
-                                                    : analysis.riskCalculation.riskLevel ===
-                                                        "Moderate"
-                                                        ? "text-yellow-600"
-                                                        : "text-green-600"
-                                                }`}
+
+                                    {/* Visual Risk Meter */}
+                                    <div className="relative pt-2">
+                                        <div className="h-3 w-full rounded-full flex overflow-hidden bg-gray-100">
+                                            <div className="w-1/4 h-full bg-emerald-400 opacity-80"></div>
+                                            <div className="w-1/4 h-full bg-yellow-400 opacity-80"></div>
+                                            <div className="w-1/4 h-full bg-orange-400 opacity-80"></div>
+                                            <div className="w-1/4 h-full bg-rose-500 opacity-80"></div>
+                                        </div>
+                                        {/* Pointer */}
+                                        <div
+                                            className="absolute top-0 w-4 h-4 -ml-2 transition-all duration-1000 ease-out"
+                                            style={{ left: `${Math.min(Math.max(analysis.riskCalculation.riskScore, 0), 100)}%` }}
                                         >
-                                            {analysis.riskCalculation.riskLevel}
-                                        </p>
+                                            <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[8px] border-t-gray-800 mx-auto mb-1"></div>
+                                        </div>
+
+                                        <div className="flex justify-between text-xs text-gray-400 font-medium mt-2 uppercase tracking-wide">
+                                            <span>Low</span>
+                                            <span>Moderate</span>
+                                            <span>High</span>
+                                            <span>Critical</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="inline-flex items-center gap-2.5 px-4 py-2 bg-gray-50 rounded-lg border border-gray-100">
+                                        <span className="text-sm text-gray-500">Current Status:</span>
+                                        <span className={`text-base font-bold ${analysis.riskCalculation.riskLevel === "Very High" ? "text-rose-600" :
+                                            analysis.riskCalculation.riskLevel === "High" ? "text-orange-600" :
+                                                analysis.riskCalculation.riskLevel === "Moderate" ? "text-yellow-600" :
+                                                    "text-emerald-600"
+                                            }`}>
+                                            {analysis.riskCalculation.riskLevel} Risk
+                                        </span>
+                                    </div>
+
+                                    {/* Medical Recommendation */}
+                                    <div className={`mt-6 p-4 rounded-lg border flex gap-3 ${analysis.riskCalculation.riskLevel === "Very High" ? "bg-rose-50 border-rose-100 text-rose-800" :
+                                        analysis.riskCalculation.riskLevel === "High" ? "bg-orange-50 border-orange-100 text-orange-800" :
+                                            analysis.riskCalculation.riskLevel === "Moderate" ? "bg-yellow-50 border-yellow-100 text-yellow-800" :
+                                                "bg-emerald-50 border-emerald-100 text-emerald-800"
+                                        }`}>
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 flex-shrink-0 mt-0.5">
+                                            <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zM12 8.25a.75.75 0 01.75.75v3.75a.75.75 0 01-1.5 0V9a.75.75 0 01.75-.75zm0 8.25a.75.75 0 100-1.5.75.75 0 000 1.5z" clipRule="evenodd" />
+                                        </svg>
+                                        <div>
+                                            <h4 className="text-sm font-bold mb-1">Medical Recommendation</h4>
+                                            <p className="text-sm opacity-90 leading-relaxed">
+                                                {analysis.riskCalculation.riskLevel === "Very High"
+                                                    ? "Critical alert. Immediate comprehensive medication review (CMR) and specialist consultation advised."
+                                                    : analysis.riskCalculation.riskLevel === "High"
+                                                        ? "Urgent medication review required. Consider deprescribing non-essential drugs."
+                                                        : analysis.riskCalculation.riskLevel === "Moderate"
+                                                            ? "Review medication list for potential optimization. Monitor renal/hepatic function."
+                                                            : "Routine monitoring recommended. No immediate intervention required."
+                                                }
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Right Column: Risk Factors List */}
+                                <div className="bg-gray-50 rounded-xl p-6 border border-gray-100">
+                                    <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 text-indigo-500">
+                                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-13.5a.75.75 0 00-1.5 0v5c0 .414.336.75.75.75h4a.75.75 0 000-1.5h-3.25V4.5z" clipRule="evenodd" />
+                                        </svg>
+                                        Contributing Risk Factors
+                                    </h3>
+                                    <div className="space-y-3">
+                                        <div className="flex items-center justify-between p-2 rounded hover:bg-white hover:shadow-sm transition-all group">
+                                            <span className="text-sm text-gray-600 group-hover:text-gray-900">Medication Load</span>
+                                            <div className="flex items-center gap-3">
+                                                <span className="text-sm font-semibold text-gray-900">{analysis.drugCount} drugs</span>
+                                                <div className="w-16 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                                                    <div className="h-full bg-indigo-500" style={{ width: `${Math.min(analysis.riskCalculation.scores.s1, 100)}%` }}></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center justify-between p-2 rounded hover:bg-white hover:shadow-sm transition-all group">
+                                            <span className="text-sm text-gray-600 group-hover:text-gray-900">Patient Age</span>
+                                            <div className="flex items-center gap-3">
+                                                <span className="text-sm font-semibold text-gray-900">{analysis.age} years</span>
+                                                <div className="w-16 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                                                    <div className="h-full bg-blue-500" style={{ width: `${Math.min(analysis.riskCalculation.scores.s2, 100)}%` }}></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center justify-between p-2 rounded hover:bg-white hover:shadow-sm transition-all group">
+                                            <span className="text-sm text-gray-600 group-hover:text-gray-900">Drug Interactions</span>
+                                            <div className="flex items-center gap-3">
+                                                <span className="text-sm font-semibold text-gray-900">{analysis.interactionsFound} detected</span>
+                                                <div className="w-16 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                                                    <div className="h-full bg-orange-500" style={{ width: `${Math.min(analysis.riskCalculation.scores.s3, 100)}%` }}></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center justify-between p-2 rounded hover:bg-white hover:shadow-sm transition-all group">
+                                            <span className="text-sm text-gray-600 group-hover:text-gray-900">Liver Function</span>
+                                            <div className="flex items-center gap-3">
+                                                <span className="text-sm font-semibold text-gray-900">{analysis.liverFunction}</span>
+                                                <div className="w-16 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                                                    <div className="h-full bg-purple-500" style={{ width: `${Math.min(analysis.riskCalculation.scores.s4, 100)}%` }}></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center justify-between p-2 rounded hover:bg-white hover:shadow-sm transition-all group">
+                                            <span className="text-sm text-gray-600 group-hover:text-gray-900">Kidney Function</span>
+                                            <div className="flex items-center gap-3">
+                                                <span className="text-sm font-semibold text-gray-900">{analysis.kidneyFunction}</span>
+                                                <div className="w-16 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                                                    <div className="h-full bg-teal-500" style={{ width: `${Math.min(analysis.riskCalculation.scores.s5, 100)}%` }}></div>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     )}
-
-                    <div className="mt-6 grid gap-4 md:grid-cols-3">
-                        {renderSeverityCard(
-                            "Major",
-                            severitySummary.Major || 0,
-                            "bg-rose-50 border-rose-100"
-                        )}
-                        {renderSeverityCard(
-                            "Moderate",
-                            severitySummary.Moderate || 0,
-                            "bg-amber-50 border-amber-100"
-                        )}
-                        {renderSeverityCard(
-                            "Minor",
-                            severitySummary.Minor || 0,
-                            "bg-emerald-50 border-emerald-100"
-                        )}
-                    </div>
                 </div>
 
                 {/* Calculation Details */}
                 {analysis.riskCalculation && (
                     <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
-                        <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                            Detailed Calculation
-                        </h3>
-
-                        {/* Sub-scores */}
-                        <div className="mb-6">
-                            <h4 className="text-md font-medium text-gray-700 mb-3">
-                                Sub-Scores (S1-S5)
-                            </h4>
-                            <div className="grid gap-3 md:grid-cols-5">
-                                <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
-                                    <p className="text-xs text-gray-500">
-                                        S1 (Medication Count)
-                                    </p>
-                                    <p className="text-xl font-bold text-gray-900">
-                                        {analysis.riskCalculation.scores.s1}
-                                    </p>
-                                    <p className="text-xs text-gray-400 mt-1">
-                                        From {analysis.drugCount} drugs
-                                    </p>
-                                    {analysis.riskCalculation.calculation.s1Explanation && (
-                                        <p className="text-xs text-blue-600 mt-1 font-medium">
-                                            {analysis.riskCalculation.calculation.s1Explanation}
-                                        </p>
-                                    )}
-                                </div>
-                                <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
-                                    <p className="text-xs text-gray-500">S2 (Age)</p>
-                                    <p className="text-xl font-bold text-gray-900">
-                                        {analysis.riskCalculation.scores.s2}
-                                    </p>
-                                    {analysis.riskCalculation.calculation.s2Explanation && (
-                                        <p className="text-xs text-green-600 mt-1 font-medium">
-                                            {analysis.riskCalculation.calculation.s2Explanation}
-                                        </p>
-                                    )}
-                                </div>
-                                <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
-                                    <p className="text-xs text-gray-500">S3 (DDI)</p>
-                                    <p className="text-xl font-bold text-gray-900">
-                                        {analysis.riskCalculation.scores.s3}
-                                    </p>
-                                    {analysis.riskCalculation.calculation.s3Explanation && (
-                                        <p className="text-xs text-orange-600 mt-1 font-medium">
-                                            {analysis.riskCalculation.calculation.s3Explanation}
-                                        </p>
-                                    )}
-                                </div>
-                                <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
-                                    <p className="text-xs text-gray-500">S4 (Liver)</p>
-                                    <p className="text-xl font-bold text-gray-900">
-                                        {analysis.riskCalculation.scores.s4}
-                                    </p>
-                                    {analysis.riskCalculation.calculation.s4Explanation && (
-                                        <p className="text-xs text-purple-600 mt-1 font-medium">
-                                            {analysis.riskCalculation.calculation.s4Explanation}
-                                        </p>
-                                    )}
-                                </div>
-                                <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
-                                    <p className="text-xs text-gray-500">S5 (Kidney)</p>
-                                    <p className="text-xl font-bold text-gray-900">
-                                        {analysis.riskCalculation.scores.s5}
-                                    </p>
-                                    {analysis.riskCalculation.calculation.s5Explanation && (
-                                        <p className="text-xs text-teal-600 mt-1 font-medium">
-                                            {analysis.riskCalculation.calculation.s5Explanation}
-                                        </p>
-                                    )}
-                                </div>
-                            </div>
+                        <div
+                            className="flex items-center justify-between cursor-pointer mb-4"
+                            onClick={() => toggleSection('detailedCalculation')}
+                        >
+                            <h3 className="text-lg font-semibold text-gray-900">
+                                Detailed Calculation
+                            </h3>
+                            {sections.detailedCalculation ? <ChevronUp /> : <ChevronDown />}
                         </div>
 
-                        {/* Weights */}
-                        <div className="mb-6">
-                            <h4 className="text-md font-medium text-gray-700 mb-3">
-                                Weights
-                            </h4>
-                            <div className="grid gap-3 md:grid-cols-5">
-                                <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
-                                    <p className="text-xs text-blue-600">Drug Weight</p>
-                                    <p className="text-lg font-bold text-blue-900">
-                                        {analysis.riskCalculation.weights.drugWeight}
-                                    </p>
-                                </div>
-                                <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
-                                    <p className="text-xs text-blue-600">Age Weight</p>
-                                    <p className="text-lg font-bold text-blue-900">
-                                        {analysis.riskCalculation.weights.ageWeight}
-                                    </p>
-                                </div>
-                                <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
-                                    <p className="text-xs text-blue-600">DDI Weight</p>
-                                    <p className="text-lg font-bold text-blue-900">
-                                        {analysis.riskCalculation.weights.ddiWeight}
-                                    </p>
-                                </div>
-                                <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
-                                    <p className="text-xs text-blue-600">Liver Weight</p>
-                                    <p className="text-lg font-bold text-blue-900">
-                                        {analysis.riskCalculation.weights.liverWeight}
-                                    </p>
-                                </div>
-                                <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
-                                    <p className="text-xs text-blue-600">Kidney Weight</p>
-                                    <p className="text-lg font-bold text-blue-900">
-                                        {analysis.riskCalculation.weights.kidneyWeight}
-                                    </p>
-                                </div>
-                            </div>
-                            <p className="mt-2 text-xs text-gray-500">
-                                Total Weight:{" "}
-                                {Object.values(analysis.riskCalculation.weights).reduce(
-                                    (a, b) => a + b,
-                                    0
-                                )}
-                            </p>
-                        </div>
+                        {sections.detailedCalculation && (
+                            <div className="space-y-6">
+                                {/* Sub-scores */}
+                                <div>
+                                    <h4 className="text-md font-medium text-gray-700 mb-3">
+                                        Sub-Scores (S1-S5)
+                                    </h4>
 
-                        {/* S1 Calculation Breakdown */}
-                        <div className="mb-6">
-                            <h4 className="text-md font-medium text-gray-700 mb-3">
-                                S1 (Drug Sub-Score) Calculation
-                            </h4>
-                            <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
-                                <div className="space-y-2">
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-sm font-medium text-blue-900">
-                                            Drug Count:
-                                        </span>
-                                        <span className="text-lg font-bold text-blue-900">
-                                            {analysis.drugCount} drugs
-                                        </span>
-                                    </div>
-                                    <div className="border-t border-blue-200 pt-2 mt-2">
-                                        <p className="text-xs text-blue-700 mb-2">
-                                            S1 Calculation Rules:
-                                        </p>
-                                        <ul className="text-xs text-blue-600 space-y-1 ml-4 list-disc">
-                                            <li>Drug count &lt; 5: S1 = 0.0</li>
-                                            <li>Drug count 5-7: S1 = 0.7</li>
-                                            <li>Drug count 8-10: S1 = 1.0</li>
-                                            <li>
-                                                Drug count &gt; 10: S1 = 1.0 + (drug count - 10) ×
-                                                0.1
-                                            </li>
-                                        </ul>
-                                    </div>
-                                    {analysis.riskCalculation.calculation.s1Explanation && (
-                                        <div className="border-t border-blue-200 pt-2 mt-2">
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-sm font-medium text-blue-900">
-                                                    Calculated S1:
-                                                </span>
-                                                <span className="text-lg font-bold text-blue-900">
-                                                    {analysis.riskCalculation.scores.s1}
-                                                </span>
-                                            </div>
-                                            <p className="text-xs text-blue-600 mt-1 italic">
-                                                {analysis.riskCalculation.calculation.s1Explanation}
+
+                                    <div className="grid gap-3 md:grid-cols-5 animate-in fade-in slide-in-from-top-2 duration-300">
+                                        <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+                                            <p className="text-xs text-gray-500">
+                                                S1 (Medication Count)
                                             </p>
+                                            <p className="text-xl font-bold text-gray-900">
+                                                {analysis.riskCalculation.scores.s1}
+                                            </p>
+                                            <p className="text-xs text-gray-400 mt-1">
+                                                From {analysis.drugCount} drugs
+                                            </p>
+                                            {analysis.riskCalculation.calculation.s1Explanation && (
+                                                <p className="text-xs text-blue-600 mt-1 font-medium">
+                                                    {analysis.riskCalculation.calculation.s1Explanation}
+                                                </p>
+                                            )}
+                                        </div>
+                                        <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+                                            <p className="text-xs text-gray-500">S2 (Age)</p>
+                                            <p className="text-xl font-bold text-gray-900">
+                                                {analysis.riskCalculation.scores.s2}
+                                            </p>
+                                            {analysis.riskCalculation.calculation.s2Explanation && (
+                                                <p className="text-xs text-green-600 mt-1 font-medium">
+                                                    {analysis.riskCalculation.calculation.s2Explanation}
+                                                </p>
+                                            )}
+                                        </div>
+                                        <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+                                            <p className="text-xs text-gray-500">S3 (DDI)</p>
+                                            <p className="text-xl font-bold text-gray-900">
+                                                {analysis.riskCalculation.scores.s3}
+                                            </p>
+                                            {analysis.riskCalculation.calculation.s3Explanation && (
+                                                <p className="text-xs text-orange-600 mt-1 font-medium">
+                                                    {analysis.riskCalculation.calculation.s3Explanation}
+                                                </p>
+                                            )}
+                                        </div>
+                                        <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+                                            <p className="text-xs text-gray-500">S4 (Liver)</p>
+                                            <p className="text-xl font-bold text-gray-900">
+                                                {analysis.riskCalculation.scores.s4}
+                                            </p>
+                                            {analysis.riskCalculation.calculation.s4Explanation && (
+                                                <p className="text-xs text-purple-600 mt-1 font-medium">
+                                                    {analysis.riskCalculation.calculation.s4Explanation}
+                                                </p>
+                                            )}
+                                        </div>
+                                        <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+                                            <p className="text-xs text-gray-500">S5 (Kidney)</p>
+                                            <p className="text-xl font-bold text-gray-900">
+                                                {analysis.riskCalculation.scores.s5}
+                                            </p>
+                                            {analysis.riskCalculation.calculation.s5Explanation && (
+                                                <p className="text-xs text-teal-600 mt-1 font-medium">
+                                                    {analysis.riskCalculation.calculation.s5Explanation}
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                </div>
+
+                                {/* Weights */}
+                                <div>
+                                    <h4 className="text-md font-medium text-gray-700 mb-3">
+                                        Weights
+                                    </h4>
+
+
+                                    <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+                                        <div className="grid gap-3 md:grid-cols-5">
+                                            <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
+                                                <p className="text-xs text-blue-600">Drug Weight</p>
+                                                <p className="text-lg font-bold text-blue-900">
+                                                    {analysis.riskCalculation.weights.drugWeight}
+                                                </p>
+                                            </div>
+                                            <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
+                                                <p className="text-xs text-blue-600">Age Weight</p>
+                                                <p className="text-lg font-bold text-blue-900">
+                                                    {analysis.riskCalculation.weights.ageWeight}
+                                                </p>
+                                            </div>
+                                            <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
+                                                <p className="text-xs text-blue-600">DDI Weight</p>
+                                                <p className="text-lg font-bold text-blue-900">
+                                                    {analysis.riskCalculation.weights.ddiWeight}
+                                                </p>
+                                            </div>
+                                            <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
+                                                <p className="text-xs text-blue-600">Liver Weight</p>
+                                                <p className="text-lg font-bold text-blue-900">
+                                                    {analysis.riskCalculation.weights.liverWeight}
+                                                </p>
+                                            </div>
+                                            <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
+                                                <p className="text-xs text-blue-600">Kidney Weight</p>
+                                                <p className="text-lg font-bold text-blue-900">
+                                                    {analysis.riskCalculation.weights.kidneyWeight}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <p className="mt-2 text-xs text-gray-500">
+                                            Total Weight:{" "}
+                                            {Object.values(analysis.riskCalculation.weights).reduce(
+                                                (a, b) => a + b,
+                                                0
+                                            )}
+                                        </p>
+                                    </div>
+
+                                </div>
+
+                                {/* S1 Calculation Breakdown */}
+                                <div className="mb-6">
+                                    <div
+                                        className="flex items-center justify-between cursor-pointer mb-3"
+                                        onClick={() => toggleSection('s1')}
+                                    >
+                                        <h4 className="text-md font-medium text-gray-700">
+                                            S1 (Drug Sub-Score) Calculation
+                                        </h4>
+                                        {sections.s1 ? <ChevronUp /> : <ChevronDown />}
+                                    </div>
+
+                                    {sections.s1 && (
+                                        <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                                            <div className="space-y-2">
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-sm font-medium text-blue-900">
+                                                        Drug Count:
+                                                    </span>
+                                                    <span className="text-lg font-bold text-blue-900">
+                                                        {analysis.drugCount} drugs
+                                                    </span>
+                                                </div>
+                                                <div className="border-t border-blue-200 pt-2 mt-2">
+                                                    <p className="text-xs text-blue-700 mb-2">
+                                                        S1 Calculation Rules:
+                                                    </p>
+                                                    <ul className="text-xs text-blue-600 space-y-1 ml-4 list-disc">
+                                                        <li>Drug count &lt; 5: S1 = 0.0</li>
+                                                        <li>Drug count 5-7: S1 = 0.7</li>
+                                                        <li>Drug count 8-10: S1 = 1.0</li>
+                                                        <li>
+                                                            Drug count &gt; 10: S1 = 1.0 + (drug count - 10) ×
+                                                            0.1
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                                {analysis.riskCalculation.calculation.s1Explanation && (
+                                                    <div className="border-t border-blue-200 pt-2 mt-2">
+                                                        <div className="flex items-center justify-between">
+                                                            <span className="text-sm font-medium text-blue-900">
+                                                                Calculated S1:
+                                                            </span>
+                                                            <span className="text-lg font-bold text-blue-900">
+                                                                {analysis.riskCalculation.scores.s1}
+                                                            </span>
+                                                        </div>
+                                                        <p className="text-xs text-blue-600 mt-1 italic">
+                                                            {analysis.riskCalculation.calculation.s1Explanation}
+                                                        </p>
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
                                     )}
                                 </div>
-                            </div>
-                        </div>
 
-                        {/* S2 Calculation Breakdown */}
-                        <div className="mb-6">
-                            <h4 className="text-md font-medium text-gray-700 mb-3">
-                                S2 (Age Sub-Score) Calculation
-                            </h4>
-                            <div className="rounded-lg border border-green-200 bg-green-50 p-4">
-                                <div className="space-y-2">
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-sm font-medium text-green-900">
-                                            Age:
-                                        </span>
-                                        <span className="text-lg font-bold text-green-900">
-                                            {analysis.age} years
-                                        </span>
+                                {/* S2 Calculation Breakdown */}
+                                <div className="mb-6">
+                                    <div
+                                        className="flex items-center justify-between cursor-pointer mb-3"
+                                        onClick={() => toggleSection('s2')}
+                                    >
+                                        <h4 className="text-md font-medium text-gray-700">
+                                            S2 (Age Sub-Score) Calculation
+                                        </h4>
+                                        {sections.s2 ? <ChevronUp /> : <ChevronDown />}
                                     </div>
-                                    <div className="border-t border-green-200 pt-2 mt-2">
-                                        <p className="text-xs text-green-700 mb-2">
-                                            S2 Calculation Rules:
-                                        </p>
-                                        <ul className="text-xs text-green-600 space-y-1 ml-4 list-disc">
-                                            <li>Age &lt; 65: S2 = 0.0</li>
-                                            <li>Age 65-74: S2 = 0.5</li>
-                                            <li>Age 75-84: S2 = 0.7</li>
-                                            <li>Age ≥ 85: S2 = 1.0</li>
-                                        </ul>
-                                    </div>
-                                    {analysis.riskCalculation.calculation.s2Explanation && (
-                                        <div className="border-t border-green-200 pt-2 mt-2">
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-sm font-medium text-green-900">
-                                                    Calculated S2:
-                                                </span>
-                                                <span className="text-lg font-bold text-green-900">
-                                                    {analysis.riskCalculation.scores.s2}
-                                                </span>
+
+                                    {sections.s2 && (
+                                        <div className="rounded-lg border border-green-200 bg-green-50 p-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                                            <div className="space-y-2">
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-sm font-medium text-green-900">
+                                                        Age:
+                                                    </span>
+                                                    <span className="text-lg font-bold text-green-900">
+                                                        {analysis.age} years
+                                                    </span>
+                                                </div>
+                                                <div className="border-t border-green-200 pt-2 mt-2">
+                                                    <p className="text-xs text-green-700 mb-2">
+                                                        S2 Calculation Rules:
+                                                    </p>
+                                                    <ul className="text-xs text-green-600 space-y-1 ml-4 list-disc">
+                                                        <li>Age &lt; 65: S2 = 0.0</li>
+                                                        <li>Age 65-74: S2 = 0.5</li>
+                                                        <li>Age 75-84: S2 = 0.7</li>
+                                                        <li>Age ≥ 85: S2 = 1.0</li>
+                                                    </ul>
+                                                </div>
+                                                {analysis.riskCalculation.calculation.s2Explanation && (
+                                                    <div className="border-t border-green-200 pt-2 mt-2">
+                                                        <div className="flex items-center justify-between">
+                                                            <span className="text-sm font-medium text-green-900">
+                                                                Calculated S2:
+                                                            </span>
+                                                            <span className="text-lg font-bold text-green-900">
+                                                                {analysis.riskCalculation.scores.s2}
+                                                            </span>
+                                                        </div>
+                                                        <p className="text-xs text-green-600 mt-1 italic">
+                                                            {analysis.riskCalculation.calculation.s2Explanation}
+                                                        </p>
+                                                    </div>
+                                                )}
                                             </div>
-                                            <p className="text-xs text-green-600 mt-1 italic">
-                                                {analysis.riskCalculation.calculation.s2Explanation}
-                                            </p>
                                         </div>
                                     )}
                                 </div>
-                            </div>
-                        </div>
 
-                        {/* S3 Calculation Breakdown */}
-                        <div className="mb-6">
-                            <h4 className="text-md font-medium text-gray-700 mb-3">
-                                S3 (DDI Sub-Score) Calculation
-                            </h4>
-                            <div className="rounded-lg border border-orange-200 bg-orange-50 p-4">
-                                <div className="space-y-2">
-                                    <div className="grid grid-cols-3 gap-2">
-                                        <div className="text-center">
-                                            <span className="text-xs text-orange-700">
-                                                Major DDI:
+                                {/* S3 Calculation Breakdown */}
+                                <div className="mb-6">
+                                    <div
+                                        className="flex items-center justify-between cursor-pointer mb-3"
+                                        onClick={() => toggleSection('s3')}
+                                    >
+                                        <h4 className="text-md font-medium text-gray-700">
+                                            S3 (DDI Sub-Score) Calculation
+                                        </h4>
+                                        {sections.s3 ? <ChevronUp /> : <ChevronDown />}
+                                    </div>
+
+                                    {sections.s3 && (
+                                        <div className="rounded-lg border border-orange-200 bg-orange-50 p-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                                            <div className="space-y-2">
+                                                <div className="grid grid-cols-3 gap-2">
+                                                    <div className="text-center">
+                                                        <span className="text-xs text-orange-700">
+                                                            Major DDI:
+                                                        </span>
+                                                        <p className="text-lg font-bold text-orange-900">
+                                                            {severitySummary.Major || 0}
+                                                        </p>
+                                                    </div>
+                                                    <div className="text-center">
+                                                        <span className="text-xs text-orange-700">
+                                                            Moderate DDI:
+                                                        </span>
+                                                        <p className="text-lg font-bold text-orange-900">
+                                                            {severitySummary.Moderate || 0}
+                                                        </p>
+                                                    </div>
+                                                    <div className="text-center">
+                                                        <span className="text-xs text-orange-700">
+                                                            Minor DDI:
+                                                        </span>
+                                                        <p className="text-lg font-bold text-orange-900">
+                                                            {severitySummary.Minor || 0}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <div className="border-t border-orange-200 pt-2 mt-2">
+                                                    <p className="text-xs text-orange-700 mb-2">
+                                                        S3 Calculation Rules:
+                                                    </p>
+                                                    <ul className="text-xs text-orange-600 space-y-1 ml-4 list-disc">
+                                                        <li>Major DDI: 1.0 × Major DDI Count</li>
+                                                        <li>Moderate DDI: 0.6 × Moderate DDI Count</li>
+                                                        <li>Minor DDI: 0.3 × Minor DDI Count</li>
+                                                        <li>
+                                                            S3 = (Major × 1.0) + (Moderate × 0.6) + (Minor ×
+                                                            0.3)
+                                                        </li>
+                                                        <li>No DDI: S3 = 0.0</li>
+                                                    </ul>
+                                                </div>
+                                                {analysis.riskCalculation.calculation.s3Explanation && (
+                                                    <div className="border-t border-orange-200 pt-2 mt-2">
+                                                        <div className="flex items-center justify-between">
+                                                            <span className="text-sm font-medium text-orange-900">
+                                                                Calculated S3:
+                                                            </span>
+                                                            <span className="text-lg font-bold text-orange-900">
+                                                                {analysis.riskCalculation.scores.s3}
+                                                            </span>
+                                                        </div>
+                                                        <p className="text-xs text-orange-600 mt-1 italic">
+                                                            {analysis.riskCalculation.calculation.s3Explanation}
+                                                        </p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* S4 Calculation Breakdown */}
+                                <div className="mb-6">
+                                    <div
+                                        className="flex items-center justify-between cursor-pointer mb-3"
+                                        onClick={() => toggleSection('s4')}
+                                    >
+                                        <h4 className="text-md font-medium text-gray-700">
+                                            S4 (Liver Function Sub-Score) Calculation
+                                        </h4>
+                                        {sections.s4 ? <ChevronUp /> : <ChevronDown />}
+                                    </div>
+
+                                    {sections.s4 && (
+                                        <div className="rounded-lg border border-purple-200 bg-purple-50 p-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                                            <div className="space-y-2">
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-sm font-medium text-purple-900">
+                                                        Liver Function:
+                                                    </span>
+                                                    <span className="text-lg font-bold text-purple-900">
+                                                        {analysis.liverFunction}
+                                                    </span>
+                                                </div>
+                                                <div className="border-t border-purple-200 pt-2 mt-2">
+                                                    <p className="text-xs text-purple-700 mb-2">
+                                                        S4 Calculation Rules:
+                                                    </p>
+                                                    <ul className="text-xs text-purple-600 space-y-1 ml-4 list-disc">
+                                                        <li>Normal (&lt;40 IU/L): S4 = 0.0</li>
+                                                        <li>Mild risk (40-80 IU/L): S4 = 0.3</li>
+                                                        <li>Moderate risk (80-150 IU/L): S4 = 0.6</li>
+                                                        <li>Severe risk (&gt;150 IU/L): S4 = 1.0</li>
+                                                    </ul>
+                                                </div>
+                                                {analysis.riskCalculation.calculation.s4Explanation && (
+                                                    <div className="border-t border-purple-200 pt-2 mt-2">
+                                                        <div className="flex items-center justify-between">
+                                                            <span className="text-sm font-medium text-purple-900">
+                                                                Calculated S4:
+                                                            </span>
+                                                            <span className="text-lg font-bold text-purple-900">
+                                                                {analysis.riskCalculation.scores.s4}
+                                                            </span>
+                                                        </div>
+                                                        <p className="text-xs text-purple-600 mt-1 italic">
+                                                            {analysis.riskCalculation.calculation.s4Explanation}
+                                                        </p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* S5 Calculation Breakdown */}
+                                <div className="mb-6">
+                                    <div
+                                        className="flex items-center justify-between cursor-pointer mb-3"
+                                        onClick={() => toggleSection('s5')}
+                                    >
+                                        <h4 className="text-md font-medium text-gray-700">
+                                            S5 (Kidney Function Sub-Score) Calculation
+                                        </h4>
+                                        {sections.s5 ? <ChevronUp /> : <ChevronDown />}
+                                    </div>
+
+                                    {sections.s5 && (
+                                        <div className="rounded-lg border border-teal-200 bg-teal-50 p-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                                            <div className="space-y-2">
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-sm font-medium text-teal-900">
+                                                        Kidney Function:
+                                                    </span>
+                                                    <span className="text-lg font-bold text-teal-900">
+                                                        {analysis.kidneyFunction}
+                                                    </span>
+                                                </div>
+                                                <div className="border-t border-teal-200 pt-2 mt-2">
+                                                    <p className="text-xs text-teal-700 mb-2">
+                                                        S5 Calculation Rules:
+                                                    </p>
+                                                    <ul className="text-xs text-teal-600 space-y-1 ml-4 list-disc">
+                                                        <li>Stage 1 (eGFR 90): S5 = 0.0</li>
+                                                        <li>Stage 2 (eGFR 60-89): S5 = 0.3</li>
+                                                        <li>Stage 3a (eGFR 45-59): S5 = 0.5</li>
+                                                        <li>Stage 3b (eGFR 30-44): S5 = 0.7</li>
+                                                        <li>Stage 4 (eGFR 15-29): S5 = 0.9</li>
+                                                        <li>Stage 5 (eGFR &lt;15): S5 = 1.0</li>
+                                                    </ul>
+                                                </div>
+                                                {analysis.riskCalculation.calculation.s5Explanation && (
+                                                    <div className="border-t border-teal-200 pt-2 mt-2">
+                                                        <div className="flex items-center justify-between">
+                                                            <span className="text-sm font-medium text-teal-900">
+                                                                Calculated S5:
+                                                            </span>
+                                                            <span className="text-lg font-bold text-teal-900">
+                                                                {analysis.riskCalculation.scores.s5}
+                                                            </span>
+                                                        </div>
+                                                        <p className="text-xs text-teal-600 mt-1 italic">
+                                                            {analysis.riskCalculation.calculation.s5Explanation}
+                                                        </p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Calculation Components */}
+                                <div>
+                                    <h4 className="text-md font-medium text-gray-700 mb-3">
+                                        Weighted Components
+                                    </h4>
+
+
+                                    <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                                        <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 p-3">
+                                            <span className="text-sm text-gray-600">
+                                                Drug Component ={" "}
+                                                {analysis.riskCalculation.weights.drugWeight} ×{" "}
+                                                {analysis.riskCalculation.scores.s1} (S1 from{" "}
+                                                {analysis.drugCount} drugs)
                                             </span>
-                                            <p className="text-lg font-bold text-orange-900">
-                                                {severitySummary.Major || 0}
-                                            </p>
-                                        </div>
-                                        <div className="text-center">
-                                            <span className="text-xs text-orange-700">
-                                                Moderate DDI:
+                                            <span className="text-lg font-semibold text-gray-900">
+                                                = {analysis.riskCalculation.calculation.drugComponent}
                                             </span>
-                                            <p className="text-lg font-bold text-orange-900">
-                                                {severitySummary.Moderate || 0}
-                                            </p>
                                         </div>
-                                        <div className="text-center">
-                                            <span className="text-xs text-orange-700">
-                                                Minor DDI:
+                                        <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 p-3">
+                                            <span className="text-sm text-gray-600">
+                                                Age Component ={" "}
+                                                {analysis.riskCalculation.weights.ageWeight} ×{" "}
+                                                {analysis.riskCalculation.scores.s2}
                                             </span>
-                                            <p className="text-lg font-bold text-orange-900">
-                                                {severitySummary.Minor || 0}
-                                            </p>
+                                            <span className="text-lg font-semibold text-gray-900">
+                                                = {analysis.riskCalculation.calculation.ageComponent}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 p-3">
+                                            <span className="text-sm text-gray-600">
+                                                DDI Component ={" "}
+                                                {analysis.riskCalculation.weights.ddiWeight} ×{" "}
+                                                {analysis.riskCalculation.scores.s3}
+                                            </span>
+                                            <span className="text-lg font-semibold text-gray-900">
+                                                = {analysis.riskCalculation.calculation.ddiComponent}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 p-3">
+                                            <span className="text-sm text-gray-600">
+                                                Liver Component ={" "}
+                                                {analysis.riskCalculation.weights.liverWeight} ×{" "}
+                                                {analysis.riskCalculation.scores.s4}
+                                            </span>
+                                            <span className="text-lg font-semibold text-gray-900">
+                                                = {analysis.riskCalculation.calculation.liverComponent}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 p-3">
+                                            <span className="text-sm text-gray-600">
+                                                Kidney Component ={" "}
+                                                {analysis.riskCalculation.weights.kidneyWeight} ×{" "}
+                                                {analysis.riskCalculation.scores.s5}
+                                            </span>
+                                            <span className="text-lg font-semibold text-gray-900">
+                                                = {analysis.riskCalculation.calculation.kidneyComponent}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center justify-between rounded-lg border-2 border-indigo-300 bg-indigo-50 p-4 mt-3">
+                                            <span className="text-base font-semibold text-indigo-900">
+                                                Total Risk Score
+                                            </span>
+                                            <span className="text-2xl font-bold text-indigo-900">
+                                                = {analysis.riskCalculation.riskScore}
+                                            </span>
                                         </div>
                                     </div>
-                                    <div className="border-t border-orange-200 pt-2 mt-2">
-                                        <p className="text-xs text-orange-700 mb-2">
-                                            S3 Calculation Rules:
-                                        </p>
-                                        <ul className="text-xs text-orange-600 space-y-1 ml-4 list-disc">
-                                            <li>Major DDI: 1.0 × Major DDI Count</li>
-                                            <li>Moderate DDI: 0.6 × Moderate DDI Count</li>
-                                            <li>Minor DDI: 0.3 × Minor DDI Count</li>
-                                            <li>
-                                                S3 = (Major × 1.0) + (Moderate × 0.6) + (Minor ×
-                                                0.3)
-                                            </li>
-                                            <li>No DDI: S3 = 0.0</li>
-                                        </ul>
-                                    </div>
-                                    {analysis.riskCalculation.calculation.s3Explanation && (
-                                        <div className="border-t border-orange-200 pt-2 mt-2">
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-sm font-medium text-orange-900">
-                                                    Calculated S3:
-                                                </span>
-                                                <span className="text-lg font-bold text-orange-900">
-                                                    {analysis.riskCalculation.scores.s3}
-                                                </span>
-                                            </div>
-                                            <p className="text-xs text-orange-600 mt-1 italic">
-                                                {analysis.riskCalculation.calculation.s3Explanation}
+
+                                </div>
+
+                                {/* Risk Categories */}
+                                <div>
+                                    <h4 className="text-md font-medium text-gray-700 mb-3">
+                                        Risk Categories
+                                    </h4>
+
+
+                                    <div className="grid gap-2 md:grid-cols-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                                        <div
+                                            className={`rounded-lg border p-3 ${analysis.riskCalculation.riskScore < 30
+                                                ? "border-green-300 bg-green-50"
+                                                : "border-gray-200 bg-gray-50"
+                                                }`}
+                                        >
+                                            <p className="text-xs text-gray-600">Low</p>
+                                            <p className="text-sm font-medium text-gray-900">
+                                                0 - 29
                                             </p>
                                         </div>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* S4 Calculation Breakdown */}
-                        <div className="mb-6">
-                            <h4 className="text-md font-medium text-gray-700 mb-3">
-                                S4 (Liver Function Sub-Score) Calculation
-                            </h4>
-                            <div className="rounded-lg border border-purple-200 bg-purple-50 p-4">
-                                <div className="space-y-2">
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-sm font-medium text-purple-900">
-                                            Liver Function:
-                                        </span>
-                                        <span className="text-lg font-bold text-purple-900">
-                                            {analysis.liverFunction}
-                                        </span>
-                                    </div>
-                                    <div className="border-t border-purple-200 pt-2 mt-2">
-                                        <p className="text-xs text-purple-700 mb-2">
-                                            S4 Calculation Rules:
-                                        </p>
-                                        <ul className="text-xs text-purple-600 space-y-1 ml-4 list-disc">
-                                            <li>Normal (&lt;40 IU/L): S4 = 0.0</li>
-                                            <li>Mild risk (40-80 IU/L): S4 = 0.3</li>
-                                            <li>Moderate risk (80-150 IU/L): S4 = 0.6</li>
-                                            <li>Severe risk (&gt;150 IU/L): S4 = 1.0</li>
-                                        </ul>
-                                    </div>
-                                    {analysis.riskCalculation.calculation.s4Explanation && (
-                                        <div className="border-t border-purple-200 pt-2 mt-2">
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-sm font-medium text-purple-900">
-                                                    Calculated S4:
-                                                </span>
-                                                <span className="text-lg font-bold text-purple-900">
-                                                    {analysis.riskCalculation.scores.s4}
-                                                </span>
-                                            </div>
-                                            <p className="text-xs text-purple-600 mt-1 italic">
-                                                {analysis.riskCalculation.calculation.s4Explanation}
+                                        <div
+                                            className={`rounded-lg border p-3 ${analysis.riskCalculation.riskScore >= 30 &&
+                                                analysis.riskCalculation.riskScore < 60
+                                                ? "border-yellow-300 bg-yellow-50"
+                                                : "border-gray-200 bg-gray-50"
+                                                }`}
+                                        >
+                                            <p className="text-xs text-gray-600">Moderate</p>
+                                            <p className="text-sm font-medium text-gray-900">
+                                                30 - 59
                                             </p>
                                         </div>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* S5 Calculation Breakdown */}
-                        <div className="mb-6">
-                            <h4 className="text-md font-medium text-gray-700 mb-3">
-                                S5 (Kidney Function Sub-Score) Calculation
-                            </h4>
-                            <div className="rounded-lg border border-teal-200 bg-teal-50 p-4">
-                                <div className="space-y-2">
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-sm font-medium text-teal-900">
-                                            Kidney Function:
-                                        </span>
-                                        <span className="text-lg font-bold text-teal-900">
-                                            {analysis.kidneyFunction}
-                                        </span>
-                                    </div>
-                                    <div className="border-t border-teal-200 pt-2 mt-2">
-                                        <p className="text-xs text-teal-700 mb-2">
-                                            S5 Calculation Rules:
-                                        </p>
-                                        <ul className="text-xs text-teal-600 space-y-1 ml-4 list-disc">
-                                            <li>Stage 1 (eGFR 90): S5 = 0.0</li>
-                                            <li>Stage 2 (eGFR 60-89): S5 = 0.3</li>
-                                            <li>Stage 3a (eGFR 45-59): S5 = 0.5</li>
-                                            <li>Stage 3b (eGFR 30-44): S5 = 0.7</li>
-                                            <li>Stage 4 (eGFR 15-29): S5 = 0.9</li>
-                                            <li>Stage 5 (eGFR &lt;15): S5 = 1.0</li>
-                                        </ul>
-                                    </div>
-                                    {analysis.riskCalculation.calculation.s5Explanation && (
-                                        <div className="border-t border-teal-200 pt-2 mt-2">
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-sm font-medium text-teal-900">
-                                                    Calculated S5:
-                                                </span>
-                                                <span className="text-lg font-bold text-teal-900">
-                                                    {analysis.riskCalculation.scores.s5}
-                                                </span>
-                                            </div>
-                                            <p className="text-xs text-teal-600 mt-1 italic">
-                                                {analysis.riskCalculation.calculation.s5Explanation}
+                                        <div
+                                            className={`rounded-lg border p-3 ${analysis.riskCalculation.riskScore >= 60 &&
+                                                analysis.riskCalculation.riskScore < 80
+                                                ? "border-orange-300 bg-orange-50"
+                                                : "border-gray-200 bg-gray-50"
+                                                }`}
+                                        >
+                                            <p className="text-xs text-gray-600">High</p>
+                                            <p className="text-sm font-medium text-gray-900">
+                                                60 - 79
                                             </p>
                                         </div>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
+                                        <div
+                                            className={`rounded-lg border p-3 ${analysis.riskCalculation.riskScore >= 80
+                                                ? "border-red-300 bg-red-50"
+                                                : "border-gray-200 bg-gray-50"
+                                                }`}
+                                        >
+                                            <p className="text-xs text-gray-600">Very High</p>
+                                            <p className="text-sm font-medium text-gray-900">≥ 80</p>
+                                        </div>
+                                    </div>
 
-                        {/* Calculation Components */}
-                        <div className="mb-6">
-                            <h4 className="text-md font-medium text-gray-700 mb-3">
-                                Weighted Components
-                            </h4>
-                            <div className="space-y-2">
-                                <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 p-3">
-                                    <span className="text-sm text-gray-600">
-                                        Drug Component ={" "}
-                                        {analysis.riskCalculation.weights.drugWeight} ×{" "}
-                                        {analysis.riskCalculation.scores.s1} (S1 from{" "}
-                                        {analysis.drugCount} drugs)
-                                    </span>
-                                    <span className="text-lg font-semibold text-gray-900">
-                                        = {analysis.riskCalculation.calculation.drugComponent}
-                                    </span>
-                                </div>
-                                <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 p-3">
-                                    <span className="text-sm text-gray-600">
-                                        Age Component ={" "}
-                                        {analysis.riskCalculation.weights.ageWeight} ×{" "}
-                                        {analysis.riskCalculation.scores.s2}
-                                    </span>
-                                    <span className="text-lg font-semibold text-gray-900">
-                                        = {analysis.riskCalculation.calculation.ageComponent}
-                                    </span>
-                                </div>
-                                <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 p-3">
-                                    <span className="text-sm text-gray-600">
-                                        DDI Component ={" "}
-                                        {analysis.riskCalculation.weights.ddiWeight} ×{" "}
-                                        {analysis.riskCalculation.scores.s3}
-                                    </span>
-                                    <span className="text-lg font-semibold text-gray-900">
-                                        = {analysis.riskCalculation.calculation.ddiComponent}
-                                    </span>
-                                </div>
-                                <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 p-3">
-                                    <span className="text-sm text-gray-600">
-                                        Liver Component ={" "}
-                                        {analysis.riskCalculation.weights.liverWeight} ×{" "}
-                                        {analysis.riskCalculation.scores.s4}
-                                    </span>
-                                    <span className="text-lg font-semibold text-gray-900">
-                                        = {analysis.riskCalculation.calculation.liverComponent}
-                                    </span>
-                                </div>
-                                <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 p-3">
-                                    <span className="text-sm text-gray-600">
-                                        Kidney Component ={" "}
-                                        {analysis.riskCalculation.weights.kidneyWeight} ×{" "}
-                                        {analysis.riskCalculation.scores.s5}
-                                    </span>
-                                    <span className="text-lg font-semibold text-gray-900">
-                                        = {analysis.riskCalculation.calculation.kidneyComponent}
-                                    </span>
-                                </div>
-                                <div className="flex items-center justify-between rounded-lg border-2 border-indigo-300 bg-indigo-50 p-4 mt-3">
-                                    <span className="text-base font-semibold text-indigo-900">
-                                        Total Risk Score
-                                    </span>
-                                    <span className="text-2xl font-bold text-indigo-900">
-                                        = {analysis.riskCalculation.riskScore}
-                                    </span>
                                 </div>
                             </div>
-                        </div>
-
-                        {/* Risk Categories */}
-                        <div>
-                            <h4 className="text-md font-medium text-gray-700 mb-3">
-                                Risk Categories
-                            </h4>
-                            <div className="grid gap-2 md:grid-cols-4">
-                                <div
-                                    className={`rounded-lg border p-3 ${analysis.riskCalculation.riskScore < 30
-                                        ? "border-green-300 bg-green-50"
-                                        : "border-gray-200 bg-gray-50"
-                                        }`}
-                                >
-                                    <p className="text-xs text-gray-600">Low</p>
-                                    <p className="text-sm font-medium text-gray-900">
-                                        0 - 29
-                                    </p>
-                                </div>
-                                <div
-                                    className={`rounded-lg border p-3 ${analysis.riskCalculation.riskScore >= 30 &&
-                                        analysis.riskCalculation.riskScore < 60
-                                        ? "border-yellow-300 bg-yellow-50"
-                                        : "border-gray-200 bg-gray-50"
-                                        }`}
-                                >
-                                    <p className="text-xs text-gray-600">Moderate</p>
-                                    <p className="text-sm font-medium text-gray-900">
-                                        30 - 59
-                                    </p>
-                                </div>
-                                <div
-                                    className={`rounded-lg border p-3 ${analysis.riskCalculation.riskScore >= 60 &&
-                                        analysis.riskCalculation.riskScore < 80
-                                        ? "border-orange-300 bg-orange-50"
-                                        : "border-gray-200 bg-gray-50"
-                                        }`}
-                                >
-                                    <p className="text-xs text-gray-600">High</p>
-                                    <p className="text-sm font-medium text-gray-900">
-                                        60 - 79
-                                    </p>
-                                </div>
-                                <div
-                                    className={`rounded-lg border p-3 ${analysis.riskCalculation.riskScore >= 80
-                                        ? "border-red-300 bg-red-50"
-                                        : "border-gray-200 bg-gray-50"
-                                        }`}
-                                >
-                                    <p className="text-xs text-gray-600">Very High</p>
-                                    <p className="text-sm font-medium text-gray-900">≥ 80</p>
-                                </div>
-                            </div>
-                        </div>
+                        )}
                     </div>
                 )}
 
