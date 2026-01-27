@@ -243,65 +243,99 @@ const DashboardPage = () => {
                     </div>
                 </div>
 
-                {/* Patient & Medication Details */}
+                {/* Patient Profile & Medication Regime */}
                 <div className="grid gap-6 md:grid-cols-2">
-                    <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
-                        <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                            Patient Details
-                        </h2>
-                        <div className="space-y-3 text-sm">
-                            <div className="flex justify-between border-b pb-2">
-                                <span className="text-gray-500">Name</span>
-                                <span className="font-medium text-gray-900">
-                                    {analysis.user.firstName} {analysis.user.lastName}
+                    {/* Patient Profile Card */}
+                    <div className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm flex flex-col justify-between">
+                        <div>
+                            <div className="flex items-center justify-between mb-6">
+                                <h2 className="text-lg font-bold text-gray-900">
+                                    Patient Profile
+                                </h2>
+                                <span className="px-3 py-1 bg-indigo-50 text-indigo-700 text-xs font-semibold rounded-full border border-indigo-100">
+                                    Geriatric Care
                                 </span>
                             </div>
-                            <div className="flex justify-between border-b pb-2">
-                                <span className="text-gray-500">Age</span>
-                                <span className="font-medium text-gray-900">{analysis.age} years</span>
-                            </div>
-                            <div className="flex justify-between border-b pb-2">
-                                <span className="text-gray-500">Gender</span>
-                                <span className="font-medium text-gray-900 capitalize">
-                                    {analysis.user.gender || "Not specified"}
-                                </span>
-                            </div>
-                            <div className="flex justify-between border-b pb-2">
-                                <span className="text-gray-500">Liver Function</span>
-                                <span className="font-medium text-gray-900 text-right max-w-[60%]">
-                                    {analysis.liverFunction}
-                                </span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-gray-500">Kidney Function</span>
-                                <span className="font-medium text-gray-900 text-right max-w-[60%]">
-                                    {analysis.kidneyFunction}
-                                </span>
+
+                            <div className="flex items-start gap-5">
+                                <div className="h-20 w-20 rounded-full bg-gray-100 flex items-center justify-center border-2 border-white shadow-md flex-shrink-0">
+                                    <span className="text-2xl font-bold text-gray-400">
+                                        {analysis.user.firstName?.[0]}{analysis.user.lastName?.[0]}
+                                    </span>
+                                </div>
+                                <div className="space-y-1">
+                                    <h3 className="text-xl font-bold text-gray-900">
+                                        {analysis.user.firstName} {analysis.user.lastName}
+                                    </h3>
+                                    <p className="text-sm text-gray-500 font-medium flex items-center gap-2">
+                                        <span>{analysis.age} Years Old</span>
+                                        <span className="h-1 w-1 rounded-full bg-gray-300"></span>
+                                        <span className="capitalize">{analysis.user.gender || "Not specified"}</span>
+                                    </p>
+                                    <div className="pt-2 flex flex-wrap gap-2">
+                                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-blue-50 border border-blue-100 text-xs font-semibold text-blue-700">
+                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3 h-3">
+                                                <path fillRule="evenodd" d="M1 11.27c0-.246.033-.492.099-.73l1.523-5.521A2.75 2.75 0 015.273 3h9.454a2.75 2.75 0 012.651 2.019l1.523 5.52c.066.239.099.485.099.732V15a2 2 0 01-2 2H3a2 2 0 01-2-2v-3.73zm3.068-5.852A1.25 1.25 0 015.273 4.5h9.454a1.25 1.25 0 011.205.918l1.523 5.52c.006.02.01.041.015.062H14a1 1 0 00-.86.49l-.606 1.02a1 1 0 01-.86.49H8.326a1 1 0 01-.86-.49l-.606-1.02a1 1 0 00-.86-.49H2.53a.98.98 0 01.015-.062l1.523-5.52z" clipRule="evenodd" />
+                                            </svg>
+                                            Liver: {analysis.liverFunction}
+                                        </div>
+                                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-teal-50 border border-teal-100 text-xs font-semibold text-teal-700">
+                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3 h-3">
+                                                <path fillRule="evenodd" d="M5.5 2a.75.75 0 01.75.75v5.598a2.25 2.25 0 01-.659 1.59l-2.028 2.03A5.25 5.25 0 005.583 18h8.834a5.25 5.25 0 002.02-6.032l-2.028-2.03a2.25 2.25 0 01-.658-1.59V2.75a.75.75 0 01.75-.75h1.5a.75.75 0 01.75.75v5.598a3.75 3.75 0 01-1.099 2.65l-2.028 2.031a3.75 3.75 0 00-1.098 2.651H6.333c.319-1.066.71-2.049 1.098-2.651l-2.028-2.03a3.75 3.75 0 01-1.098-2.652V2.75a.75.75 0 01.75-.75h1.5z" clipRule="evenodd" />
+                                            </svg>
+                                            Kidney: {analysis.kidneyFunction}
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
-                        <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                            Medication List
-                        </h2>
-                        {analysis.drugs && analysis.drugs.length > 0 ? (
-                            <ul className="space-y-2">
-                                {analysis.drugs.map((drug, index) => (
-                                    <li
-                                        key={index}
-                                        className="flex items-center gap-3 rounded-lg border border-gray-100 bg-gray-50 px-3 py-2 text-sm text-gray-700"
-                                    >
-                                        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-indigo-100 text-xs font-bold text-indigo-600">
-                                            {index + 1}
-                                        </span>
-                                        {drug}
-                                    </li>
-                                ))}
-                            </ul>
-                        ) : (
-                            <p className="text-sm text-gray-500">No drugs listed.</p>
-                        )}
+                    {/* Medication Regime Card */}
+                    <div className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm flex flex-col h-full">
+                        <div className="flex items-center justify-between mb-4">
+                            <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-indigo-500">
+                                    <path fillRule="evenodd" d="M5.625 1.5H9a3.75 3.75 0 013.75 3.75v1.875c0 1.036.84 1.875 1.875 1.875H16.5a3.75 3.75 0 013.75 3.75v7.875c0 1.035-.84 1.875-1.875 1.875H5.625a1.875 1.875 0 01-1.875-1.875V3.375c0-1.036.84-1.875 1.875-1.875zM12.75 12a.75.75 0 00-1.5 0V15H8.25a.75.75 0 000 1.5H11.25v3a.75.75 0 001.5 0V16.5h3a.75.75 0 000-1.5H12.75V12z" clipRule="evenodd" />
+                                </svg>
+                                Current Medication Regime
+                            </h2>
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                {analysis.drugs?.length || 0} Active
+                            </span>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto max-h-[220px] pr-2 custom-scrollbar">
+                            {analysis.drugs && analysis.drugs.length > 0 ? (
+                                <div className="space-y-2">
+                                    {analysis.drugs.map((drug, index) => (
+                                        <div
+                                            key={index}
+                                            className="group flex items-center gap-3 p-3 rounded-lg border border-gray-100 bg-white hover:border-indigo-100 hover:bg-gray-50 transition-colors shadow-sm"
+                                        >
+                                            <div className="flex-shrink-0 h-8 w-8 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600">
+                                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+                                                    <path d="M11.644 1.59a.75.75 0 01.712 0l9.75 5.25a.75.75 0 010 1.32l-9.75 5.25a.75.75 0 01-.712 0l-9.75-5.25a.75.75 0 010-1.32l9.75-5.25z" />
+                                                    <path d="M3.265 10.602l7.668 4.129a2.25 2.25 0 002.134 0l7.668-4.13 1.37.739a.75.75 0 010 1.32l-9.75 5.25a.75.75 0 01-.712 0l-9.75-5.25a.75.75 0 010-1.32l1.37-.738z" />
+                                                    <path d="M10.933 19.231l-7.668-4.13-1.37.739a.75.75 0 000 1.32l9.75 5.25c.221.119.491.119.712 0l9.75-5.25a.75.75 0 000-1.32l-1.37-.738-7.668 4.13a2.25 2.25 0 01-2.134 0z" />
+                                                </svg>
+                                            </div>
+                                            <div className="flex-1">
+                                                <p className="text-sm font-semibold text-gray-900">{drug}</p>
+                                                <p className="text-xs text-gray-500">Prescribed Medication</p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="flex flex-col items-center justify-center h-40 text-gray-400 bg-gray-50 rounded-lg border border-dashed border-gray-200">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-8 h-8 mb-2 opacity-50">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5m6 4.125l2.25 2.25m0 0l2.25 2.25M12 13.875l2.25-2.25M12 13.875l-2.25 2.25M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
+                                    </svg>
+                                    <p className="text-sm">No active medications logged.</p>
+                                </div>
+                            )}
+                        </div>
                     </div>
 
                 </div>
@@ -532,9 +566,9 @@ const DashboardPage = () => {
 
                                     {/* Medical Recommendation */}
                                     <div className={`mt-6 p-4 rounded-lg border flex gap-3 ${analysis.riskCalculation.riskLevel === "Very High" ? "bg-rose-50 border-rose-100 text-rose-800" :
-                                            analysis.riskCalculation.riskLevel === "High" ? "bg-orange-50 border-orange-100 text-orange-800" :
-                                                analysis.riskCalculation.riskLevel === "Moderate" ? "bg-yellow-50 border-yellow-100 text-yellow-800" :
-                                                    "bg-emerald-50 border-emerald-100 text-emerald-800"
+                                        analysis.riskCalculation.riskLevel === "High" ? "bg-orange-50 border-orange-100 text-orange-800" :
+                                            analysis.riskCalculation.riskLevel === "Moderate" ? "bg-yellow-50 border-yellow-100 text-yellow-800" :
+                                                "bg-emerald-50 border-emerald-100 text-emerald-800"
                                         }`}>
                                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 flex-shrink-0 mt-0.5">
                                             <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zM12 8.25a.75.75 0 01.75.75v3.75a.75.75 0 01-1.5 0V9a.75.75 0 01.75-.75zm0 8.25a.75.75 0 100-1.5.75.75 0 000 1.5z" clipRule="evenodd" />
