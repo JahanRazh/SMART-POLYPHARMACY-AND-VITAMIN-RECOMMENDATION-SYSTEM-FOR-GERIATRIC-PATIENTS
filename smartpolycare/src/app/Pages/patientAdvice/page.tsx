@@ -41,6 +41,7 @@ export default function PatientAdvicePage() {
   const patientId = searchParams.get('patientId');
   
   const [advice, setAdvice] = useState<LifestyleAdvice | null>(null);
+  const [rawAdviceText, setRawAdviceText] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
   const [activeTab, setActiveTab] = useState<string>('nutrition');
@@ -60,13 +61,23 @@ export default function PatientAdvicePage() {
           ? `/patient-advice?patientId=${patientId}`
           : '/patient-advice';
         
-        const response = await api.get<LifestyleAdvice>(endpoint);
-        setAdvice(response.data);
-        
-        // Set first available tab as active
-        if (response.data) {
-          const firstTab = Object.keys(response.data)[0];
-          if (firstTab) setActiveTab(firstTab);
+        const response = await api.get(endpoint);
+
+        // If backend returned a simple `advice` string (from server controller),
+        // display that text instead of the tabbed LifestyleAdvice structure.
+        if (response.data && (response.data.advice || response.data.adviceText)) {
+          const text = response.data.advice || response.data.adviceText || "";
+          setRawAdviceText(text);
+          setAdvice(null);
+        } else {
+          const data = response.data as LifestyleAdvice;
+          setAdvice(data);
+
+          // Set first available tab as active
+          if (data) {
+            const firstTab = Object.keys(data)[0];
+            if (firstTab) setActiveTab(firstTab);
+          }
         }
       } catch (err: any) {
         setError(
@@ -186,6 +197,24 @@ export default function PatientAdvicePage() {
             </Link>
           </div>
 
+          {/* Always-visible personalized advice card requested by user */}
+          <motion.div
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+            className="mt-8 rounded-2xl bg-white border border-teal-100 shadow-sm p-6"
+          >
+            <h2 className="text-lg font-bold text-gray-900">Personalized Advice</h2>
+            <div className="mt-3 text-sm text-gray-700">
+              <p>Hello Patient, here are some personalized recommendations:</p>
+              <ul className="mt-2 list-disc list-inside space-y-1">
+                <li>Exercise: Try to include at least 20–30 minutes of light activity most days (walking, stretching).</li>
+                <li>Mindfulness: Try short guided meditations (5–10 minutes) to help with stress and mood.</li>
+              </ul>
+              <p className="mt-3">If you'd like, we can provide a more detailed plan including meal and vitamin suggestions.</p>
+            </div>
+          </motion.div>
+
           {error && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
@@ -280,6 +309,20 @@ export default function PatientAdvicePage() {
                 </p>
               </motion.div>
             </div>
+          )}
+
+          {/* Plain text advice fallback when server returns a single advice string */}
+          {rawAdviceText && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mt-10 rounded-2xl bg-white border border-teal-100 shadow-sm p-8"
+            >
+              <h2 className="text-lg font-bold text-gray-900">Personalized Advice for you</h2>
+              <div className="mt-4 text-sm text-gray-700 whitespace-pre-line">
+                {rawAdviceText}
+              </div>
+            </motion.div>
           )}
 
           {advice && tabs.length === 0 && (
