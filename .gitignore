@@ -53,6 +53,7 @@ __pycache__/
 .venv/
 .vscode/
 .qodo
+<<<<<<< HEAD
 =======
 
 # Python cache & compiled files
@@ -126,3 +127,6 @@ coverage/
 # Optional cache
 .next/cache/
 >>>>>>> Stashed changes
+=======
+server/Data/geriatric_non_medical_advice_dataset.csv
+>>>>>>> Dev
