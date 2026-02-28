@@ -18,10 +18,15 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <head>
-        {/* important for mobile responsiveness */}
+        {/* Important for mobile responsiveness */}
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        {/* Prevent Grammarly from modifying the page */}
+        <meta name="grammarly-disable" content="true" />
       </head>
-      <body className="flex flex-col min-h-screen bg-white text-gray-900">
+      <body
+        className="flex flex-col min-h-screen bg-white text-gray-900"
+        suppressHydrationWarning={true}
+      >
         <AuthProvider>
           {/* HEADER */}
           <HeaderWithAuth />
@@ -126,7 +131,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
 
               <div className="border-t border-gray-800 mt-2 pt-4 flex flex-col md:flex-row justify-between items-center">
                 <p className="text-gray-400 text-base">
-                  &copy; 2025 SmartPolyCare. Clinical-grade AI solutions.
+                  &copy; {new Date().getFullYear()} SmartPolyCare. Clinical-grade AI solutions.
                 </p>
                 <div className="flex space-x-6 mt-4 md:mt-0">
                   <Link
