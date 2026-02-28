@@ -4,6 +4,9 @@ import { useAuth } from "@/app/components/Contexts/AuthContext";
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import * as XLSX from "xlsx";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 type SeveritySummary = Record<string, number>;
 
@@ -161,6 +164,387 @@ const DashboardPage = () => {
         }
     };
 
+    // ── EXCEL EXPORT ──
+    const handleExportExcel = () => {
+        if (!analysis) return;
+        const wb = XLSX.utils.book_new();
+        const reportDate = new Date(analysis.createdAt).toLocaleDateString("en-US", {
+            year: "numeric", month: "long", day: "numeric",
+        });
+
+        // 1) Patient Summary
+        const patientData = [
+            ["POLYPHARMACY RISK ANALYSIS REPORT"],
+            ["SmartPolyCare – Clinical Decision Support System"],
+            [""],
+            ["Report Reference", analysis.assessmentId || "N/A"],
+            ["Report Date", reportDate],
+            [""],
+            ["PATIENT INFORMATION"],
+            ["Full Name", `${analysis.user.firstName || ""} ${analysis.user.lastName || ""}`],
+            ["Age", `${analysis.age} years`],
+            ["Gender", analysis.user.gender || "Not specified"],
+            ["Email", analysis.user.email || "N/A"],
+            ["Liver Function", analysis.liverFunction],
+            ["Kidney Function", analysis.kidneyFunction],
+            ["Existing Diseases", analysis.existingDiseases?.join(", ") || "None specified"],
+            [""],
+            ["RISK ASSESSMENT SUMMARY"],
+            ["Overall Risk Score", analysis.riskCalculation.riskScore],
+            ["Risk Level", analysis.riskCalculation.riskLevel],
+            ["Total Medications", analysis.drugCount],
+            ["Drug Interactions Found", analysis.interactionsFound],
+        ];
+        const wsPatient = XLSX.utils.aoa_to_sheet(patientData);
+        wsPatient["!cols"] = [{ wch: 28 }, { wch: 45 }];
+        wsPatient["!merges"] = [
+            { s: { r: 0, c: 0 }, e: { r: 0, c: 1 } },
+            { s: { r: 1, c: 0 }, e: { r: 1, c: 1 } },
+        ];
+        XLSX.utils.book_append_sheet(wb, wsPatient, "Patient Summary");
+
+        // 2) Medications
+        const medsData = [["#", "Medication Name"]];
+        analysis.drugs.forEach((drug, i) => medsData.push([(i + 1).toString(), drug]));
+        const wsMeds = XLSX.utils.aoa_to_sheet(medsData);
+        wsMeds["!cols"] = [{ wch: 6 }, { wch: 40 }];
+        XLSX.utils.book_append_sheet(wb, wsMeds, "Medications");
+
+        // 3) Drug Interactions
+        const interData = [["Drug A", "Drug B", "Severity", "Description"]];
+        analysis.interactions.forEach((ix) =>
+            interData.push([ix.drugA, ix.drugB, ix.severity, ix.description || "N/A"])
+        );
+        const wsInter = XLSX.utils.aoa_to_sheet(interData);
+        wsInter["!cols"] = [{ wch: 22 }, { wch: 22 }, { wch: 14 }, { wch: 55 }];
+        XLSX.utils.book_append_sheet(wb, wsInter, "Drug Interactions");
+
+        // 4) Severity Summary
+        const sevData = [
+            ["Severity Level", "Count", "Priority"],
+            ["Major", analysis.severitySummary?.Major || 0, "Requires Immediate Attention"],
+            ["Moderate", analysis.severitySummary?.Moderate || 0, "Monitor Closely"],
+            ["Minor", analysis.severitySummary?.Minor || 0, "Low Priority"],
+        ];
+        const wsSev = XLSX.utils.aoa_to_sheet(sevData);
+        wsSev["!cols"] = [{ wch: 18 }, { wch: 10 }, { wch: 32 }];
+        XLSX.utils.book_append_sheet(wb, wsSev, "Severity Summary");
+
+        // 5) ADE Predictions (if available)
+        if (analysis.adePredictions && analysis.adePredictions.length > 0) {
+            const adeData = [["Drug", "Existing Disease", "Predicted ADE", "Confidence (%)"]];
+            analysis.adePredictions.forEach((p) =>
+                adeData.push([p.drug, p.disease, p.predictedADE, p.confidence.toString()])
+            );
+            const wsAde = XLSX.utils.aoa_to_sheet(adeData);
+            wsAde["!cols"] = [{ wch: 22 }, { wch: 22 }, { wch: 28 }, { wch: 16 }];
+            XLSX.utils.book_append_sheet(wb, wsAde, "ADE Predictions");
+        }
+
+        // 6) Risk Analysis Detail
+        const rc = analysis.riskCalculation;
+        const riskData = [
+            ["RISK SCORE BREAKDOWN"],
+            [""],
+            ["Component", "Sub-Score", "Weight", "Weighted Value", "Description"],
+            ["S1 – Medication Count", rc.scores.s1, rc.weights.drugWeight, rc.calculation.drugComponent, rc.calculation.s1Explanation || ""],
+            ["S2 – Patient Age", rc.scores.s2, rc.weights.ageWeight, rc.calculation.ageComponent, rc.calculation.s2Explanation || ""],
+            ["S3 – Drug Interactions", rc.scores.s3, rc.weights.ddiWeight, rc.calculation.ddiComponent, rc.calculation.s3Explanation || ""],
+            ["S4 – Liver Function", rc.scores.s4, rc.weights.liverWeight, rc.calculation.liverComponent, rc.calculation.s4Explanation || ""],
+            ["S5 – Kidney Function", rc.scores.s5, rc.weights.kidneyWeight, rc.calculation.kidneyComponent, rc.calculation.s5Explanation || ""],
+            [""],
+            ["TOTAL RISK SCORE", rc.riskScore, "", "", ""],
+            ["RISK LEVEL", rc.riskLevel, "", "", ""],
+            [""],
+            ["RISK CATEGORIES"],
+            ["Low", "0 – 29"],
+            ["Moderate", "30 – 59"],
+            ["High", "60 – 79"],
+            ["Very High", "≥ 80"],
+        ];
+        const wsRisk = XLSX.utils.aoa_to_sheet(riskData);
+        wsRisk["!cols"] = [{ wch: 26 }, { wch: 14 }, { wch: 12 }, { wch: 16 }, { wch: 40 }];
+        wsRisk["!merges"] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 4 } }];
+        XLSX.utils.book_append_sheet(wb, wsRisk, "Risk Analysis");
+
+        const patientName = `${analysis.user.firstName || "Patient"}_${analysis.user.lastName || ""}`;
+        XLSX.writeFile(wb, `Polypharmacy_Report_${patientName}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    };
+
+    // ── PDF EXPORT ──
+    const handleExportPDF = () => {
+        if (!analysis) return;
+        const doc = new jsPDF("p", "mm", "a4");
+        const pageW = doc.internal.pageSize.getWidth();
+        const pageH = doc.internal.pageSize.getHeight();
+        const margin = 15;
+        const contentW = pageW - margin * 2;
+        let y = margin;
+        const reportDate = new Date(analysis.createdAt).toLocaleDateString("en-US", {
+            year: "numeric", month: "long", day: "numeric",
+        });
+
+        const addFooter = () => {
+            const pages = doc.getNumberOfPages();
+            for (let i = 1; i <= pages; i++) {
+                doc.setPage(i);
+                doc.setFontSize(7);
+                doc.setTextColor(150);
+                doc.text(
+                    "Disclaimer: This report is generated for informational purposes only and does not constitute medical advice. Consult a healthcare professional.",
+                    margin, pageH - 8
+                );
+                doc.text(`Page ${i} of ${pages}`, pageW - margin, pageH - 8, { align: "right" });
+                doc.setDrawColor(200);
+                doc.line(margin, pageH - 12, pageW - margin, pageH - 12);
+            }
+        };
+
+        const checkPage = (needed: number) => {
+            if (y + needed > pageH - 20) {
+                doc.addPage();
+                y = margin;
+            }
+        };
+
+        const drawSectionTitle = (title: string) => {
+            checkPage(14);
+            doc.setFontSize(12);
+            doc.setTextColor(67, 56, 202); // indigo-600
+            doc.setFont("helvetica", "bold");
+            doc.text(title, margin, y);
+            y += 2;
+            doc.setDrawColor(67, 56, 202);
+            doc.setLineWidth(0.5);
+            doc.line(margin, y, margin + contentW, y);
+            y += 6;
+        };
+
+        // ── HEADER ──
+        doc.setFillColor(67, 56, 202);
+        doc.rect(0, 0, pageW, 38, "F");
+        doc.setFontSize(22);
+        doc.setTextColor(255);
+        doc.setFont("helvetica", "bold");
+        doc.text("SmartPolyCare", margin, 14);
+        doc.setFontSize(11);
+        doc.setFont("helvetica", "normal");
+        doc.text("Polypharmacy Risk Analysis Report", margin, 22);
+        doc.setFontSize(8);
+        doc.text(`Ref: ${analysis.assessmentId?.substring(0, 8) || "N/A"}   |   Date: ${reportDate}`, margin, 30);
+
+        // Risk badge on header
+        const badgeW = 36;
+        const badgeX = pageW - margin - badgeW;
+        const riskLevel = analysis.riskCalculation.riskLevel;
+        const badgeColor: [number, number, number] =
+            riskLevel === "Very High" ? [220, 38, 38] :
+                riskLevel === "High" ? [234, 88, 12] :
+                    riskLevel === "Moderate" ? [202, 138, 4] : [22, 163, 74];
+        doc.setFillColor(...badgeColor);
+        doc.roundedRect(badgeX, 8, badgeW, 22, 3, 3, "F");
+        doc.setFontSize(8);
+        doc.setTextColor(255);
+        doc.text("RISK SCORE", badgeX + badgeW / 2, 15, { align: "center" });
+        doc.setFontSize(16);
+        doc.setFont("helvetica", "bold");
+        doc.text(String(analysis.riskCalculation.riskScore), badgeX + badgeW / 2, 26, { align: "center" });
+
+        y = 46;
+
+        // ── PATIENT INFORMATION ──
+        drawSectionTitle("Patient Information");
+        autoTable(doc, {
+            startY: y,
+            margin: { left: margin, right: margin },
+            theme: "grid",
+            headStyles: { fillColor: [243, 244, 246], textColor: [55, 65, 81], fontStyle: "bold", fontSize: 9 },
+            bodyStyles: { fontSize: 9, textColor: [31, 41, 55] },
+            columnStyles: { 0: { fontStyle: "bold", cellWidth: 45 } },
+            head: [["Field", "Value"]],
+            body: [
+                ["Full Name", `${analysis.user.firstName || ""} ${analysis.user.lastName || ""}`],
+                ["Age", `${analysis.age} years`],
+                ["Gender", analysis.user.gender || "Not specified"],
+                ["Liver Function", analysis.liverFunction],
+                ["Kidney Function", analysis.kidneyFunction],
+                ["Existing Diseases", analysis.existingDiseases?.join(", ") || "None specified"],
+            ],
+        });
+        y = (doc as any).lastAutoTable.finalY + 8;
+
+        // ── MEDICATIONS ──
+        drawSectionTitle("Medication List");
+        autoTable(doc, {
+            startY: y,
+            margin: { left: margin, right: margin },
+            theme: "striped",
+            headStyles: { fillColor: [99, 102, 241], textColor: [255, 255, 255], fontStyle: "bold", fontSize: 9 },
+            bodyStyles: { fontSize: 9 },
+            head: [["#", "Medication Name"]],
+            body: analysis.drugs.map((d, i) => [(i + 1).toString(), d]),
+        });
+        y = (doc as any).lastAutoTable.finalY + 8;
+
+        // ── SEVERITY SUMMARY ──
+        drawSectionTitle("Drug Interaction Severity Summary");
+        const sevSummary = analysis.severitySummary || {};
+        checkPage(20);
+        const boxW = contentW / 3 - 3;
+        const sevItems: { label: string; count: number; color: [number, number, number]; desc: string }[] = [
+            { label: "Major", count: sevSummary.Major || 0, color: [220, 38, 38], desc: "Immediate Attention" },
+            { label: "Moderate", count: sevSummary.Moderate || 0, color: [217, 119, 6], desc: "Monitor Closely" },
+            { label: "Minor", count: sevSummary.Minor || 0, color: [22, 163, 74], desc: "Low Priority" },
+        ];
+        sevItems.forEach((item, i) => {
+            const x = margin + i * (boxW + 3);
+            doc.setFillColor(249, 250, 251);
+            doc.roundedRect(x, y, boxW, 18, 2, 2, "F");
+            doc.setDrawColor(...item.color);
+            doc.setLineWidth(0.8);
+            doc.line(x, y + 18, x + boxW, y + 18);
+            doc.setFontSize(8);
+            doc.setTextColor(...item.color);
+            doc.setFont("helvetica", "bold");
+            doc.text(item.label, x + 4, y + 6);
+            doc.setFontSize(16);
+            doc.setTextColor(31, 41, 55);
+            doc.text(String(item.count), x + 4, y + 14);
+            doc.setFontSize(6);
+            doc.setTextColor(107, 114, 128);
+            doc.setFont("helvetica", "normal");
+            doc.text(item.desc, x + boxW - 3, y + 14, { align: "right" });
+        });
+        y += 26;
+
+        // ── INTERACTION TABLE ──
+        if (analysis.interactions.length > 0) {
+            drawSectionTitle("Drug Interaction Details");
+            autoTable(doc, {
+                startY: y,
+                margin: { left: margin, right: margin },
+                theme: "grid",
+                headStyles: { fillColor: [31, 41, 55], textColor: [255, 255, 255], fontStyle: "bold", fontSize: 8 },
+                bodyStyles: { fontSize: 8 },
+                columnStyles: { 3: { cellWidth: 70 } },
+                head: [["Drug A", "Drug B", "Severity", "Description"]],
+                body: analysis.interactions.map((ix) => [ix.drugA, ix.drugB, ix.severity, ix.description || "N/A"]),
+                didParseCell: (data: any) => {
+                    if (data.section === "body" && data.column.index === 2) {
+                        const sev = data.cell.raw as string;
+                        if (sev === "Major") {
+                            data.cell.styles.textColor = [220, 38, 38];
+                            data.cell.styles.fontStyle = "bold";
+                        } else if (sev === "Moderate") {
+                            data.cell.styles.textColor = [217, 119, 6];
+                            data.cell.styles.fontStyle = "bold";
+                        } else if (sev === "Minor") {
+                            data.cell.styles.textColor = [22, 163, 74];
+                        }
+                    }
+                },
+            });
+            y = (doc as any).lastAutoTable.finalY + 8;
+        }
+
+        // ── ADE PREDICTIONS ──
+        if (analysis.adePredictions && analysis.adePredictions.length > 0) {
+            drawSectionTitle("Adverse Drug Event Predictions");
+            autoTable(doc, {
+                startY: y,
+                margin: { left: margin, right: margin },
+                theme: "grid",
+                headStyles: { fillColor: [234, 88, 12], textColor: [255, 255, 255], fontStyle: "bold", fontSize: 8 },
+                bodyStyles: { fontSize: 8 },
+                head: [["Drug", "Existing Disease", "Predicted ADE", "Confidence"]],
+                body: analysis.adePredictions.map((p) => [p.drug, p.disease, p.predictedADE, `${p.confidence}%`]),
+                didParseCell: (data: any) => {
+                    if (data.section === "body" && data.column.index === 3) {
+                        const conf = parseFloat(data.cell.raw as string);
+                        if (conf >= 50) data.cell.styles.textColor = [220, 38, 38];
+                        else if (conf >= 30) data.cell.styles.textColor = [217, 119, 6];
+                    }
+                },
+            });
+            y = (doc as any).lastAutoTable.finalY + 8;
+        }
+
+        // ── RISK ANALYSIS ──
+        drawSectionTitle("Risk Analysis Report");
+        const rc = analysis.riskCalculation;
+
+        // Score display
+        checkPage(30);
+        doc.setFillColor(249, 250, 251);
+        doc.roundedRect(margin, y, contentW, 24, 3, 3, "F");
+        doc.setFontSize(10);
+        doc.setTextColor(107, 114, 128);
+        doc.setFont("helvetica", "normal");
+        doc.text("Overall Risk Score", margin + 6, y + 8);
+        doc.setFontSize(28);
+        doc.setTextColor(31, 41, 55);
+        doc.setFont("helvetica", "bold");
+        doc.text(`${rc.riskScore}`, margin + 6, y + 20);
+        doc.setFontSize(12);
+        doc.setTextColor(107, 114, 128);
+        doc.setFont("helvetica", "normal");
+        doc.text("/ 100", margin + 30, y + 20);
+
+        // Risk level badge
+        doc.setFillColor(...badgeColor);
+        doc.roundedRect(pageW - margin - 50, y + 4, 44, 16, 2, 2, "F");
+        doc.setFontSize(10);
+        doc.setTextColor(255);
+        doc.setFont("helvetica", "bold");
+        doc.text(`${rc.riskLevel} Risk`, pageW - margin - 28, y + 14, { align: "center" });
+        y += 30;
+
+        // Recommendation
+        checkPage(20);
+        const recText =
+            rc.riskLevel === "Very High" ? "Critical alert. Immediate comprehensive medication review (CMR) and specialist consultation advised." :
+                rc.riskLevel === "High" ? "Urgent medication review required. Consider deprescribing non-essential drugs." :
+                    rc.riskLevel === "Moderate" ? "Review medication list for potential optimization. Monitor renal/hepatic function." :
+                        "Routine monitoring recommended. No immediate intervention required.";
+        doc.setFillColor(badgeColor[0], badgeColor[1], badgeColor[2]);
+        doc.setGState(new (doc as any).GState({ opacity: 0.1 }));
+        doc.roundedRect(margin, y, contentW, 14, 2, 2, "F");
+        doc.setGState(new (doc as any).GState({ opacity: 1 }));
+        doc.setFontSize(8);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(...badgeColor);
+        doc.text("Medical Recommendation", margin + 4, y + 5);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8);
+        doc.text(recText, margin + 4, y + 10, { maxWidth: contentW - 8 });
+        y += 18;
+
+        // Risk breakdown table
+        drawSectionTitle("Risk Score Breakdown");
+        autoTable(doc, {
+            startY: y,
+            margin: { left: margin, right: margin },
+            theme: "grid",
+            headStyles: { fillColor: [67, 56, 202], textColor: [255, 255, 255], fontStyle: "bold", fontSize: 8 },
+            bodyStyles: { fontSize: 8 },
+            head: [["Component", "Sub-Score", "Weight", "Weighted Value"]],
+            body: [
+                ["S1 – Medication Count", String(rc.scores.s1), String(rc.weights.drugWeight), String(rc.calculation.drugComponent)],
+                ["S2 – Patient Age", String(rc.scores.s2), String(rc.weights.ageWeight), String(rc.calculation.ageComponent)],
+                ["S3 – Drug Interactions", String(rc.scores.s3), String(rc.weights.ddiWeight), String(rc.calculation.ddiComponent)],
+                ["S4 – Liver Function", String(rc.scores.s4), String(rc.weights.liverWeight), String(rc.calculation.liverComponent)],
+                ["S5 – Kidney Function", String(rc.scores.s5), String(rc.weights.kidneyWeight), String(rc.calculation.kidneyComponent)],
+            ],
+            foot: [["Total Risk Score", "", "", String(rc.riskScore)]],
+            footStyles: { fillColor: [238, 242, 255], textColor: [67, 56, 202], fontStyle: "bold", fontSize: 9 },
+        });
+
+        addFooter();
+
+        const patientName = `${analysis.user.firstName || "Patient"}_${analysis.user.lastName || ""}`;
+        doc.save(`Polypharmacy_Report_${patientName}_${new Date().toISOString().slice(0, 10)}.pdf`);
+    };
+
     const renderSeverityCard = (label: string, count: number, accent: string) => (
         <div className={`rounded-xl border p-4 ${accent}`}>
             <p className="text-sm text-gray-500">{label}</p>
@@ -235,16 +619,30 @@ const DashboardPage = () => {
                                 Analysis for {analysis.user.firstName} {analysis.user.lastName} (Age: {analysis.age})
                             </p>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex flex-wrap gap-2">
+                            <button
+                                onClick={handleExportExcel}
+                                className="flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-100"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /><polyline points="10 9 9 9 8 9" /></svg>
+                                Export Excel
+                            </button>
+                            <button
+                                onClick={handleExportPDF}
+                                className="flex items-center gap-1.5 rounded-lg border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700 transition-colors hover:bg-rose-100"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /><polyline points="10 9 9 9 8 9" /></svg>
+                                Export PDF
+                            </button>
                             <Link
                                 href="/Pages/Polypharmacy/Polyform"
-                                className="rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-semibold text-indigo-600 hover:bg-indigo-100"
+                                className="rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-semibold text-indigo-600 transition-colors hover:bg-indigo-100"
                             >
                                 Edit / New Analysis
                             </Link>
                             <button
                                 onClick={handleClear}
-                                className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-600 hover:bg-red-100"
+                                className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-600 transition-colors hover:bg-red-100"
                             >
                                 Clear Results
                             </button>
@@ -361,10 +759,10 @@ const DashboardPage = () => {
                                                 <td className="px-4 py-3 text-right">
                                                     <span
                                                         className={`inline-block rounded-full px-3 py-1 text-xs font-bold ${pred.confidence >= 50
-                                                                ? "bg-red-100 text-red-800"
-                                                                : pred.confidence >= 30
-                                                                    ? "bg-orange-100 text-orange-800"
-                                                                    : "bg-yellow-100 text-yellow-800"
+                                                            ? "bg-red-100 text-red-800"
+                                                            : pred.confidence >= 30
+                                                                ? "bg-orange-100 text-orange-800"
+                                                                : "bg-yellow-100 text-yellow-800"
                                                             }`}
                                                     >
                                                         {pred.confidence}%
