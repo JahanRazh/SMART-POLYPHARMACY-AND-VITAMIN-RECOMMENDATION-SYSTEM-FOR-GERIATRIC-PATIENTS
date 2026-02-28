@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 import pandas as pd
 import joblib
 from db import get_db
+from firebase_admin import auth as firebase_auth
 from datetime import datetime
 import os
 
@@ -56,12 +57,50 @@ def full_assessment():
     pred_encoded = model.predict(df)[0]
     prediction = target_encoder.inverse_transform([pred_encoded])[0]
 
+    # Ensure email is included: prefer provided email, otherwise try to extract
+    # from a Firebase ID token provided in the Authorization header.
+    email = data.get("email") if isinstance(data, dict) else None
+    if not email:
+        auth_header = request.headers.get("Authorization") or request.headers.get("authorization")
+        if auth_header and auth_header.startswith("Bearer "):
+            id_token = auth_header.split(" ", 1)[1]
+            try:
+                decoded = firebase_auth.verify_id_token(id_token)
+                email = decoded.get("email")
+            except Exception:
+                # If verification fails, leave email as None
+                email = None
+
     # Save to Firebase
     db = get_db()
-    db.collection("patient_assessment").add({
-        **data,
+    entry = {
+        **(data if isinstance(data, dict) else {}),
         "mental_health_level": prediction,
         "timestamp": datetime.utcnow()
-    })
+    }
+    if email:
+        entry["email"] = email
 
-    return jsonify({"mental_health_level": prediction}), 200
+    # If we have an email, upsert using a stable document id derived from the
+    # email so repeated requests for the same user overwrite the same record
+    # instead of creating duplicates. Fall back to `add()` for anonymous
+    # submissions.
+    try:
+        if email:
+            # sanitize email for document id
+            doc_id = email.replace("@", "_at_").replace(".", "_")
+            doc_ref = db.collection("patient_assessment").document(doc_id)
+            snap = doc_ref.get()
+            if snap.exists:
+                # Merge update so existing metadata (like createdAt) is preserved
+                doc_ref.set(entry, merge=True)
+            else:
+                entry["createdAt"] = datetime.utcnow()
+                doc_ref.set(entry, merge=True)
+        else:
+            db.collection("patient_assessment").add(entry)
+    except Exception:
+        # On any failure, still attempt to add to avoid losing data
+        db.collection("patient_assessment").add(entry)
+
+    return jsonify({"mental_health_Risk": prediction}), 200

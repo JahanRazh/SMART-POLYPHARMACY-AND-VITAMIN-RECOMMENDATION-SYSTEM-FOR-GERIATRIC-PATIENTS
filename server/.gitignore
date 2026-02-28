@@ -6,6 +6,7 @@ env/
 emotion_env/
 .emotion_env/
 
+
 # Python cache.
 __pycache__/
 *.pyc
@@ -14,3 +15,7 @@ __pycache__/
 
 # VS Code settings
 .vscode/
+
+# Secrets/credentials
+serviceAccountKey.json
+
