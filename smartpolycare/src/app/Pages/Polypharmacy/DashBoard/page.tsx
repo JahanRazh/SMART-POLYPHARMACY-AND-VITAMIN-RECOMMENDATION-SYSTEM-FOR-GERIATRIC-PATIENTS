@@ -49,6 +49,13 @@ type RiskCalculation = {
     };
 };
 
+type AdePrediction = {
+    drug: string;
+    disease: string;
+    predictedADE: string;
+    confidence: number;
+};
+
 type AssessmentResponse = {
     assessmentId: string;
     mode?: "self" | "caretaker";
@@ -68,6 +75,8 @@ type AssessmentResponse = {
     age: number;
     liverFunction: string;
     kidneyFunction: string;
+    existingDiseases?: string[];
+    adePredictions?: AdePrediction[];
     riskCalculation: RiskCalculation;
     createdAt: string;
     source?: string;
@@ -272,10 +281,18 @@ const DashboardPage = () => {
                                     {analysis.liverFunction}
                                 </span>
                             </div>
-                            <div className="flex justify-between">
+                            <div className="flex justify-between border-b pb-2">
                                 <span className="text-gray-500">Kidney Function</span>
                                 <span className="font-medium text-gray-900 text-right max-w-[60%]">
                                     {analysis.kidneyFunction}
+                                </span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-gray-500">Existing Diseases</span>
+                                <span className="font-medium text-gray-900 text-right max-w-[60%]">
+                                    {analysis.existingDiseases && analysis.existingDiseases.length > 0
+                                        ? analysis.existingDiseases.join(", ")
+                                        : "None specified"}
                                 </span>
                             </div>
                         </div>
@@ -303,6 +320,63 @@ const DashboardPage = () => {
                             <p className="text-sm text-gray-500">No drugs listed.</p>
                         )}
                     </div>
+
+                    {/* Adverse Drug Event Predictions */}
+                    {analysis.adePredictions && analysis.adePredictions.length > 0 && (
+                        <div className="rounded-2xl border border-orange-100 bg-white p-6 shadow-sm md:col-span-2">
+                            <h2 className="text-lg font-semibold text-gray-900 mb-1">
+                                ⚠️ Adverse Drug Event Predictions
+                            </h2>
+                            <p className="text-sm text-gray-500 mb-4">
+                                ML-predicted adverse events based on your medications, age, and existing conditions.
+                            </p>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-sm text-left">
+                                    <thead>
+                                        <tr className="bg-orange-50 text-gray-700">
+                                            <th className="px-4 py-3 font-semibold rounded-tl-xl">Drug</th>
+                                            <th className="px-4 py-3 font-semibold">Existing Disease</th>
+                                            <th className="px-4 py-3 font-semibold">Predicted ADE</th>
+                                            <th className="px-4 py-3 font-semibold rounded-tr-xl text-right">Confidence</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {analysis.adePredictions.map((pred, index) => (
+                                            <tr
+                                                key={`ade-${index}`}
+                                                className={`border-b border-gray-100 ${index % 2 === 0 ? "bg-white" : "bg-gray-50"
+                                                    }`}
+                                            >
+                                                <td className="px-4 py-3 font-medium text-gray-900">
+                                                    {pred.drug}
+                                                </td>
+                                                <td className="px-4 py-3 text-gray-700">
+                                                    {pred.disease}
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <span className="inline-block rounded-full bg-red-50 px-3 py-1 text-xs font-semibold text-red-700">
+                                                        {pred.predictedADE}
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-3 text-right">
+                                                    <span
+                                                        className={`inline-block rounded-full px-3 py-1 text-xs font-bold ${pred.confidence >= 50
+                                                                ? "bg-red-100 text-red-800"
+                                                                : pred.confidence >= 30
+                                                                    ? "bg-orange-100 text-orange-800"
+                                                                    : "bg-yellow-100 text-yellow-800"
+                                                            }`}
+                                                    >
+                                                        {pred.confidence}%
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
 
                 </div>
 
