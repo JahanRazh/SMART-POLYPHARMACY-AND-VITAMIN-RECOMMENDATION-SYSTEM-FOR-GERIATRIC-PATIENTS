@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuth } from "@/app/components/Contexts/AuthContext";
-import React, { FormEvent, useEffect, useState } from "react";
+import React, { FormEvent, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -68,6 +68,8 @@ type AssessmentResponse = {
   age: number;
   liverFunction: string;
   kidneyFunction: string;
+  existingDiseases?: string[];
+  adePredictions?: { drug: string; disease: string; predictedADE: string; confidence: number }[];
   riskCalculation: RiskCalculation;
   createdAt: string;
   source?: string;
@@ -95,6 +97,10 @@ const PolypharmacyPage = () => {
   const [error, setError] = useState<string>("");
   const [successMessage, setSuccessMessage] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [existingDiseases, setExistingDiseases] = useState<string[]>([""]);
+  const [activeDiseaseIndex, setActiveDiseaseIndex] = useState<number | null>(null);
+  const [diseaseSuggestions, setDiseaseSuggestions] = useState<string[]>([]);
+  const initialLoadDone = useRef(false);
 
   const liverFunctionOptions = [
     { value: "Normal (<40 IU/L)", label: "Normal (<40 IU/L)" },
@@ -115,6 +121,34 @@ const PolypharmacyPage = () => {
     { value: "Stage 5: eGFR below 15", label: "Stage 5: eGFR below 15" },
   ];
 
+  // Auto-add/remove diseases based on liver and kidney function selections
+  useEffect(() => {
+    const liverLower = liverFunction.toLowerCase();
+    const isSevereLiver = liverLower.includes("severe") || liverLower.includes(">150");
+    const kidneyLower = kidneyFunction.toLowerCase();
+    const isSevereKidney = kidneyLower.includes("stage 5") || kidneyLower.includes("below 15");
+
+    setExistingDiseases((prev) => {
+      let updated = prev.filter(
+        (d) => d !== "Liver Issues" && d !== "Kidney Issues"
+      );
+
+      const autoEntries: string[] = [];
+      if (isSevereLiver) autoEntries.push("Liver Issues");
+      if (isSevereKidney) autoEntries.push("Kidney Issues");
+
+      // Prepend auto entries
+      updated = [...autoEntries, ...updated];
+
+      // Ensure there's always at least one empty slot for manual entry
+      if (updated.length === 0 || updated.every((d) => d.trim() !== "")) {
+        updated.push("");
+      }
+
+      return updated;
+    });
+  }, [liverFunction, kidneyFunction]);
+
   useEffect(() => {
     // Auto-fill from the authenticated user's profile when available
     if (
@@ -134,6 +168,38 @@ const PolypharmacyPage = () => {
       setGender(userProfile.gender);
     }
   }, [userProfile, age, firstName, lastName, gender]);
+
+  // Auto-save Patient Snapshot fields to Firestore on change (debounced)
+  useEffect(() => {
+    // Skip the initial render / auto-fill phase
+    if (!initialLoadDone.current) {
+      if (user && (firstName || lastName || gender || age)) {
+        initialLoadDone.current = true;
+      }
+      return;
+    }
+
+    if (!user) return;
+
+    const timer = setTimeout(() => {
+      const payload: Record<string, unknown> = { userId: user.uid };
+      if (firstName) payload.firstName = firstName;
+      if (lastName) payload.lastName = lastName;
+      if (gender) payload.gender = gender;
+      const ageNum = parseInt(age, 10);
+      if (!isNaN(ageNum) && ageNum > 0 && ageNum <= 120) payload.age = ageNum;
+      const nameFromFields = `${(firstName || "").trim()} ${(lastName || "").trim()}`.trim();
+      if (nameFromFields) payload.displayName = nameFromFields;
+
+      fetch(`${API_BASE}/api/polypharmacy/profile`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      }).catch(() => { });
+    }, 800);
+
+    return () => clearTimeout(timer);
+  }, [firstName, lastName, gender, age, user]);
 
   useEffect(() => {
     // Auto-fill full name based on firstName and lastName
@@ -176,6 +242,7 @@ const PolypharmacyPage = () => {
           setAge(String(data.age));
           setLiverFunction(data.liverFunction);
           setKidneyFunction(data.kidneyFunction);
+          setExistingDiseases(data.existingDiseases && data.existingDiseases.length > 0 ? data.existingDiseases : [""]);
         }
       } catch (error) {
         console.error("Failed to fetch assessment", error);
@@ -197,6 +264,7 @@ const PolypharmacyPage = () => {
       setAge("");
       setLiverFunction("");
       setKidneyFunction("");
+      setExistingDiseases([""]);
       setSuccessMessage("Analysis cleared successfully.");
     } catch (error) {
       setError("Failed to clear analysis.");
@@ -314,8 +382,10 @@ const PolypharmacyPage = () => {
           userId: user.uid,
           drugs: cleanedDrugs,
           age: ageNum,
+          gender: gender,
           liverFunction: liverFunction,
           kidneyFunction: kidneyFunction,
+          existingDiseases: existingDiseases.map(d => d.trim()).filter(d => d),
         }),
       });
 
@@ -540,6 +610,109 @@ const PolypharmacyPage = () => {
                   </select>
                 </div>
               </div>
+            </div>
+          </section>
+
+          <section className="rounded-2xl border border-gray-100 bg-gray-50 p-6">
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">
+                  Existing Diseases
+                </h2>
+                <p className="text-sm text-gray-500">
+                  List any existing diseases or medical conditions.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setExistingDiseases((prev) => [...prev, ""])}
+                className="rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-medium text-indigo-600 transition hover:bg-indigo-100"
+              >
+                + Add Disease
+              </button>
+            </div>
+            <div className="mt-4 space-y-3">
+              {existingDiseases.map((disease, index) => (
+                <div key={`disease-${index}`} className="flex gap-3">
+                  <div className="relative flex-1">
+                    <input
+                      type="text"
+                      value={disease}
+                      onChange={async (e) => {
+                        const value = e.target.value;
+                        setExistingDiseases((prev) =>
+                          prev.map((d, idx) => (idx === index ? value : d))
+                        );
+                        setActiveDiseaseIndex(index);
+                        const query = value.trim();
+                        if (!query) {
+                          setDiseaseSuggestions([]);
+                          return;
+                        }
+                        try {
+                          const params = new URLSearchParams({ q: query, limit: "15" });
+                          const res = await fetch(
+                            `${API_BASE}/api/polypharmacy/diseases/search?${params.toString()}`
+                          );
+                          const data = await res.json().catch(() => null);
+                          if (res.ok && data?.items) {
+                            // Filter out diseases already selected
+                            const currentDiseases = existingDiseases.map(d => d.trim().toLowerCase());
+                            const filtered = data.items.filter(
+                              (item: string) => !currentDiseases.includes(item.toLowerCase())
+                            );
+                            setDiseaseSuggestions(filtered);
+                          } else {
+                            setDiseaseSuggestions([]);
+                          }
+                        } catch {
+                          setDiseaseSuggestions([]);
+                        }
+                      }}
+                      onFocus={() => setActiveDiseaseIndex(index)}
+                      onBlur={() => {
+                        // Delay to allow click on suggestion
+                        setTimeout(() => setActiveDiseaseIndex(null), 150);
+                      }}
+                      placeholder={`Disease ${index + 1}`}
+                      className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2 text-gray-900 focus:border-indigo-500 focus:outline-none"
+                    />
+                    {activeDiseaseIndex === index && diseaseSuggestions.length > 0 && (
+                      <ul className="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-xl border border-gray-200 bg-white shadow-lg">
+                        {diseaseSuggestions.map((suggestion) => (
+                          <li
+                            key={suggestion}
+                            className="cursor-pointer px-3 py-2 text-sm text-gray-800 hover:bg-indigo-50"
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              setExistingDiseases((prev) =>
+                                prev.map((d, idx) => (idx === index ? suggestion : d))
+                              );
+                              setActiveDiseaseIndex(null);
+                              setDiseaseSuggestions([]);
+                            }}
+                          >
+                            {suggestion}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                  {existingDiseases.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setExistingDiseases((prev) =>
+                          prev.filter((_, idx) => idx !== index)
+                        )
+                      }
+                      className="h-fit rounded-xl border border-gray-200 bg-gray-50 px-4 py-2 text-sm text-gray-600 transition hover:bg-gray-100"
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
+              ))}
             </div>
           </section>
 
