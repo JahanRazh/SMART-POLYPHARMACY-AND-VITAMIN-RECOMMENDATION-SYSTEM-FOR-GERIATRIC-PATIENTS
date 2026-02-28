@@ -33,17 +33,17 @@ export default function PolypharmacyHomepage() {
               Clinical Decision Support
             </span>
 
-            <h1 className="mt-6 text-4xl font-extrabold leading-tight tracking-tight sm:text-5xl md:text-6xl">
-              Polypharmacy Risk
+            <h1 className="mt-6 text-3xl font-bold sm:text-4xl md:text-5xl">
+              Intelligent Polypharmacy Risk
               <span className="block bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">
-                Analysis System
+                Assessment System
               </span>
             </h1>
 
             <p className="mt-5 text-lg leading-relaxed text-gray-600 md:text-xl max-w-2xl">
               An intelligent, ML-powered platform designed for geriatric care.
               Analyze drug–drug interactions, predict adverse events, and
-              calculate personalized polypharmacy risk scores — all in one
+              calculate personalized polypharmacy risk scores all in one
               comprehensive clinical dashboard.
             </p>
 
