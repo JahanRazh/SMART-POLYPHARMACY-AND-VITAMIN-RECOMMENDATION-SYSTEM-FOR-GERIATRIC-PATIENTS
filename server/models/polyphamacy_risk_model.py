@@ -1,5 +1,7 @@
 import os
+import csv
 import pickle
+import numpy as np
 from datetime import datetime
 from typing import Dict, List, Tuple, Optional
 from functools import lru_cache
@@ -8,6 +10,8 @@ from db import get_db
 
 # Path to the knowledge base directory (same directory as this file)
 MODEL_DIR = os.path.join(os.path.dirname(__file__), "drug_interaction_ml")
+ADE_MODEL_DIR = os.path.join(os.path.dirname(__file__), "ade_model")
+DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "Data")
 POLYPHARMACY_COLLECTION = "polypharmacy_assessments"
 USERS_COLLECTION = "users"
 
@@ -16,6 +20,12 @@ _INTERACTION_DB = None
 _DRUG_LIST = None
 _DRUG_NAME_MAP = None
 _SEVERITY_LEVELS = None
+
+# ADE model globals
+_ADE_MODEL = None
+_ADE_DRUG_ENCODER = None
+_ADE_DISEASE_ENCODER = None
+_ADE_TARGET_ENCODER = None
 
 
 def _normalize_drug_name(value: str) -> str:
@@ -96,6 +106,139 @@ def search_drug_names(query: str, limit: int = 15) -> List[str]:
     
     return results
 
+
+@lru_cache(maxsize=1)
+def _load_disease_list() -> List[str]:
+    """Load unique disease names from the Adverse Drug Event CSV."""
+    csv_path = os.path.join(DATA_DIR, "Adverse Drug Event.csv")
+    if not os.path.exists(csv_path):
+        return []
+    
+    diseases = set()
+    with open(csv_path, "r", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            disease = row.get("Existing Diseases", "").strip()
+            if disease:
+                diseases.add(disease)
+    
+    return sorted(diseases)
+
+
+def search_disease_names(query: str, limit: int = 15) -> List[str]:
+    """
+    Fuzzy search over disease names from the Adverse Drug Event CSV.
+    
+    - Case-insensitive
+    - Scores prefix matches highest, then substring matches
+    - Returns up to `limit` unique labels
+    """
+    if not query or not isinstance(query, str):
+        return []
+    
+    disease_list = _load_disease_list()
+    normalized_query = query.strip().lower()
+    if not normalized_query:
+        return []
+    
+    prefix_matches = []
+    substring_matches = []
+    
+    for disease in disease_list:
+        normalized_disease = disease.lower()
+        if normalized_disease.startswith(normalized_query):
+            prefix_matches.append(disease)
+        elif normalized_query in normalized_disease:
+            substring_matches.append(disease)
+    
+    results = prefix_matches + substring_matches
+    return results[:limit]
+
+
+def _load_ade_model():
+    """Load the trained ADE prediction model and encoders (cached)."""
+    global _ADE_MODEL, _ADE_DRUG_ENCODER, _ADE_DISEASE_ENCODER, _ADE_TARGET_ENCODER
+
+    if _ADE_MODEL is not None:
+        return _ADE_MODEL, _ADE_DRUG_ENCODER, _ADE_DISEASE_ENCODER, _ADE_TARGET_ENCODER
+
+    model_path = os.path.join(ADE_MODEL_DIR, "rf_ade_model.pkl")
+    if not os.path.exists(model_path):
+        raise FileNotFoundError(
+            f"ADE model not found at {model_path}. Run train_ade_model.py first."
+        )
+
+    with open(model_path, "rb") as f:
+        _ADE_MODEL = pickle.load(f)
+    with open(os.path.join(ADE_MODEL_DIR, "drug_encoder.pkl"), "rb") as f:
+        _ADE_DRUG_ENCODER = pickle.load(f)
+    with open(os.path.join(ADE_MODEL_DIR, "disease_encoder.pkl"), "rb") as f:
+        _ADE_DISEASE_ENCODER = pickle.load(f)
+    with open(os.path.join(ADE_MODEL_DIR, "target_encoder.pkl"), "rb") as f:
+        _ADE_TARGET_ENCODER = pickle.load(f)
+
+    return _ADE_MODEL, _ADE_DRUG_ENCODER, _ADE_DISEASE_ENCODER, _ADE_TARGET_ENCODER
+
+
+def predict_adverse_events(
+    drugs: List[str], age: int, diseases: List[str]
+) -> List[Dict]:
+    """
+    Predict adverse drug events for combinations of drugs and existing diseases.
+
+    Returns a list of dicts:
+        { drug, disease, predictedADE, confidence }
+    """
+    model, drug_enc, disease_enc, target_enc = _load_ade_model()
+
+    known_drugs = set(drug_enc.classes_)
+    known_diseases = set(disease_enc.classes_)
+
+    predictions: List[Dict] = []
+
+    for drug in drugs:
+        drug_clean = drug.strip()
+        # Find closest known drug (case-insensitive)
+        drug_match = None
+        for kd in known_drugs:
+            if kd.lower() == drug_clean.lower():
+                drug_match = kd
+                break
+        if drug_match is None:
+            continue  # skip unknown drugs
+
+        drug_encoded = drug_enc.transform([drug_match])[0]
+
+        disease_list = diseases if diseases else [""]
+        for disease in disease_list:
+            disease_clean = disease.strip()
+            if not disease_clean:
+                continue
+            # Find closest known disease
+            disease_match = None
+            for kds in known_diseases:
+                if kds.lower() == disease_clean.lower():
+                    disease_match = kds
+                    break
+            if disease_match is None:
+                continue  # skip unknown diseases
+
+            disease_encoded = disease_enc.transform([disease_match])[0]
+            features = np.array([[drug_encoded, age, disease_encoded]])
+
+            proba = model.predict_proba(features)[0]
+            pred_idx = int(np.argmax(proba))
+            predicted_ade = target_enc.inverse_transform([pred_idx])[0]
+            confidence = round(float(proba[pred_idx]) * 100, 1)
+
+            predictions.append({
+                "drug": drug_match,
+                "disease": disease_match,
+                "predictedADE": predicted_ade,
+                "confidence": confidence,
+            })
+
+    return predictions
 
 def lookup_drug_interaction(drug_a: str, drug_b: str) -> Optional[Dict]:
     """
@@ -186,9 +329,12 @@ def save_polypharmacy_assessment(
     interactions: List[Dict],
     severity_summary: Dict[str, int],
     age: int,
-    liver_function: str,
-    kidney_function: str,
-    risk_calculation: Dict,
+    gender: str = "",
+    liver_function: str = "",
+    kidney_function: str = "",
+    risk_calculation: Dict = None,
+    existing_diseases: Optional[List[str]] = None,
+    ade_predictions: Optional[List[Dict]] = None,
 ) -> Dict:
     """Persist the latest assessment for the user (upsert single record)."""
     db = get_db()
@@ -199,7 +345,7 @@ def save_polypharmacy_assessment(
         "lastName": user_profile.get("lastName"),
         "displayName": user_profile.get("displayName"),
         "age": age,
-        "gender": user_profile.get("gender"),
+        "gender": gender or user_profile.get("gender", ""),
         "email": user_profile.get("email"),
         "photoURL": user_profile.get("photoURL"),
     }
@@ -216,6 +362,8 @@ def save_polypharmacy_assessment(
         "age": age,
         "liverFunction": liver_function,
         "kidneyFunction": kidney_function,
+        "existingDiseases": existing_diseases or [],
+        "adePredictions": ade_predictions or [],
         "riskCalculation": risk_calculation,
         "updatedAt": timestamp,
         "source": "ML_Model",
@@ -285,6 +433,16 @@ def get_user_profile(user_id: str) -> Dict:
     if not doc.exists:
         return {}
     return doc.to_dict()
+
+
+def update_user_profile_fields(user_id: str, fields: Dict) -> None:
+    """Update specified fields in the user's main profile."""
+    if not fields:
+        return
+    db = get_db()
+    doc_ref = db.collection(USERS_COLLECTION).document(user_id)
+    if doc_ref.get().exists:
+        doc_ref.update(fields)
 
 
 def calculate_s1_score(drug_count: int) -> float:
