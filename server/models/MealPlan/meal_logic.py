@@ -107,24 +107,6 @@ def train_and_save_model():
     print("New model files saved!")
 
 # ==================================================
-# LOAD DATA & MODEL
-# ==================================================
-df = load_dataset()
-
-if not (os.path.exists(MODEL_PATH) and os.path.exists(SCALER_PATH)):
-    train_and_save_model()
-else:
-    try:
-        with open(MODEL_PATH, "rb") as f:
-            vitamin_model = pickle.load(f)
-        with open(SCALER_PATH, "rb") as f:
-            scaler = pickle.load(f)
-        print("Existing AI model loaded")
-    except Exception as e:
-        print(f"Model load failed ({e}) – retraining...")
-        train_and_save_model()
-
-# ==================================================
 # AI SCORING – No warning
 # ==================================================
 def ai_food_score(row):
@@ -152,7 +134,33 @@ def ai_food_score(row):
     except:
         return 0.5
 
-df["ai_score"] = df.apply(ai_food_score, axis=1)
+# ==================================================
+# LOAD DATA & MODEL (LAZY LOADING)
+# ==================================================
+_system_initialized = False
+
+def initialize_system():
+    global df, vitamin_model, scaler, _system_initialized
+    if _system_initialized:
+        return
+
+    df = load_dataset()
+
+    if not (os.path.exists(MODEL_PATH) and os.path.exists(SCALER_PATH)):
+        train_and_save_model()
+    else:
+        try:
+            with open(MODEL_PATH, "rb") as f:
+                vitamin_model = pickle.load(f)
+            with open(SCALER_PATH, "rb") as f:
+                scaler = pickle.load(f)
+            print("Existing AI model loaded")
+        except Exception as e:
+            print(f"Model load failed ({e}) – retraining...")
+            train_and_save_model()
+
+    df["ai_score"] = df.apply(ai_food_score, axis=1)
+    _system_initialized = True
 
 # ==================================================
 # FILTER FOODS
@@ -256,6 +264,8 @@ def generate_daily_plan(filtered_df, seed=42, calorie_min=1800, calorie_max=2200
 # MAIN FUNCTION – Now uses BMI to adjust calories and give advice
 # ==================================================
 def generate_full_meal_plan(patient_data):
+    initialize_system()
+    
     basic = patient_data.get("basicProfile", {})
     medical = patient_data.get("medicalConditions", {})
     vitamin_defs = patient_data.get("vitaminDeficiencies", [])
