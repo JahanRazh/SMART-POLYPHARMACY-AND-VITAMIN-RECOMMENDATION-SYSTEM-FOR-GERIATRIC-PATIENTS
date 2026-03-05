@@ -134,11 +134,11 @@ const Home = () => {
   return (
     <div className="min-h-screen">
       {/* Hero Section - Clinical Grade */}
-      <section className="relative bg-white py-20 lg:py-28">
+      <section className="relative bg-white py-20 lg:py-6.5 ">
         <div className="container mx-auto px-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            <div className="space-y-8">
-              <div className="space-y-4">
+            <div className="space-y-10">
+              <div className="space-y-5">
                 <div className="inline-flex items-center px-4 py-2 rounded-full bg-teal-50 border border-teal-200">
                   <span className="text-teal-600 font-medium text-sm">
                     Clinical AI Platform
