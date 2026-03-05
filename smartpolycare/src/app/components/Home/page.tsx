@@ -159,7 +159,7 @@ const Home = () => {
 
               <div className="flex flex-col sm:flex-row gap-4">
                 <Link
-                  href="/Pages/vitamin_deficiency"
+                  href="/Pages/vitamin_deficiency/Home"
                   className="bg-gradient-to-r from-teal-600 to-blue-700 text-white px-8 py-4 rounded-lg hover:shadow-xl transition-all duration-200 font-semibold text-center"
                 >
                   Vitamin deficiency assessment
