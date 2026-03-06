@@ -5,6 +5,7 @@ import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import UserProfile from "./UserProfile";
+import NotificationBell from "./NotificationBell";
 
 export default function HeaderWithAuth() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -67,6 +68,7 @@ export default function HeaderWithAuth() {
 
         {/* RIGHT SIDE: USER + MOBILE MENU BUTTON */}
         <div className="flex items-center gap-2">
+          <NotificationBell />
           <UserProfile />
 
           {/* MOBILE BURGER BUTTON */}
