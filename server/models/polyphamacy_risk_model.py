@@ -635,13 +635,14 @@ def calculate_polypharmacy_risk(
     else:
         s5_explanation = f"S5 = 0.0 (Stage 1: eGFR 90)"
     
-    # Calculate weighted score
-    risk_score = (
+    # Calculate weighted score (capped at 100)
+    risk_score = min(
         (drug_weight * s1) +
         (age_weight * s2) +
         (ddi_weight * s3) +
         (liver_weight * s4) +
-        (kidney_weight * s5)
+        (kidney_weight * s5),
+        100.0
     )
     
     # Determine risk level
