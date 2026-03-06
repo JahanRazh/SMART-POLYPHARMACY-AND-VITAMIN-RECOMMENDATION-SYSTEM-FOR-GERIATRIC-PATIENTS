@@ -134,11 +134,11 @@ const Home = () => {
   return (
     <div className="min-h-screen">
       {/* Hero Section - Clinical Grade */}
-      <section className="relative bg-white py-20 lg:py-28">
+      <section className="relative bg-white py-20 lg:py-6.5 ">
         <div className="container mx-auto px-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            <div className="space-y-8">
-              <div className="space-y-4">
+            <div className="space-y-10">
+              <div className="space-y-5">
                 <div className="inline-flex items-center px-4 py-2 rounded-full bg-teal-50 border border-teal-200">
                   <span className="text-teal-600 font-medium text-sm">
                     Clinical AI Platform
@@ -159,7 +159,7 @@ const Home = () => {
 
               <div className="flex flex-col sm:flex-row gap-4">
                 <Link
-                  href="/Pages/ppHome"
+                  href="/Pages/vitamin_deficiency/Home"
                   className="bg-gradient-to-r from-teal-600 to-blue-700 text-white px-8 py-4 rounded-lg hover:shadow-xl transition-all duration-200 font-semibold text-center"
                 >
                   Vitamin deficiency assessment
@@ -199,9 +199,8 @@ const Home = () => {
             {clinicalFeatures.map((feature, index) => (
               <div
                 key={index}
-                className={`bg-white rounded-2xl p-8 shadow-lg border border-gray-200 hover:shadow-xl transition-all duration-300 cursor-pointer ${
-                  activeFeature === index ? "ring-2 ring-teal-500" : ""
-                }`}
+                className={`bg-white rounded-2xl p-8 shadow-lg border border-gray-200 hover:shadow-xl transition-all duration-300 cursor-pointer ${activeFeature === index ? "ring-2 ring-teal-500" : ""
+                  }`}
                 onMouseEnter={() => setActiveFeature(index)}
               >
                 <div className="flex items-start space-x-6">
