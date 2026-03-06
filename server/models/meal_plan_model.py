@@ -17,12 +17,11 @@ def save_meal_plan_assessment(meal_data: Dict) -> Dict:
 
     payload = {
         # ---------- FORM SECTIONS ----------
+        "userId": meal_data.get("userId"),
         "basicProfile": meal_data.get("basicProfile", {}),
         "medicalConditions": meal_data.get("medicalConditions", {}),
         "vitaminDeficiencies": meal_data.get("vitaminDeficiencies", []),
         "dietaryRestrictions": meal_data.get("dietaryRestrictions", {}),
-        "mealTimings": meal_data.get("mealTimings", {}),
-        "preferences": meal_data.get("preferences", {}),
 
         # ---------- META ----------
         "createdAt": timestamp,
@@ -35,76 +34,55 @@ def save_meal_plan_assessment(meal_data: Dict) -> Dict:
     payload["id"] = doc_ref.id
     return payload
 
-def save_selected_meal_plan(selected_plan: Dict[str, Any]) -> Dict[str, Any]:
+def save_generated_meal_plan(result: Dict[str, Any], form_id: str) -> bool:
     """
-    Save only the selected meal plan option
+    Save the entire generated meal plan result directly, mimicking the legacy frontend structure.
     """
     try:
-        print("=" * 50)
-        print("📝 DEBUG: In save_selected_meal_plan model function")
-        print(f"📦 Input keys: {list(selected_plan.keys())}")
-        
         db = get_db()
-        doc_ref = db.collection("selected_meal_plans").document()
-        
+        doc_ref = db.collection("saved_meal_plans").document()
         timestamp = datetime.utcnow().isoformat()
         
-        # Extract data safely
-        selected_plan_data = selected_plan.get("selectedPlan", {})
-        if not selected_plan_data:
-            print("⚠️ WARNING: selectedPlan is empty")
+        # Format payload precisely to match old structure
+        options = result.get("mealPlanOptions", [])
+        selected_option = options[0] if options else {}
         
-        # Prepare the payload
-        payload = {
-            # Store the entire selectedPlan
-            "selectedPlan": selected_plan_data,
-            
-            # Metadata
-            "originalPlanId": selected_plan.get("originalPlanId", "unknown"),
-            "formDataSaved": selected_plan.get("formDataSaved", False),
-            
-            # Timestamps
-            "createdAt": timestamp,
-            "updatedAt": timestamp,
-            
-            # Patient info (with defaults)
-            "patientName": selected_plan_data.get("patientName", "Unknown"),
-            "patientAge": selected_plan_data.get("patientAge", ""),
-            "patientGender": selected_plan_data.get("patientGender", ""),
-            "bmi": selected_plan_data.get("bmi", 0),
-            "bmiCategory": selected_plan_data.get("bmiCategory", "Unknown"),
-            
-            # Plan info
-            "planName": selected_plan_data.get("name", "Unnamed Plan"),
-            "optionId": selected_plan_data.get("optionId", 0),
-            "selectedDay": selected_plan_data.get("selectedDay", "Day 1"),
-            "totalCalories": selected_plan_data.get("totalCalories", 0),
-            "numberOfMeals": selected_plan_data.get("numberOfMeals", 0),
-            
-            # Status
-            "status": "active",
-            "source": "meal_plan_selection"
+        first_day_data = selected_option.get("weeklyPlan", {}).get("Day 1", {})
+        
+        selected_plan = {
+            # Option details
+            **selected_option,
+            "name": selected_option.get("name", "Generated Plan"),
+            # Patient details
+            "patientName": result.get("patient_name", "Unknown Patient"),
+            "patientAge": result.get("basicProfile", {}).get("age", "N/A"),
+            "patientGender": result.get("basicProfile", {}).get("gender", "N/A"),
+            "bmi": result.get("bmi", 0),
+            "bmiCategory": result.get("bmi_category", ""),
+            "bmiAdvice": result.get("bmi_advice", ""),
+            "dailyCalorieRange": result.get("daily_calorie_range", ""),
+            # Plan snapshot
+            "selectedDay": "Full 7-Day Plan",
+            "totalCalories": first_day_data.get("total_calories", 0),
+            "numberOfMeals": len(first_day_data.get("meals", [])),
+            "timestamp": timestamp,
         }
         
-        print(f"📄 Prepared payload with {len(payload)} fields")
+        payload = {
+            "userId": result.get("userId"),
+            "selectedPlan": selected_plan,
+            "originalPlanId": form_id or "unknown",
+            "formDataSaved": True if form_id else False,
+            "createdAt": timestamp,
+        }
         
-        # Save to Firestore
         doc_ref.set(payload)
-        
-        # Add ID to return data
-        payload["id"] = doc_ref.id
-        
-        print(f"✅ Selected meal plan saved with ID: {doc_ref.id}")
-        print(f"📁 Collection: selected_meal_plans")
-        print("=" * 50)
-        
-        return payload
+        print(f"✅ Generated meal plan natively saved with ID: {doc_ref.id} into saved_meal_plans")
+        return True
         
     except Exception as e:
-        print(f"❌ Error in save_selected_meal_plan model function: {e}")
-        import traceback
-        traceback.print_exc()
-        raise
+        print(f"❌ Error in save_generated_meal_plan: {e}")
+        return False
 
 def fetch_meal_plan(meal_plan_id: str) -> Dict:
     db = get_db()
@@ -140,3 +118,44 @@ def delete_meal_plan_data(meal_plan_id: str) -> bool:
 
     doc_ref.delete()
     return True
+
+def fetch_latest_meal_plan_assessment(user_id: str) -> Dict:
+    """
+    Fetch the most recent meal plan assessment for a given user.
+    """
+    db = get_db()
+    docs = (
+        db.collection(MEAL_PLAN_COLLECTION)
+        .where("userId", "==", user_id)
+        .order_by("createdAt", direction="DESCENDING")
+        .limit(1)
+        .get()
+    )
+
+    if not docs:
+        return None
+
+    data = docs[0].to_dict()
+    data["id"] = docs[0].id
+    return data
+
+def save_meal_tracking(tracking_data: Dict) -> Dict:
+    """
+    Save daily meal tracking progress (consumed foods).
+    """
+    db = get_db()
+    doc_ref = db.collection("meal_tracking_logs").document()
+    timestamp = datetime.utcnow().isoformat()
+    
+    payload = {
+        "userId": tracking_data.get("userId"),
+        "planId": tracking_data.get("planId"),
+        "day": tracking_data.get("day"),
+        "consumedMeals": tracking_data.get("consumedMeals", []), 
+        "timestamp": timestamp,
+        "date": tracking_data.get("date", timestamp.split('T')[0])
+    }
+    
+    doc_ref.set(payload)
+    payload["id"] = doc_ref.id
+    return payload

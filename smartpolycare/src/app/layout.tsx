@@ -2,6 +2,7 @@
 import type { ReactNode } from "react";
 import "./globals.css";
 import { AuthProvider } from "./components/Contexts/AuthContext";
+import { NotificationProvider } from "./components/Contexts/NotificationContext";
 import HeaderWithAuth from "./components/HeaderWithAuth";
 import Footer from "./components/Footer";
 
@@ -31,11 +32,13 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         suppressHydrationWarning={true}
       >
         <AuthProvider>
-          {/* HEADER */}
-          <HeaderWithAuth />
+          <NotificationProvider>
+            {/* HEADER */}
+            <HeaderWithAuth />
 
-          {/* MAIN CONTENT */}
-          <main className="flex-grow">{children}</main>
+            {/* MAIN CONTENT */}
+            <main className="flex-grow">{children}</main>
+          </NotificationProvider>
 
           {/* FOOTER */}
           <Footer />
