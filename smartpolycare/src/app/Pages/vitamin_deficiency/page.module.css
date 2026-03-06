@@ -100,6 +100,116 @@
   line-height: 1.6;
 }
 
+/* ── Patient Snapshot Card (form style) ── */
+.snapshotCard {
+  max-width: 1200px;
+  margin: 0 auto 2rem;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 1.25rem;
+  padding: 1.5rem;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.06);
+  position: relative;
+  z-index: 1;
+  animation: fadeInUp 0.5s ease-out forwards;
+}
+
+.snapshotHeader {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.snapshotIconWrap {
+  width: 44px;
+  height: 44px;
+  border-radius: 0.75rem;
+  background: #eff6ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.snapshotAvatarImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.snapshotIcon {
+  width: 24px;
+  height: 24px;
+  color: #3b82f6;
+}
+
+.snapshotTitle {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 0.2rem;
+}
+
+.snapshotSubtitle {
+  font-size: 0.8rem;
+  color: #64748b;
+  margin: 0;
+}
+
+.snapshotGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+@media (max-width: 640px) {
+  .snapshotGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.snapshotField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.snapshotLabel {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.snapshotValue {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+  padding: 0.65rem 1rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #0f172a;
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+}
+
+.snapshotEmpty {
+  color: #94a3b8;
+  font-weight: 400;
+  font-style: italic;
+}
+
+.snapshotUnit {
+  font-size: 0.78rem;
+  color: #64748b;
+  font-weight: 400;
+  margin-left: 0.25rem;
+}
+
 .mainLayout {
   display: grid;
   grid-template-columns: 1fr;
@@ -442,8 +552,59 @@
 }
 
 .resultsHeader {
-  text-align: center;
   margin-bottom: 2rem;
+}
+
+.resultsHeaderTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.exportControls {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.exportPdfBtn, .exportExcelBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1rem;
+  border-radius: 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+}
+
+.exportPdfBtn {
+  background-color: #fef2f2;
+  color: #ef4444;
+  border-color: #fecaca;
+}
+
+.exportPdfBtn:hover {
+  background-color: #fee2e2;
+  border-color: #fca5a5;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.1);
+}
+
+.exportExcelBtn {
+  background-color: #ecfdf5;
+  color: #10b981;
+  border-color: #a7f3d0;
+}
+
+.exportExcelBtn:hover {
+  background-color: #d1fae5;
+  border-color: #6ee7b7;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.1);
 }
 
 .resultsTitle {
