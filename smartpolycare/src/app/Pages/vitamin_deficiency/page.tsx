@@ -3,7 +3,10 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { useAuth } from "@/app/components/Contexts/AuthContext";
 import styles from "./page.module.css";
-import { Plus, X, Search, Beaker, RotateCcw, Activity } from "lucide-react";
+import { Plus, X, Search, Beaker, RotateCcw, Activity, Download, FileText, FileSpreadsheet } from "lucide-react";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import * as XLSX from "xlsx";
 
 /* ================= TYPES ================= */
 
@@ -37,7 +40,7 @@ const API = "http://localhost:5000/api/vitamin-deficiency";
 /* ================= COMPONENT ================= */
 
 export default function VitaminDeficiencyPage() {
-  const { user } = useAuth();
+  const { user, userProfile } = useAuth();
   /* ---- state ---- */
   const [drugs, setDrugs] = useState<string[]>(["", "", "", "", ""]);
   const [drugSuggestions, setDrugSuggestions] = useState<Record<number, string[]>>({});
@@ -121,7 +124,7 @@ export default function VitaminDeficiencyPage() {
   };
 
   const removeDrug = (index: number) => {
-    if (drugs.length <= 2) return; // minimum 2
+    if (drugs.length <= 5) return; // minimum 5 fields always open
     setDrugs(drugs.filter((_, i) => i !== index));
     setDrugSuggestions({});
     setActiveDrugDrop(null);
@@ -189,6 +192,92 @@ export default function VitaminDeficiencyPage() {
     setDrugSuggestions({});
   };
 
+  /* ---- handle exports ---- */
+  const exportPDF = () => {
+    if (!results) return;
+    const doc = new jsPDF();
+    doc.setFontSize(18);
+    doc.text("Vitamin Deficiency Assessment Report", 14, 22);
+
+    doc.setFontSize(11);
+    doc.text(`Patient Name: ${userProfile?.firstName || ""} ${userProfile?.lastName || ""}`, 14, 30);
+    doc.text(`Age: ${userProfile?.age || "N/A"}   |   Gender: ${userProfile?.gender || "N/A"}`, 14, 36);
+
+    doc.setFontSize(14);
+    doc.text("1. Input Medications & Symptoms", 14, 48);
+
+    autoTable(doc, {
+      startY: 53,
+      head: [["Medications", "Symptoms"]],
+      body: [
+        [results.drugs.join(", "), results.symptoms.join(", ")]
+      ],
+      theme: "grid",
+      headStyles: { fillColor: [14, 165, 233] },
+    });
+
+    let finalY = (doc as any).lastAutoTable.finalY || 55;
+
+    doc.setFontSize(14);
+    doc.text("2. Predicted Vitamin Depletions", 14, finalY + 15);
+
+    const vulnerabilityData = results.predictions.map(v => [
+      v.name,
+      v.description,
+      v.contributing_pairs.join(", "),
+      v.foods.join(", ")
+    ]);
+
+    autoTable(doc, {
+      startY: finalY + 20,
+      head: [["Vitamin", "Risk Description", "Causing Drug Pair", "Dietary Sources Needed"]],
+      body: vulnerabilityData.length > 0 ? vulnerabilityData : [["None", "No specific vulnerabilities detected", "-", "-"]],
+      theme: "grid",
+      headStyles: { fillColor: [16, 185, 129] },
+      styles: { cellPadding: 4, fontSize: 10 },
+      columnStyles: { 0: { cellWidth: 30 }, 2: { cellWidth: 40 } }
+    });
+
+    doc.save("vitamin_assessment_report.pdf");
+  };
+
+  const exportExcel = () => {
+    if (!results) return;
+
+    const patientData = [
+      { Field: "Patient Name", Value: `${userProfile?.firstName || ""} ${userProfile?.lastName || ""}` },
+      { Field: "Age", Value: userProfile?.age || "N/A" },
+      { Field: "Gender", Value: userProfile?.gender || "N/A" },
+      { Field: "Assessment Date", Value: new Date().toLocaleDateString() }
+    ];
+
+    const inputData = results.drugs.map((d, i) => ({
+      "Medication Name": d,
+      "Symptom": results.symptoms[i] || ""
+    }));
+
+    const vitData = results.predictions.map(v => ({
+      "Target Vitamin": v.name,
+      "Vitamin Key": v.vitamin,
+      "Description": v.description,
+      "Reactions Causes By": v.contributing_pairs.join(" | "),
+      "Suggested Dietary Replacements": v.foods.join(", ")
+    }));
+
+    const wb = XLSX.utils.book_new();
+
+    const wsPatient = XLSX.utils.json_to_sheet(patientData);
+    XLSX.utils.book_append_sheet(wb, wsPatient, "Patient Profile");
+
+    const wsInput = XLSX.utils.json_to_sheet(inputData);
+    XLSX.utils.book_append_sheet(wb, wsInput, "Input Regimen");
+
+    const wsVits = XLSX.utils.json_to_sheet(vitData.length > 0 ? vitData : [{ Message: "No vulnerabilities detected by Model" }]);
+    XLSX.utils.book_append_sheet(wb, wsVits, "Predictions");
+
+    XLSX.writeFile(wb, "vitamin_assessment_report.xlsx");
+  };
+
   /* ================= RENDER ================= */
   return (
     <main className={styles.pageContainer}>
@@ -214,6 +303,63 @@ export default function VitaminDeficiencyPage() {
           drug pair combinations to predict possible systemic vitamin depletions.
         </p>
       </div>
+
+      {/* ===== PATIENT SNAPSHOT CARD ===== */}
+      {user && (
+        <div className={styles.snapshotCard}>
+          {/* Card header */}
+          <div className={styles.snapshotHeader}>
+            <div className={styles.snapshotIconWrap}>
+              {userProfile?.photoURL ? (
+                <img src={userProfile.photoURL} alt="avatar" className={styles.snapshotAvatarImg} />
+              ) : (
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={styles.snapshotIcon}>
+                  <path fillRule="evenodd" d="M7.5 6a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM3.751 20.105a8.25 8.25 0 0116.498 0 .75.75 0 01-.437.695A18.683 18.683 0 0112 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 01-.437-.695z" clipRule="evenodd" />
+                </svg>
+              )}
+            </div>
+            <div>
+              <h2 className={styles.snapshotTitle}>Patient Snapshot</h2>
+              <p className={styles.snapshotSubtitle}>Your profile details from account</p>
+            </div>
+          </div>
+
+          {/* Fields grid */}
+          <div className={styles.snapshotGrid}>
+            <div className={styles.snapshotField}>
+              <label className={styles.snapshotLabel}>First Name</label>
+              <div className={styles.snapshotValue}>
+                {userProfile?.firstName || <span className={styles.snapshotEmpty}>Not set</span>}
+              </div>
+            </div>
+
+            <div className={styles.snapshotField}>
+              <label className={styles.snapshotLabel}>Last Name</label>
+              <div className={styles.snapshotValue}>
+                {userProfile?.lastName || <span className={styles.snapshotEmpty}>Not set</span>}
+              </div>
+            </div>
+
+            <div className={styles.snapshotField}>
+              <label className={styles.snapshotLabel}>Age</label>
+              <div className={styles.snapshotValue}>
+                {userProfile?.age
+                  ? <>{userProfile.age} <span className={styles.snapshotUnit}>years</span></>
+                  : <span className={styles.snapshotEmpty}>Not set</span>}
+              </div>
+            </div>
+
+            <div className={styles.snapshotField}>
+              <label className={styles.snapshotLabel}>Gender</label>
+              <div className={styles.snapshotValue}>
+                {userProfile?.gender
+                  ? userProfile.gender.charAt(0).toUpperCase() + userProfile.gender.slice(1)
+                  : <span className={styles.snapshotEmpty}>Not set</span>}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ===== MAIN CONTENT ===== */}
       <div className={styles.mainLayout}>
@@ -262,7 +408,7 @@ export default function VitaminDeficiencyPage() {
                     </ul>
                   )}
                 </div>
-                {drugs.length > 2 && (
+                {drugs.length > 5 && (
                   <button
                     onClick={() => removeDrug(i)}
                     className={styles.removeBtn}
@@ -392,16 +538,31 @@ export default function VitaminDeficiencyPage() {
       {results !== null && (
         <section className={styles.resultsSection}>
           <div className={styles.resultsHeader}>
-            <h3 className={styles.resultsTitle}>
-              {results.predictions.length > 0 ? (
-                <>Predicted Vulnerabilities ({results.predictions.length})</>
-              ) : (
-                "No Specific Vulnerabilities Detected"
-              )}
-            </h3>
-            <p className={styles.resultsSubtitle}>
-              Analysis complete for {results.total_pairs_analyzed} permutation(s) among {results.drugs.length} active prescriptions.
-            </p>
+            <div className={styles.resultsHeaderTop}>
+              <div>
+                <h3 className={styles.resultsTitle}>
+                  {results.predictions.length > 0 ? (
+                    <>Predicted Vulnerabilities ({results.predictions.length})</>
+                  ) : (
+                    "No Specific Vulnerabilities Detected"
+                  )}
+                </h3>
+                <p className={styles.resultsSubtitle}>
+                  Analysis complete for {results.total_pairs_analyzed} permutation(s) among {results.drugs.length} active prescriptions.
+                </p>
+              </div>
+
+              <div className={styles.exportControls}>
+                <button onClick={exportPDF} className={styles.exportPdfBtn} title="Export to PDF">
+                  <FileText size={18} />
+                  <span>PDF</span>
+                </button>
+                <button onClick={exportExcel} className={styles.exportExcelBtn} title="Export to Excel">
+                  <FileSpreadsheet size={18} />
+                  <span>Excel</span>
+                </button>
+              </div>
+            </div>
           </div>
 
           {results.predictions.length === 0 && (

@@ -97,6 +97,7 @@ const PolypharmacyPage = () => {
   const [error, setError] = useState<string>("");
   const [successMessage, setSuccessMessage] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [isLoadingVitaminDrugs, setIsLoadingVitaminDrugs] = useState<boolean>(false);
   const [existingDiseases, setExistingDiseases] = useState<string[]>([""]);
   const [activeDiseaseIndex, setActiveDiseaseIndex] = useState<number | null>(null);
   const [diseaseSuggestions, setDiseaseSuggestions] = useState<string[]>([]);
@@ -268,6 +269,41 @@ const PolypharmacyPage = () => {
       setSuccessMessage("Analysis cleared successfully.");
     } catch (error) {
       setError("Failed to clear analysis.");
+    }
+  };
+
+  const loadDrugsFromVitaminAssessment = async () => {
+    if (!user) {
+      setError("Please sign in to load drugs from Vitamin Assessment.");
+      return;
+    }
+    setError("");
+    setSuccessMessage("");
+    setIsLoadingVitaminDrugs(true);
+    try {
+      const response = await fetch(`${API_BASE || "http://localhost:5000"}/api/vitamin-deficiency/assessment?userId=${user.uid}`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data && data.inputDrugs && data.inputDrugs.length > 0) {
+          const validDrugs = data.inputDrugs.filter((d: string) => d.trim().length > 0);
+          if (validDrugs.length > 0) {
+            // Merge valid drugs, removing empty slots, but keeping current valid ones if we wanted to merge.
+            // Requirement asks to "import patient drug ... using load drug button", setting the ones from vitamin assessment is simplest.
+            setDrugs(validDrugs);
+            setSuccessMessage("Drugs loaded successfully from Vitamin Deficiency Assessment.");
+          } else {
+            setError("No valid drugs found in your Vitamin Deficiency Assessment.");
+          }
+        } else {
+          setError("No drugs found in your Vitamin Deficiency Assessment.");
+        }
+      } else {
+        setError("Failed to fetch Vitamin Deficiency Assessment.");
+      }
+    } catch (err) {
+      setError("Error loading drugs from Vitamin Assessment.");
+    } finally {
+      setIsLoadingVitaminDrugs(false);
     }
   };
 
@@ -834,17 +870,38 @@ const PolypharmacyPage = () => {
                   </p>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={addDrugField}
-                disabled={drugs.length >= MAX_DRUGS}
-                className="flex items-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-600 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
-                  <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
-                </svg>
-                Add Drug ({drugs.length}/{MAX_DRUGS})
-              </button>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={loadDrugsFromVitaminAssessment}
+                  disabled={isLoadingVitaminDrugs || !user}
+                  className="flex items-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-medium text-blue-600 transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50"
+                  title="Import from Vitamin Deficiency Assessment"
+                >
+                  {isLoadingVitaminDrugs ? (
+                    <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                  ) : (
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+                      <path fillRule="evenodd" d="M3 10a.75.75 0 01.75-.75h10.638L10.23 5.29a.75.75 0 111.04-1.08l5.5 5.25a.75.75 0 010 1.08l-5.5 5.25a.75.75 0 11-1.04-1.08l4.158-3.96H3.75A.75.75 0 013 10z" clipRule="evenodd" />
+                    </svg>
+                  )}
+                  Load Drugs
+                </button>
+                <button
+                  type="button"
+                  onClick={addDrugField}
+                  disabled={drugs.length >= MAX_DRUGS}
+                  className="flex items-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-600 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+                    <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
+                  </svg>
+                  Add Drug ({drugs.length}/{MAX_DRUGS})
+                </button>
+              </div>
             </div>
 
             {/* Medication analysis image inline */}
