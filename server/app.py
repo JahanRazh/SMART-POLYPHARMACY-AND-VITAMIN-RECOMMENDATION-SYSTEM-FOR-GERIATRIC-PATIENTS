@@ -10,9 +10,16 @@ from routes.occupation_route import occupation_bp
 from routes.advice_route import advice_bp
 
 from db import get_db
+from models.MealPlan.meal_logic import initialize_system
 
 app = Flask(__name__)
 CORS(app)
+
+# Preload heavy AI models & datasets so the first request isn't slow
+try:
+    initialize_system()
+except Exception as e:
+    print(f"⚠️ Warning: Could not preload AI: {e}")
 
 # Register blueprints
 app.register_blueprint(polypharmacy_bp)
