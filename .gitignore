@@ -31,7 +31,14 @@ yarn-error.log*
 .pnpm-debug.log*
 
 # env files (can opt-in for committing if needed)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.server.env
 
+server/.env
 
 # vercel
 .vercel
@@ -74,3 +81,5 @@ __pycache__/
 # Secrets/credentials
 serviceAccountKey.json
 
+server/.env
+server/start_flask_with_api_key.py

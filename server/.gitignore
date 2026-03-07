@@ -19,3 +19,5 @@ __pycache__/
 # Secrets/credentials
 serviceAccountKey.json
 
+server/.env
+server/start_flask_with_api_key.py
