@@ -22,3 +22,4 @@ serviceAccountKey.json
 
 start_flask_with_api_key.py
 env
+start_flask.bat
