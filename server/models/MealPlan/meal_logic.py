@@ -15,7 +15,6 @@ import warnings
 # Suppress harmless sklearn warning about feature names
 warnings.filterwarnings("ignore", message="X does not have valid feature names")
 
-print("Smart Meal Planner Starting...")
 
 # ==================================================
 # PATHS
@@ -37,7 +36,6 @@ def load_dataset():
     if not os.path.exists(CSV_PATH):
         raise FileNotFoundError(f"food.csv not found at {CSV_PATH}")
     
-    print("Loading dataset: food.csv")
     df = pd.read_csv(CSV_PATH)
     
     nutrient_cols = [
@@ -61,7 +59,6 @@ def load_dataset():
     )
     df["Calories"] = df["Calories"].fillna(0)
     
-    print(f"Dataset loaded and cleaned: {len(df)} foods")
     return df
 
 # ==================================================
@@ -107,52 +104,53 @@ def train_and_save_model():
     print("New model files saved!")
 
 # ==================================================
-# LOAD DATA & MODEL
+# AI SCORING (VECTORIZED BATCH)
 # ==================================================
-df = load_dataset()
-
-if not (os.path.exists(MODEL_PATH) and os.path.exists(SCALER_PATH)):
-    train_and_save_model()
-else:
-    try:
-        with open(MODEL_PATH, "rb") as f:
-            vitamin_model = pickle.load(f)
-        with open(SCALER_PATH, "rb") as f:
-            scaler = pickle.load(f)
-        print("Existing AI model loaded")
-    except Exception as e:
-        print(f"Model load failed ({e}) – retraining...")
-        train_and_save_model()
-
-# ==================================================
-# AI SCORING – No warning
-# ==================================================
-def ai_food_score(row):
+def batch_ai_food_score(data_df):
     if vitamin_model is None or scaler is None:
-        return 0.6
+        return [0.6] * len(data_df)
     
-    feature_values = np.array([
-        row["Data.Carbohydrate"], row["Data.Protein"], row["Data.Fat.Total Lipid"],
-        row["Data.Sugar Total"], row["Data.Major Minerals.Sodium"],
-        row["Data.Fiber"], row["Data.Cholesterol"], row["Calories"]
-    ]).reshape(1, -1)
-    
-    feature_df = pd.DataFrame(
-        feature_values,
-        columns=[
-            "Data.Carbohydrate", "Data.Protein", "Data.Fat.Total Lipid",
-            "Data.Sugar Total", "Data.Major Minerals.Sodium",
-            "Data.Fiber", "Data.Cholesterol", "Calories"
-        ]
-    )
+    features = [
+        "Data.Carbohydrate", "Data.Protein", "Data.Fat.Total Lipid",
+        "Data.Sugar Total", "Data.Major Minerals.Sodium",
+        "Data.Fiber", "Data.Cholesterol", "Calories"
+    ]
     
     try:
-        scaled = scaler.transform(feature_df)
-        return float(vitamin_model.predict_proba(scaled)[0][1])
-    except:
-        return 0.5
+        scaled = scaler.transform(data_df[features])
+        probs = vitamin_model.predict_proba(scaled)[:, 1]
+        return probs
+    except Exception as e:
+        print("Batch AI Scoring failed:", e)
+        return [0.5] * len(data_df)
 
-df["ai_score"] = df.apply(ai_food_score, axis=1)
+# ==================================================
+# LOAD DATA & MODEL (LAZY LOADING)
+# ==================================================
+_system_initialized = False
+
+def initialize_system():
+    global df, vitamin_model, scaler, _system_initialized
+    if _system_initialized:
+        return
+
+    df = load_dataset()
+
+    if not (os.path.exists(MODEL_PATH) and os.path.exists(SCALER_PATH)):
+        train_and_save_model()
+    else:
+        try:
+            with open(MODEL_PATH, "rb") as f:
+                vitamin_model = pickle.load(f)
+            with open(SCALER_PATH, "rb") as f:
+                scaler = pickle.load(f)
+        except Exception as e:
+            print(f"Model load failed ({e}) – retraining...")
+            train_and_save_model()
+
+    # Vectorized scoring takes milliseconds instead of seconds
+    df["ai_score"] = batch_ai_food_score(df)
+    _system_initialized = True
 
 # ==================================================
 # FILTER FOODS
@@ -163,6 +161,20 @@ def filter_foods(patient_data, active_conditions):
     
     restrictions = patient_data.get("dietaryRestrictions", {})
     preferences = patient_data.get("preferences", {})
+    
+    # Preferred foods boost
+    preferred_foods = preferences.get("preferredFoods", "")
+
+    if preferred_foods:
+        preferred_list = [f.strip().lower() for f in preferred_foods.split(",") if f.strip()]
+        
+        for food in preferred_list:
+            mask = filtered["Description"].str.lower().str.contains(food, na=False)
+            
+            # Give massive priority boost
+            filtered.loc[mask, "ai_score"] += 1000
+        
+        print("Preferred foods prioritized:", preferred_list)
     
     if restrictions.get("vegan", False) or restrictions.get("vegetarian", False):
         animal_keywords = ["milk", "yogurt", "cheese", "butter", "egg", "fish", "meat", "chicken", "beef", "pork", "tuna", "salmon", "honey"]
@@ -209,7 +221,7 @@ def filter_foods(patient_data, active_conditions):
 def generate_daily_plan(filtered_df, seed=42, calorie_min=1800, calorie_max=2200):
     random.seed(seed)
     if len(filtered_df) < 5:
-        return ["Not enough suitable foods"], 0
+        return {"breakfast": [], "lunch": [], "dinner": ["Not enough suitable foods"]}, 0
     
     foods = filtered_df.nlargest(80, "ai_score").sample(n=min(50, len(filtered_df)), random_state=seed)
     
@@ -231,14 +243,19 @@ def generate_daily_plan(filtered_df, seed=42, calorie_min=1800, calorie_max=2200
     
     status = prob.solve(PULP_CBC_CMD(msg=0, timeLimit=8))
     
+    def format_meal(row, multiplier=1.0):
+        grams = int(100 * multiplier)
+        kcal = int(row['Calories'] * multiplier)
+        name = row['Description']
+        name = name[:57] + "..." if len(name) > 60 else name
+        return f"• {name} - {grams}g (~{kcal} kcal)"
+
     if LpStatus[status] != "Optimal":
         fallback = foods.nlargest(6, "ai_score")
-        plan = []
-        for _, row in fallback.iterrows():
-            plan.append(f"• {row['Description'][:60]} - 150g (~{int(row['Calories'] * 1.5)} kcal)")
-        return plan, int((calorie_min + calorie_max) / 2)
+        plan_items = [format_meal(row, 1.5) for _, row in fallback.iterrows()]
+        return plan_items, int((calorie_min + calorie_max) / 2)
     
-    plan = []
+    plan_items = []
     total_cal = 0
     for i in x:
         qty = value(x[i])
@@ -247,15 +264,23 @@ def generate_daily_plan(filtered_df, seed=42, calorie_min=1800, calorie_max=2200
             kcal = int(foods.iloc[i]["Calories"] * qty)
             name = foods.iloc[i]["Description"]
             name = name[:57] + "..." if len(name) > 60 else name
-            plan.append(f"• {name} - {grams}g (~{kcal} kcal)")
+            plan_items.append(f"• {name} - {grams}g (~{kcal} kcal)")
             total_cal += kcal
+            
+    # Need at least 3 items
+    while len(plan_items) < 3:
+        fallback_item = foods.sample(1).iloc[0]
+        plan_items.append(format_meal(fallback_item, 1.0))
+        total_cal += int(fallback_item['Calories'])
     
-    return plan[:7], int(total_cal)
+    return plan_items, int(total_cal)
 
 # ==================================================
 # MAIN FUNCTION – Now uses BMI to adjust calories and give advice
 # ==================================================
 def generate_full_meal_plan(patient_data):
+    initialize_system()
+    
     basic = patient_data.get("basicProfile", {})
     medical = patient_data.get("medicalConditions", {})
     vitamin_defs = patient_data.get("vitaminDeficiencies", [])
@@ -289,7 +314,7 @@ def generate_full_meal_plan(patient_data):
         name = vd.get("name", "").lower()
         if "vitamin a" in name: active_conditions.append("vitamin_a_deficiency")
         if "vitamin c" in name: active_conditions.append("vitamin_c_deficiency")
-    
+
     foods = filter_foods(patient_data, active_conditions)
     
     # Extra fiber boost for overweight/obese patients
@@ -302,9 +327,24 @@ def generate_full_meal_plan(patient_data):
             "error": f"Too few suitable foods found ({len(foods)}). Please relax some restrictions."
         }
     
+    # Automatically determine duration based on vitamin deficiency levels
+    has_severe = any(vd.get("level", "") == "Severe" for vd in vitamin_defs)
+    has_moderate = any(vd.get("level", "") == "Moderate" for vd in vitamin_defs)
+    
+    if has_severe:
+        num_days = 180
+        duration_label = "6 Months"
+    elif has_moderate:
+        num_days = 90
+        duration_label = "3 Months"
+    else:
+        num_days = 30
+        duration_label = "1 Month"
+
     options = []
-    for option_id in range(1, 4):
-        weekly = {}
+    for option_id in range(1, 2):
+        # Generate 7 base days
+        base_weekly_plan = {}
         for day in range(1, 8):
             meals, cal = generate_daily_plan(
                 foods, 
@@ -312,11 +352,18 @@ def generate_full_meal_plan(patient_data):
                 calorie_min=calorie_min,
                 calorie_max=calorie_max
             )
-            weekly[f"Day {day}"] = {"meals": meals, "total_calories": cal}
+            base_weekly_plan[day] = {"meals": meals, "total_calories": cal}
+            
+        # Loop the 7 base days until `num_days` is reached
+        full_plan = {}
+        for day in range(1, num_days + 1):
+            base_day = ((day - 1) % 7) + 1
+            full_plan[f"Day {day}"] = base_weekly_plan[base_day]
+            
         options.append({
             "optionId": option_id,
             "name": f"Plan {option_id} - Optimized for {bmi_category}",
-            "weeklyPlan": weekly
+            "weeklyPlan": full_plan
         })
     
     return {
@@ -328,6 +375,7 @@ def generate_full_meal_plan(patient_data):
         "daily_calorie_range": f"{calorie_min}–{calorie_max} kcal",
         "conditions": active_conditions,
         "suitable_foods_count": len(foods),
+        "plan_duration": duration_label,
         "mealPlanOptions": options
     }
 

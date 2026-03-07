@@ -1,0 +1,24 @@
+============================================================
+Adverse Drug Event Model Evaluation Report
+============================================================
+
+Data file:   H:\SLIIT Campus\Testing ML\Data\Adverse Drug Event.csv
+Total rows:  100000
+Train size:  80000
+Test size:   20000
+
+Test Accuracy: 69.39%
+
+Classification Report:
+                        precision    recall  f1-score   support
+
+Elevated liver enzymes       0.68      0.73      0.70      4766
+      Heart arrhythmia       0.69      0.71      0.70      4998
+        Kidney failure       0.70      0.67      0.69      5150
+        Liver toxicity       0.69      0.67      0.68      5086
+
+              accuracy                           0.69     20000
+             macro avg       0.69      0.69      0.69     20000
+          weighted avg       0.69      0.69      0.69     20000
+
+============================================================
