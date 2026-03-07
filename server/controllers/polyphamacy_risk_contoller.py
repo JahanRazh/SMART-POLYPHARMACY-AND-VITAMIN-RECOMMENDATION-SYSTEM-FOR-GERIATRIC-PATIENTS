@@ -108,6 +108,7 @@ def analyze_polypharmacy():
         ade_predictions = predict_adverse_events(
             drugs=sanitized_drugs,
             age=age,
+            gender=gender,
             diseases=sanitized_diseases,
         )
 

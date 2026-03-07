@@ -2,23 +2,27 @@
 Adverse Drug Event Model Evaluation Report
 ============================================================
 
-Data file:   H:\SLIIT Campus\Testing ML\Data\Adverse Drug Event.csv
-Total rows:  100000
-Train size:  80000
-Test size:   20000
+Data file:   H:\SLIIT Campus\Research Project\SMART-POLYPHARMACY-AND-VITAMIN-RECOMMENDATION-SYSTEM-FOR-GERIATRIC-PATIENTS\server\Data\Adverse Drug Event.csv
+Total rows:  250000
+Train size:  200000
+Test size:   50000
 
-Test Accuracy: 69.39%
+Test Accuracy: 67.02%
 
 Classification Report:
                         precision    recall  f1-score   support
 
-Elevated liver enzymes       0.68      0.73      0.70      4766
-      Heart arrhythmia       0.69      0.71      0.70      4998
-        Kidney failure       0.70      0.67      0.69      5150
-        Liver toxicity       0.69      0.67      0.68      5086
+Elevated liver enzymes       0.60      0.58      0.59      6647
+           GI bleeding       0.71      0.69      0.70      6811
+      Heart arrhythmia       0.67      0.62      0.64      8117
+          Hypoglycemia       0.79      0.68      0.73      3913
+          Hyponatremia       0.69      0.71      0.70      6185
+        Kidney failure       0.68      0.66      0.67      7033
+        Liver toxicity       0.64      0.71      0.67      5961
+       Muscle myopathy       0.65      0.77      0.70      5333
 
-              accuracy                           0.69     20000
-             macro avg       0.69      0.69      0.69     20000
-          weighted avg       0.69      0.69      0.69     20000
+              accuracy                           0.67     50000
+             macro avg       0.68      0.68      0.67     50000
+          weighted avg       0.67      0.67      0.67     50000
 
 ============================================================
