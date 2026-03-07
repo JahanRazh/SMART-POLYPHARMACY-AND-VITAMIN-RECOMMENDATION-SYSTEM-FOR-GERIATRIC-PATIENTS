@@ -12,24 +12,40 @@ const MealPlanResultPage = () => {
     const result = sessionStorage.getItem("mealPlanResult");
     const profile = sessionStorage.getItem("patientProfile");
 
-    if (result) {
+    if (result && profile) {
       try {
         const parsedResult = JSON.parse(result);
-        console.log("Parsed mealPlanResult:", parsedResult);
-        setMealResult(parsedResult);
-      } catch (error) {
-        console.error("Error parsing mealPlanResult:", error);
-      }
-    }
-
-    if (profile) {
-      try {
         const parsedProfile = JSON.parse(profile);
-        console.log("Parsed patientProfile:", parsedProfile);
-        setPatient(parsedProfile);
+        
+        // Extract clinical data from Profile (Conditions, Restrictions, Deficiencies)
+        const conditions = Object.keys(parsedProfile.medicalConditions || {})
+          .filter(k => k !== 'other' && parsedProfile.medicalConditions[k]);
+        if (parsedProfile.medicalConditions?.other) conditions.push(parsedProfile.medicalConditions.other);
+
+        const restrictions = Object.keys(parsedProfile.dietaryRestrictions || {})
+          .filter(k => k !== 'other' && parsedProfile.dietaryRestrictions[k]);
+        if (parsedProfile.dietaryRestrictions?.other) restrictions.push(parsedProfile.dietaryRestrictions.other);
+
+        // Merge everything into a unified object for MealPlanResult
+        const mergedResult = {
+          ...parsedResult,
+          basicProfile: parsedProfile.basicProfile,
+          conditions: conditions,
+          dietary_restrictions: restrictions,
+          vitamin_deficiencies: parsedProfile.vitaminDeficiencies || [],
+          weight: parsedProfile.basicProfile?.weight,
+          bmi: parsedProfile.basicProfile?.bmi,
+          bmi_category: parsedProfile.basicProfile?.bmiLevel
+        };
+
+        console.log("Unified Meal Result:", mergedResult);
+        setMealResult(mergedResult);
+        setPatient(parsedProfile.basicProfile);
       } catch (error) {
-        console.error("Error parsing patientProfile:", error);
+        console.error("Error synchronizing meal results:", error);
       }
+    } else if (result) {
+      setMealResult(JSON.parse(result));
     }
 
     setLoading(false);
@@ -72,51 +88,6 @@ const MealPlanResultPage = () => {
   return (
     <div className="min-h-screen bg-gray-100 p-4 md:p-8">
       <div className="max-w-7xl mx-auto">
-        {/* PATIENT DETAILS */}
-        <div className="bg-white p-6 rounded-xl shadow mb-8">
-          <h2 className="text-2xl font-bold mb-4 text-gray-800">
-            Patient Details
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <p className="text-sm text-blue-600 font-medium">Name</p>
-              <p className="text-lg font-semibold text-gray-800">
-                {patient?.name || "Not provided"}
-              </p>
-            </div>
-            <div className="bg-green-50 p-4 rounded-lg">
-              <p className="text-sm text-green-600 font-medium">Age</p>
-              <p className="text-lg font-semibold text-gray-800">
-                {patient?.age || "Not provided"}
-              </p>
-            </div>
-            <div
-              className={`p-4 rounded-lg ${
-                patient?.bmiLevel === "Normal"
-                  ? "bg-green-50"
-                  : patient?.bmiLevel === "Overweight" ||
-                    patient?.bmiLevel === "Obese"
-                  ? "bg-yellow-50"
-                  : "bg-blue-50"
-              }`}
-            >
-              <p className="text-sm font-medium">BMI</p>
-              <p className="text-lg font-semibold text-gray-800">
-                {patient?.bmi || "N/A"}
-                {patient?.bmiLevel && ` (${patient.bmiLevel})`}
-              </p>
-            </div>
-            <div className="bg-purple-50 p-4 rounded-lg">
-              <p className="text-sm text-purple-600 font-medium">
-                Activity Level
-              </p>
-              <p className="text-lg font-semibold text-gray-800">
-                {patient?.activityLevel || "Not provided"}
-              </p>
-            </div>
-          </div>
-        </div>
-
         {/* MEAL PLAN */}
         <MealPlanResult result={mealResult} />
       </div>

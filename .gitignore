@@ -53,3 +53,24 @@ __pycache__/
 .vscode/
 .qodo
 server/Data/geriatric_non_medical_advice_dataset.csv
+
+# Virtual environments
+venv/
+env/
+.venv/
+emotion_env/
+.emotion_env/
+
+
+# Python cache.
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# VS Code settings
+.vscode/
+
+# Secrets/credentials
+serviceAccountKey.json
+
