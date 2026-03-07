@@ -417,7 +417,8 @@ const PatientAssessmentForm = () => {
     const userEmail = user?.email || userProfile?.email || "";
 
     try {
-      // Get mental health assessment
+      // Step 1: Get mental health assessment
+      console.log("📡 Step 1/3: Calling mental health assessment endpoint...");
       const assessmentRes = await fetch("http://127.0.0.1:5000/full_assessment", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -434,15 +435,21 @@ const PatientAssessmentForm = () => {
         }),
       });
 
-      const assessmentData = await assessmentRes.json();
-      
       if (!assessmentRes.ok) {
-        throw new Error(assessmentData.error || "Assessment failed");
+        const errorData = await assessmentRes.json();
+        console.error("❌ Assessment endpoint failed:", errorData);
+        throw new Error(
+          `Mental health assessment failed (${assessmentRes.status}): ${errorData.error || assessmentRes.statusText}`
+        );
       }
+
+      const assessmentData = await assessmentRes.json();
+      console.log("✅ Step 1 complete: Mental health level =", assessmentData.mental_health_level);
 
       setMentalHealthLevel(assessmentData.mental_health_level);
 
-      // Save complete data including emotion and email
+      // Step 2: Prepare complete data
+      console.log("📦 Step 2/3: Preparing complete patient data...");
       const completeData = {
         ...formData,
         email: userEmail,
@@ -453,8 +460,10 @@ const PatientAssessmentForm = () => {
         timestamp: new Date().toISOString(),
       };
 
-      console.log("💾 Saving data:", completeData);
+      console.log("💾 Complete data to save:", completeData);
 
+      // Step 3: Save patient data
+      console.log("📡 Step 3/3: Saving patient data to database...");
       const saveRes = await fetch("/api/save_patient_data", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -462,30 +471,59 @@ const PatientAssessmentForm = () => {
       });
 
       if (!saveRes.ok) {
-        throw new Error("Failed to save patient data");
+        const errorData = await saveRes.json().catch(() => ({}));
+        console.error("❌ Save endpoint failed:", errorData);
+        throw new Error(
+          `Failed to save patient data (${saveRes.status}): ${errorData.error || saveRes.statusText}`
+        );
       }
 
       const saveJson = await saveRes.json();
+      console.log("✅ Step 3 complete: Patient assessment saved with ID:", saveJson.id);
 
-      setSuccessMessage("Patient assessment completed successfully!");
+      setSuccessMessage("Patient assessment completed successfully! Redirecting...");
 
       // Redirect to patientAdvice page after successful submission.
       // Include email in query so server can lookup patient_assessment by email
-      try {
-        const patientId = saveJson?.id || null;
-        const emailParam = userEmail ? `&email=${encodeURIComponent(userEmail)}` : "";
-        const target = patientId
-          ? `/Pages/patientAdvice?patientId=${encodeURIComponent(patientId)}${emailParam}`
-          : `/Pages/patientAdvice${emailParam ? `?email=${encodeURIComponent(userEmail)}` : ""}`;
+      const patientId = saveJson?.id || null;
+      const emailParam = userEmail ? `&email=${encodeURIComponent(userEmail)}` : "";
+      const target = patientId
+        ? `/Pages/patientAdvice?patientId=${encodeURIComponent(patientId)}${emailParam}`
+        : `/Pages/patientAdvice${emailParam ? `?email=${encodeURIComponent(userEmail)}` : ""}`;
+      
+      console.log("🔄 Redirecting to:", target);
+      
+      // Wait a moment for user to see success message
+      setTimeout(() => {
         router.push(target);
-      } catch (err) {
-        console.warn("Navigation failed:", err);
-      }
+      }, 1000);
       
     } catch (error: any) {
-      console.error("❌ Error:", error);
-      setError(error.message || "Failed to submit data. Please try again.");
-    } finally {
+      console.error("❌ Error details:", error);
+      
+      let displayError = error.message || "Failed to submit data. Please try again.";
+      
+      // Add helpful troubleshooting info
+      if (error.message.includes("Failed to fetch") || error.message.includes("NetworkError")) {
+        displayError = `Network Error: Cannot connect to the server. Please check:\n` +
+          `1. Flask server is running (http://127.0.0.1:5000)\n` +
+          `2. Next.js dev server is running (http://localhost:3000)\n` +
+          `3. You have internet connection\n\n` +
+          `Original error: ${error.message}`;
+      } else if (error.message.includes("Assessment failed")) {
+        displayError = `Mental health assessment failed. Please check that:\n` +
+          `1. All lifestyle fields are filled with numbers 0-24\n` +
+          `2. Flask server is running\n\n` +
+          `Error: ${error.message}`;
+      } else if (error.message.includes("save patient data")) {
+        displayError = `Database save failed. Please check that:\n` +
+          `1. Next.js API is running\n` +
+          `2. Firebase credentials are configured\n` +
+          `3. Email is provided\n\n` +
+          `Error: ${error.message}`;
+      }
+      
+      setError(displayError);
       setIsSubmitting(false);
     }
   };
