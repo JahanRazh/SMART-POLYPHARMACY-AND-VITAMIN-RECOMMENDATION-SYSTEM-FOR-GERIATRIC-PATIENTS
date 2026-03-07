@@ -35,24 +35,32 @@ def train_ade_model():
     # ---- Load Data ----
     print(f"\nLoading data from {DATA_FILE} ...")
     df = pd.read_csv(DATA_FILE, encoding="utf-8-sig")
-    df = df.dropna(subset=["Drug", "Age", "Existing Diseases", "Predicted_ADE"])
+    df = df.dropna(subset=["Drug", "Age", "Gender", "Existing Diseases", "Predicted_ADE"])
     print(f"  Rows: {len(df):,}")
 
     # ---- Encode Categorical Features ----
     drug_encoder = LabelEncoder()
     disease_encoder = LabelEncoder()
+    age_encoder = LabelEncoder()
+    gender_encoder = LabelEncoder()
     target_encoder = LabelEncoder()
+    
 
     df["Drug_enc"] = drug_encoder.fit_transform(df["Drug"].astype(str))
     df["Disease_enc"] = disease_encoder.fit_transform(df["Existing Diseases"].astype(str))
+    df["Age_enc"] = age_encoder.fit_transform(df["Age"].astype(str))
+    df["Gender_enc"] = gender_encoder.fit_transform(df["Gender"].astype(str))
     df["ADE_enc"] = target_encoder.fit_transform(df["Predicted_ADE"].astype(str))
+    
 
     print(f"\n  Drugs:    {list(drug_encoder.classes_)}")
+    print(f"  Ages:     {list(age_encoder.classes_)}")
+    print(f"  Genders:  {list(gender_encoder.classes_)}")
     print(f"  Diseases: {list(disease_encoder.classes_)}")
     print(f"  ADEs:     {list(target_encoder.classes_)}")
 
     # ---- Build feature matrix ----
-    X = df[["Drug_enc", "Age", "Disease_enc"]].values
+    X = df[["Drug_enc", "Age_enc", "Gender_enc", "Disease_enc"]].values
     y = df["ADE_enc"].values
 
     # ---- Train / Test split (80/20) ----
@@ -116,6 +124,10 @@ def train_ade_model():
         pickle.dump(disease_encoder, f)
     with open(os.path.join(MODEL_DIR, "target_encoder.pkl"), "wb") as f:
         pickle.dump(target_encoder, f)
+    with open(os.path.join(MODEL_DIR, "age_encoder.pkl"), "wb") as f:
+        pickle.dump(age_encoder, f)
+    with open(os.path.join(MODEL_DIR, "gender_encoder.pkl"), "wb") as f:
+        pickle.dump(gender_encoder, f)
 
     metadata = {
         "data_file": DATA_FILE,
