@@ -38,6 +38,8 @@ yarn-error.log*
 .env.production.local
 .server.env
 
+server/.env
+
 # vercel
 .vercel
 
@@ -79,3 +81,5 @@ __pycache__/
 # Secrets/credentials
 serviceAccountKey.json
 
+server/.env
+server/start_flask_with_api_key.py
