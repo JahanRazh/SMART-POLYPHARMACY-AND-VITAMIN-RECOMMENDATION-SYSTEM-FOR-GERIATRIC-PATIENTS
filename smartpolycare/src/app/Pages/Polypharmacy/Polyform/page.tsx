@@ -97,6 +97,7 @@ const PolypharmacyPage = () => {
   const [error, setError] = useState<string>("");
   const [successMessage, setSuccessMessage] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [isLoadingVitaminDrugs, setIsLoadingVitaminDrugs] = useState<boolean>(false);
   const [existingDiseases, setExistingDiseases] = useState<string[]>([""]);
   const [activeDiseaseIndex, setActiveDiseaseIndex] = useState<number | null>(null);
   const [diseaseSuggestions, setDiseaseSuggestions] = useState<string[]>([]);
@@ -271,6 +272,41 @@ const PolypharmacyPage = () => {
     }
   };
 
+  const loadDrugsFromVitaminAssessment = async () => {
+    if (!user) {
+      setError("Please sign in to load drugs from Vitamin Assessment.");
+      return;
+    }
+    setError("");
+    setSuccessMessage("");
+    setIsLoadingVitaminDrugs(true);
+    try {
+      const response = await fetch(`${API_BASE || "http://localhost:5000"}/api/vitamin-deficiency/assessment?userId=${user.uid}`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data && data.inputDrugs && data.inputDrugs.length > 0) {
+          const validDrugs = data.inputDrugs.filter((d: string) => d.trim().length > 0);
+          if (validDrugs.length > 0) {
+            // Merge valid drugs, removing empty slots, but keeping current valid ones if we wanted to merge.
+            // Requirement asks to "import patient drug ... using load drug button", setting the ones from vitamin assessment is simplest.
+            setDrugs(validDrugs);
+            setSuccessMessage("Drugs loaded successfully from Vitamin Deficiency Assessment.");
+          } else {
+            setError("No valid drugs found in your Vitamin Deficiency Assessment.");
+          }
+        } else {
+          setError("No drugs found in your Vitamin Deficiency Assessment.");
+        }
+      } else {
+        setError("Failed to fetch Vitamin Deficiency Assessment.");
+      }
+    } catch (err) {
+      setError("Error loading drugs from Vitamin Assessment.");
+    } finally {
+      setIsLoadingVitaminDrugs(false);
+    }
+  };
+
   const handleDrugChange = async (index: number, value: string) => {
     setDrugs((prev) => prev.map((drug, idx) => (idx === index ? value : drug)));
 
@@ -420,69 +456,150 @@ const PolypharmacyPage = () => {
   const severitySummary = analysis?.severitySummary || {};
 
   return (
-    <div className="min-h-screen bg-gray-50 py-10">
-      <div className="mx-auto max-w-5xl rounded-3xl bg-white p-8 shadow-xl">
-        <div className="mb-8">
-          <div className="flex flex-wrap gap-4 mb-6">
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 via-indigo-50/30 to-white">
+      {/* ── HERO BANNER ── */}
+      <div className="relative overflow-hidden bg-gradient-to-r from-indigo-600 via-indigo-700 to-violet-700">
+        {/* Background image with overlay */}
+        <div className="absolute inset-0">
+          <img
+            src="/clinical_hero.png"
+            alt="Clinical environment"
+            className="h-full w-full object-cover opacity-20"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-indigo-900/80 via-indigo-800/70 to-violet-900/80" />
+        </div>
+
+        <div className="relative container mx-auto max-w-6xl px-6 py-12">
+          <div className="flex flex-wrap gap-3 mb-6">
             <Link
               href="/Pages/Polypharmacy/Homepage"
-              className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-600 shadow-sm transition-all hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-600"
+              className="inline-flex items-center gap-2 rounded-lg border border-white/20 bg-white/10 backdrop-blur-sm px-4 py-2 text-sm font-medium text-white/90 transition-all hover:bg-white/20"
             >
-              <span>←</span> Polypharmacy Risk Analysis Hub
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+                <path fillRule="evenodd" d="M17 10a.75.75 0 01-.75.75H5.612l4.158 3.96a.75.75 0 11-1.04 1.08l-5.5-5.25a.75.75 0 010-1.08l5.5-5.25a.75.75 0 111.04 1.08L5.612 9.25H16.25A.75.75 0 0117 10z" clipRule="evenodd" />
+              </svg>
+              Back to Overview
             </Link>
             {analysis && (
               <Link
                 href="/Pages/Polypharmacy/DashBoard"
-                className="inline-flex items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-medium text-indigo-700 shadow-sm transition-all hover:bg-indigo-100"
+                className="inline-flex items-center gap-2 rounded-lg border border-emerald-400/30 bg-emerald-500/20 backdrop-blur-sm px-4 py-2 text-sm font-medium text-emerald-100 transition-all hover:bg-emerald-500/30"
               >
-                <span>📊</span> View Last Risk Breakdown
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+                  <path d="M15.5 2A1.5 1.5 0 0014 3.5v13a1.5 1.5 0 001.5 1.5h1a1.5 1.5 0 001.5-1.5v-13A1.5 1.5 0 0016.5 2h-1zM9.5 6A1.5 1.5 0 008 7.5v9A1.5 1.5 0 009.5 18h1a1.5 1.5 0 001.5-1.5v-9A1.5 1.5 0 0010.5 6h-1zM3.5 10A1.5 1.5 0 002 11.5v5A1.5 1.5 0 003.5 18h1A1.5 1.5 0 006 16.5v-5A1.5 1.5 0 004.5 10h-1z" />
+                </svg>
+                View Risk Dashboard
               </Link>
             )}
           </div>
-          <p className="text-xs uppercase tracking-wide text-indigo-500">
-            Polypharmacy Risk
-          </p>
-          <h1 className="text-3xl font-bold text-gray-900">
-            Personalized Drug Interaction Checker
-          </h1>
-          <p className="mt-3 text-gray-600">
-            Our engine cross-checks every combination against the curated Drug
-            Interaction and highlights the severity in real time.
-          </p>
-        </div>
 
+          <div className="grid lg:grid-cols-2 gap-8 items-center">
+            <div>
+              <span className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-indigo-200">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                Polypharmacy Risk Assessment Form
+              </span>
+              <h1 className="mt-4 text-3xl font-bold text-white sm:text-4xl leading-tight">
+                Personalized Drug Interaction
+                <span className="block text-indigo-200">Analysis & Adverse Drug Event Prediction</span>
+              </h1>
+              <p className="mt-3 text-indigo-100/80 leading-relaxed max-w-lg">
+                Enter your patient details and medication list. Our ML-powered engine
+                cross-references every drug combination against a comprehensive knowledge
+                base of 200K+ interactions in real time.
+              </p>
+
+              {/* Quick info pills */}
+              <div className="mt-5 flex flex-wrap gap-2">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 border border-white/10 px-3 py-1.5 text-xs font-medium text-white/80">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5 text-emerald-400">
+                    <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
+                  </svg>
+                  Auto-fill from profile
+                </span>
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 border border-white/10 px-3 py-1.5 text-xs font-medium text-white/80">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5 text-amber-400">
+                    <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
+                  </svg>
+                  Smart drug suggestions
+                </span>
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 border border-white/10 px-3 py-1.5 text-xs font-medium text-white/80">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5 text-rose-400">
+                    <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
+                  </svg>
+                  ADE prediction
+                </span>
+              </div>
+            </div>
+
+            {/* Hero image card */}
+            <div className="hidden lg:block">
+              <div className="relative rounded-2xl overflow-hidden shadow-2xl shadow-black/20 border border-white/10">
+                <img
+                  src="/patient_care.png"
+                  alt="Doctor consulting with patient"
+                  className="w-full h-64 object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-indigo-900/60 to-transparent" />
+                <div className="absolute bottom-0 left-0 right-0 p-5">
+                  <p className="text-white/90 text-sm font-medium">Evidence-Based Clinical Support</p>
+                  <p className="text-indigo-200/70 text-xs mt-1">Designed for geriatric polypharmacy risk management</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── MAIN CONTENT ── */}
+      <div className="container mx-auto max-w-5xl px-6 py-10">
         {!user && (
-          <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-800">
+          <div className="mb-6 flex items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-800">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5 flex-shrink-0">
+              <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+            </svg>
             Please sign in to run a polypharmacy risk analysis.
           </div>
         )}
 
         {error && (
-          <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-red-700">
+          <div className="mb-6 flex items-center gap-3 rounded-2xl border border-red-200 bg-red-50 p-4 text-red-700">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5 flex-shrink-0">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" />
+            </svg>
             {error}
           </div>
         )}
 
         {successMessage && (
-          <div className="mb-6 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-700">
+          <div className="mb-6 flex items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-700">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5 flex-shrink-0">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" />
+            </svg>
             {successMessage}
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-8">
-          <section className="rounded-2xl border border-gray-100 bg-gray-50 p-6">
-            <div className="mb-4 flex items-center justify-between">
+          {/* ── PATIENT SNAPSHOT ── */}
+          <section className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
+            <div className="mb-5 flex items-start gap-4">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 flex-shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-6 w-6">
+                  <path fillRule="evenodd" d="M7.5 6a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM3.751 20.105a8.25 8.25 0 0116.498 0 .75.75 0 01-.437.695A18.683 18.683 0 0112 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 01-.437-.695z" clipRule="evenodd" />
+                </svg>
+              </div>
               <div>
-                <h2 className="text-lg font-semibold text-gray-900">
+                <h2 className="text-lg font-bold text-gray-900">
                   Patient Snapshot
                 </h2>
                 <p className="text-sm text-gray-500">
-                  We auto-fill what we know about you.
+                  We auto-fill from your profile. Update any field as needed.
                 </p>
               </div>
             </div>
 
-            <div className="mt-6 grid gap-4 md:grid-cols-2">
+            <div className="grid gap-4 md:grid-cols-2">
               <div>
                 <label className="block text-sm font-medium text-gray-600">
                   First Name
@@ -492,7 +609,7 @@ const PolypharmacyPage = () => {
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
                   placeholder="Enter first name"
-                  className="mt-1 w-full rounded-xl border border-gray-200 bg-white px-4 py-2 text-gray-900 focus:border-indigo-500 focus:outline-none"
+                  className="mt-1 w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-gray-900 transition-colors focus:border-indigo-500 focus:bg-white focus:outline-none"
                 />
               </div>
               <div>
@@ -504,7 +621,7 @@ const PolypharmacyPage = () => {
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
                   placeholder="Enter last name"
-                  className="mt-1 w-full rounded-xl border border-gray-200 bg-white px-4 py-2 text-gray-900 focus:border-indigo-500 focus:outline-none"
+                  className="mt-1 w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-gray-900 transition-colors focus:border-indigo-500 focus:bg-white focus:outline-none"
                 />
               </div>
               <div>
@@ -519,7 +636,7 @@ const PolypharmacyPage = () => {
                     setFullName(e.target.value);
                   }}
                   placeholder="Enter full name"
-                  className="mt-1 w-full rounded-xl border border-gray-200 bg-white px-4 py-2 text-gray-900 focus:border-indigo-500 focus:outline-none"
+                  className="mt-1 w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-gray-900 transition-colors focus:border-indigo-500 focus:bg-white focus:outline-none"
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -530,7 +647,7 @@ const PolypharmacyPage = () => {
                   <select
                     value={gender}
                     onChange={(e) => setGender(e.target.value)}
-                    className="mt-1 w-full rounded-xl border border-gray-200 bg-white px-4 py-2 text-gray-900 focus:border-indigo-500 focus:outline-none"
+                    className="mt-1 w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-gray-900 transition-colors focus:border-indigo-500 focus:bg-white focus:outline-none"
                   >
                     <option value="">Select gender</option>
                     <option value="male">Male</option>
@@ -546,12 +663,9 @@ const PolypharmacyPage = () => {
                     type="text"
                     value={age}
                     onChange={(e) => {
-                      // allow only numbers
                       const val = e.target.value;
                       if (/^\d*$/.test(val)) {
                         setAge(val);
-
-                        // Validation: Age must be between 1 and 120
                         if (val === "") {
                           setAgeError("Age is required");
                         } else if (Number(val) < 1) {
@@ -564,7 +678,7 @@ const PolypharmacyPage = () => {
                       }
                     }}
                     placeholder="Enter age"
-                    className={`mt-1 w-full rounded-xl border px-4 py-2 text-gray-900 focus:outline-none ${ageError ? "border-red-300 focus:border-red-500" : "border-gray-200 focus:border-indigo-500"
+                    className={`mt-1 w-full rounded-xl border px-4 py-2.5 text-gray-900 transition-colors focus:outline-none ${ageError ? "border-red-300 bg-red-50 focus:border-red-500" : "border-gray-200 bg-gray-50 focus:border-indigo-500 focus:bg-white"
                       }`}
                   />
                   {ageError && (
@@ -572,7 +686,17 @@ const PolypharmacyPage = () => {
                   )}
                 </div>
               </div>
-              <div className="mt-4 grid gap-4 md:grid-cols-2">
+            </div>
+
+            {/* Organ Function — separate visual block */}
+            <div className="mt-6 rounded-xl border border-purple-100 bg-purple-50/50 p-5">
+              <div className="mb-3 flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4 text-purple-600">
+                  <path d="M11.645 20.91l-.007-.003-.022-.012a15.247 15.247 0 01-.383-.218 25.18 25.18 0 01-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.714 3 7.688 3A5.5 5.5 0 0112 5.052 5.5 5.5 0 0116.313 3c2.973 0 5.437 2.322 5.437 5.25 0 3.925-2.438 7.111-4.739 9.256a25.175 25.175 0 01-4.244 3.17 15.247 15.247 0 01-.383.219l-.022.012-.007.004-.003.001a.752.752 0 01-.704 0l-.003-.001z" />
+                </svg>
+                <span className="text-sm font-semibold text-purple-800">Organ Function Assessment</span>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2">
                 <div>
                   <label className="block text-sm font-medium text-gray-600">
                     Liver Function (ALT/AST Level) *
@@ -581,7 +705,7 @@ const PolypharmacyPage = () => {
                     value={liverFunction}
                     onChange={(e) => setLiverFunction(e.target.value)}
                     required
-                    className="mt-1 w-full rounded-xl border border-gray-200 bg-white px-4 py-2 text-gray-900 focus:border-indigo-500 focus:outline-none"
+                    className="mt-1 w-full rounded-xl border border-purple-200 bg-white px-4 py-2.5 text-gray-900 transition-colors focus:border-purple-500 focus:outline-none"
                   >
                     <option value="">Select liver function level</option>
                     {liverFunctionOptions.map((option) => (
@@ -599,7 +723,7 @@ const PolypharmacyPage = () => {
                     value={kidneyFunction}
                     onChange={(e) => setKidneyFunction(e.target.value)}
                     required
-                    className="mt-1 w-full rounded-xl border border-gray-200 bg-white px-4 py-2 text-gray-900 focus:border-indigo-500 focus:outline-none"
+                    className="mt-1 w-full rounded-xl border border-purple-200 bg-white px-4 py-2.5 text-gray-900 transition-colors focus:border-purple-500 focus:outline-none"
                   >
                     <option value="">Select kidney function stage</option>
                     {kidneyFunctionOptions.map((option) => (
@@ -613,25 +737,36 @@ const PolypharmacyPage = () => {
             </div>
           </section>
 
-          <section className="rounded-2xl border border-gray-100 bg-gray-50 p-6">
-            <div className="mb-4 flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900">
-                  Existing Diseases
-                </h2>
-                <p className="text-sm text-gray-500">
-                  List any existing diseases or medical conditions.
-                </p>
+          {/* ── EXISTING DISEASES ── */}
+          <section className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
+            <div className="mb-5 flex items-start justify-between">
+              <div className="flex items-start gap-4">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-orange-50 text-orange-600 flex-shrink-0">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-6 w-6">
+                    <path fillRule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zM12.75 9a.75.75 0 00-1.5 0v2.25H9a.75.75 0 000 1.5h2.25V15a.75.75 0 001.5 0v-2.25H15a.75.75 0 000-1.5h-2.25V9z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-gray-900">
+                    Existing Conditions
+                  </h2>
+                  <p className="text-sm text-gray-500">
+                    Pre-existing diseases help predict adverse drug events more accurately.
+                  </p>
+                </div>
               </div>
               <button
                 type="button"
                 onClick={() => setExistingDiseases((prev) => [...prev, ""])}
-                className="rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-medium text-indigo-600 transition hover:bg-indigo-100"
+                className="flex items-center gap-1.5 rounded-xl border border-orange-200 bg-orange-50 px-4 py-2 text-sm font-medium text-orange-600 transition hover:bg-orange-100"
               >
-                + Add Disease
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+                  <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
+                </svg>
+                Add Condition
               </button>
             </div>
-            <div className="mt-4 space-y-3">
+            <div className="space-y-3">
               {existingDiseases.map((disease, index) => (
                 <div key={`disease-${index}`} className="flex gap-3">
                   <div className="relative flex-1">
@@ -656,7 +791,6 @@ const PolypharmacyPage = () => {
                           );
                           const data = await res.json().catch(() => null);
                           if (res.ok && data?.items) {
-                            // Filter out diseases already selected
                             const currentDiseases = existingDiseases.map(d => d.trim().toLowerCase());
                             const filtered = data.items.filter(
                               (item: string) => !currentDiseases.includes(item.toLowerCase())
@@ -671,18 +805,17 @@ const PolypharmacyPage = () => {
                       }}
                       onFocus={() => setActiveDiseaseIndex(index)}
                       onBlur={() => {
-                        // Delay to allow click on suggestion
                         setTimeout(() => setActiveDiseaseIndex(null), 150);
                       }}
-                      placeholder={`Disease ${index + 1}`}
-                      className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2 text-gray-900 focus:border-indigo-500 focus:outline-none"
+                      placeholder={`Condition ${index + 1}`}
+                      className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-gray-900 transition-colors focus:border-orange-400 focus:bg-white focus:outline-none"
                     />
                     {activeDiseaseIndex === index && diseaseSuggestions.length > 0 && (
                       <ul className="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-xl border border-gray-200 bg-white shadow-lg">
                         {diseaseSuggestions.map((suggestion) => (
                           <li
                             key={suggestion}
-                            className="cursor-pointer px-3 py-2 text-sm text-gray-800 hover:bg-indigo-50"
+                            className="cursor-pointer px-3 py-2 text-sm text-gray-800 hover:bg-orange-50"
                             onMouseDown={(e) => {
                               e.preventDefault();
                               setExistingDiseases((prev) =>
@@ -706,9 +839,11 @@ const PolypharmacyPage = () => {
                           prev.filter((_, idx) => idx !== index)
                         )
                       }
-                      className="h-fit rounded-xl border border-gray-200 bg-gray-50 px-4 py-2 text-sm text-gray-600 transition hover:bg-gray-100"
+                      className="h-fit rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-500 transition hover:bg-red-50 hover:text-red-500 hover:border-red-200"
                     >
-                      Remove
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+                        <path fillRule="evenodd" d="M8.75 1A2.75 2.75 0 006 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 10.23 1.482l.149-.022.841 10.518A2.75 2.75 0 007.596 19h4.807a2.75 2.75 0 002.742-2.53l.841-10.519.149.023a.75.75 0 00.23-1.482A41.03 41.03 0 0014 4.193V3.75A2.75 2.75 0 0011.25 1h-2.5zM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4zM8.58 7.72a.75.75 0 00-1.5.06l.3 7.5a.75.75 0 101.5-.06l-.3-7.5zm4.34.06a.75.75 0 10-1.5-.06l-.3 7.5a.75.75 0 101.5.06l.3-7.5z" clipRule="evenodd" />
+                      </svg>
                     </button>
                   )}
                 </div>
@@ -716,92 +851,163 @@ const PolypharmacyPage = () => {
             </div>
           </section>
 
+          {/* ── MEDICATION LIST ── */}
           <section className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900">
-                  Medication List
-                </h2>
-                <p className="text-sm text-gray-500">
-                  Add drugs you are currently taking use Format (ex; Conjugated
-                  estrogens).
-                </p>
+            <div className="mb-5 flex items-start justify-between">
+              <div className="flex items-start gap-4">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 flex-shrink-0">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-6 w-6">
+                    <path d="M11.644 1.59a.75.75 0 01.712 0l9.75 5.25a.75.75 0 010 1.32l-9.75 5.25a.75.75 0 01-.712 0l-9.75-5.25a.75.75 0 010-1.32l9.75-5.25z" />
+                    <path d="M3.265 10.602l7.668 4.129a2.25 2.25 0 002.134 0l7.668-4.13 1.37.739a.75.75 0 010 1.32l-9.75 5.25a.75.75 0 01-.71 0l-9.75-5.25a.75.75 0 010-1.32l1.37-.738z" />
+                  </svg>
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-gray-900">
+                    Medication List
+                  </h2>
+                  <p className="text-sm text-gray-500">
+                    Add all current medications. Use generic names (e.g., Conjugated estrogens).
+                  </p>
+                </div>
               </div>
-              <button
-                type="button"
-                onClick={addDrugField}
-                disabled={drugs.length >= MAX_DRUGS}
-                className="rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-medium text-indigo-600 transition hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                + Add Drug
-              </button>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={loadDrugsFromVitaminAssessment}
+                  disabled={isLoadingVitaminDrugs || !user}
+                  className="flex items-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-medium text-blue-600 transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50"
+                  title="Import from Vitamin Deficiency Assessment"
+                >
+                  {isLoadingVitaminDrugs ? (
+                    <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                  ) : (
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+                      <path fillRule="evenodd" d="M3 10a.75.75 0 01.75-.75h10.638L10.23 5.29a.75.75 0 111.04-1.08l5.5 5.25a.75.75 0 010 1.08l-5.5 5.25a.75.75 0 11-1.04-1.08l4.158-3.96H3.75A.75.75 0 013 10z" clipRule="evenodd" />
+                    </svg>
+                  )}
+                  Load Drugs
+                </button>
+                <button
+                  type="button"
+                  onClick={addDrugField}
+                  disabled={drugs.length >= MAX_DRUGS}
+                  className="flex items-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-600 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+                    <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
+                  </svg>
+                  Add Drug ({drugs.length}/{MAX_DRUGS})
+                </button>
+              </div>
             </div>
 
-            <div className="mt-6 space-y-4">
-              {drugs.map((drug, index) => (
-                <div key={`drug-${index}`} className="space-y-2">
-                  <div className="flex gap-3">
-                    <div className="relative flex-1">
-                      <input
-                        type="text"
-                        value={drug}
-                        onChange={(event) =>
-                          handleDrugChange(index, event.target.value)
-                        }
-                        onFocus={() => {
-                          setActiveDrugIndex(index);
-                        }}
-                        placeholder={`Drug ${index + 1}`}
-                        className="w-full rounded-xl border border-gray-200 px-4 py-2 focus:border-indigo-500 focus:outline-none"
-                      />
-                      {activeDrugIndex === index &&
-                        drugSuggestions.length > 0 && (
-                          <ul className="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-xl border border-gray-200 bg-white shadow-lg">
-                            {drugSuggestions.map((suggestion) => (
-                              <li
-                                key={suggestion}
-                                className="cursor-pointer px-3 py-2 text-sm text-gray-800 hover:bg-indigo-50"
-                                onMouseDown={(e) => {
-                                  e.preventDefault();
-                                  handleSelectSuggestion(index, suggestion);
-                                }}
-                              >
-                                {suggestion}
-                              </li>
-                            ))}
-                          </ul>
-                        )}
-                    </div>
-                    {drugs.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => removeDrugField(index)}
-                        className="h-fit rounded-xl border border-gray-200 bg-gray-50 px-4 py-2 text-sm text-gray-600 transition hover:bg-gray-100"
-                      >
-                        Remove
-                      </button>
-                    )}
+            {/* Medication analysis image inline */}
+            <div className="mb-5 rounded-xl overflow-hidden border border-emerald-100">
+              <div className="relative h-28">
+                <img
+                  src="/medication_analysis.png"
+                  alt="Drug interaction analysis"
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-r from-emerald-900/70 via-emerald-800/50 to-transparent flex items-center pl-5">
+                  <div>
+                    <p className="text-white font-semibold text-sm">AI-Powered Drug Screening</p>
+                    <p className="text-emerald-100/80 text-xs mt-0.5">Every pair checked — N×(N-1)/2 comparisons</p>
                   </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              {drugs.map((drug, index) => (
+                <div key={`drug-${index}`} className="flex gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-50 text-xs font-bold text-emerald-600 flex-shrink-0">
+                    {index + 1}
+                  </div>
+                  <div className="relative flex-1">
+                    <input
+                      type="text"
+                      value={drug}
+                      onChange={(event) =>
+                        handleDrugChange(index, event.target.value)
+                      }
+                      onFocus={() => {
+                        setActiveDrugIndex(index);
+                      }}
+                      placeholder={`Medication name`}
+                      className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 transition-colors focus:border-emerald-500 focus:bg-white focus:outline-none"
+                    />
+                    {activeDrugIndex === index &&
+                      drugSuggestions.length > 0 && (
+                        <ul className="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-xl border border-gray-200 bg-white shadow-lg">
+                          {drugSuggestions.map((suggestion) => (
+                            <li
+                              key={suggestion}
+                              className="cursor-pointer px-3 py-2 text-sm text-gray-800 hover:bg-emerald-50"
+                              onMouseDown={(e) => {
+                                e.preventDefault();
+                                handleSelectSuggestion(index, suggestion);
+                              }}
+                            >
+                              {suggestion}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                  </div>
+                  {drugs.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removeDrugField(index)}
+                      className="h-fit rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-500 transition hover:bg-red-50 hover:text-red-500 hover:border-red-200"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+                        <path fillRule="evenodd" d="M8.75 1A2.75 2.75 0 006 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 10.23 1.482l.149-.022.841 10.518A2.75 2.75 0 007.596 19h4.807a2.75 2.75 0 002.742-2.53l.841-10.519.149.023a.75.75 0 00.23-1.482A41.03 41.03 0 0014 4.193V3.75A2.75 2.75 0 0011.25 1h-2.5zM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4zM8.58 7.72a.75.75 0 00-1.5.06l.3 7.5a.75.75 0 101.5-.06l-.3-7.5zm4.34.06a.75.75 0 10-1.5-.06l-.3 7.5a.75.75 0 101.5.06l.3-7.5z" clipRule="evenodd" />
+                      </svg>
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
           </section>
 
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <p className="text-sm text-gray-500">
-              We will check every drug pair (N*(N-1)/2 comparisons).
-            </p>
+          {/* ── SUBMIT ── */}
+          <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-indigo-100 bg-indigo-50/50 p-6">
+            <div className="flex items-center gap-3">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5 text-indigo-500">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a.75.75 0 000 1.5h.253a.25.25 0 01.244.304l-.459 2.066A1.75 1.75 0 0010.747 15H11a.75.75 0 000-1.5h-.253a.25.25 0 01-.244-.304l.459-2.066A1.75 1.75 0 009.253 9H9z" clipRule="evenodd" />
+              </svg>
+              <p className="text-sm text-indigo-700">
+                All drug pairs will be checked ( N×(N-1)/2 comparisons ) + ADE prediction.
+              </p>
+            </div>
             <button
               type="submit"
               disabled={!user || isSubmitting}
-              className="rounded-2xl bg-indigo-600 px-6 py-3 text-white shadow-lg transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
+              className="group flex items-center gap-2 rounded-xl bg-indigo-600 px-8 py-3.5 text-sm font-semibold text-white shadow-lg shadow-indigo-200 transition-all hover:bg-indigo-700 hover:shadow-indigo-300 hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
             >
-              {isSubmitting ? "Analyzing..." : "Analyze Drug Interactions"}
+              {isSubmitting ? (
+                <>
+                  <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                  Analyzing...
+                </>
+              ) : (
+                <>
+                  Analyze & Predict
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4 transition-transform group-hover:translate-x-0.5">
+                    <path fillRule="evenodd" d="M3 10a.75.75 0 01.75-.75h10.638L10.23 5.29a.75.75 0 111.04-1.08l5.5 5.25a.75.75 0 010 1.08l-5.5 5.25a.75.75 0 11-1.04-1.08l4.158-3.96H3.75A.75.75 0 013 10z" clipRule="evenodd" />
+                  </svg>
+                </>
+              )}
             </button>
           </div>
         </form>
-
-
       </div>
     </div>
   );

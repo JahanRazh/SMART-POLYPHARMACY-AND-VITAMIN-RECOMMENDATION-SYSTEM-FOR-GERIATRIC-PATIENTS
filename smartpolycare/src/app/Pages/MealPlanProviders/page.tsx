@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import React, { useState, useEffect } from "react";
 import MealDetailsForm from "./mealdetailsform"; // Correct import
+import MealPlanResult from "./MealPlanResult";
 import { Eye, Download, Calendar, User, FileText, Trash2 } from "lucide-react";
 
 export type ProviderCategory = {
@@ -55,17 +56,37 @@ interface SavedMealPlan {
   selectedPlan: {
     name: string;
     patientName: string;
+    patientAge?: string;
+    patientGender?: string;
     bmi: number;
     bmiCategory: string;
+    bmiAdvice?: string;
+    dailyCalorieRange?: string;
+    weight?: string;
+    activityLevel?: string;
+    medicalConditions?: string[];
+    dietaryRestrictions?: string[];
+    vitaminDeficiencies?: { name: string; level: string }[];
+    conditions?: string[];
+    dietary_restrictions?: string[];
+    vitamin_deficiencies?: any[];
+    basicProfile?: any;
     selectedDay: string;
     totalCalories: number;
     numberOfMeals: number;
     timestamp: string;
+    weeklyPlan?: {
+      [key: string]: {
+        meals: string[];
+        total_calories: number;
+      };
+    };
   };
   createdAt: string;
   planName: string;
   patientName: string;
   bmi: number;
+  originalPlanId?: string;
 }
 
 export default function MealPlanProvidersPage() {
@@ -100,6 +121,7 @@ export default function MealPlanProvidersPage() {
       const newPlan = {
         id: Date.now().toString(),
         selectedPlan: plan.selectedPlan,
+        originalPlanId: plan.originalPlanId || (plan.selectedPlan as any).databaseId || (plan.selectedPlan as any).id || "unknown",
         createdAt: new Date().toISOString(),
         planName: plan.selectedPlan.name,
         patientName: plan.selectedPlan.patientName,
@@ -219,6 +241,20 @@ export default function MealPlanProvidersPage() {
                   </span>
                 )}
               </button>
+
+              {showSavedPlans && savedPlans.length > 0 && (
+                <button
+                  onClick={() => {
+                    if (confirm("Are you sure you want to delete ALL saved plans?")) {
+                      localStorage.removeItem("savedMealPlans");
+                      setSavedPlans([]);
+                    }
+                  }}
+                  className="inline-flex items-center gap-3 rounded-lg border border-red-600 bg-white px-6 py-3 text-sm font-semibold text-red-600 hover:bg-red-50 transition"
+                >
+                  Clear All Plans
+                </button>
+              )}
             </div>
           </motion.div>
 
@@ -400,161 +436,38 @@ const PlanDetailsView: React.FC<PlanDetailsViewProps> = ({
   onExport,
   onDelete,
 }) => {
+  // Map SavedMealPlan to the expected format for MealPlanResult
+  const mappedResult = {
+    databaseId: plan.originalPlanId || (plan.selectedPlan as any).databaseId || (plan.selectedPlan as any).id,
+    bmi: plan.selectedPlan.bmi,
+    bmi_category: plan.selectedPlan.bmiCategory || "N/A",
+    bmi_advice: plan.selectedPlan.bmiAdvice || "Follow this personalized meal plan based on your health assessment.",
+    daily_calorie_range: plan.selectedPlan.dailyCalorieRange || "N/A",
+    conditions: plan.selectedPlan.medicalConditions || plan.selectedPlan.conditions || [],
+    dietary_restrictions: plan.selectedPlan.dietaryRestrictions || plan.selectedPlan.dietary_restrictions || [],
+    vitamin_deficiencies: plan.selectedPlan.vitaminDeficiencies || plan.selectedPlan.vitamin_deficiencies || [],
+    weight: plan.selectedPlan.weight || plan.selectedPlan.basicProfile?.weight || "N/A",
+    mealPlanOptions: [plan.selectedPlan as any], // Cast because the interface is roughly compatible
+    basicProfile: {
+      name: plan.selectedPlan.patientName,
+      age: plan.selectedPlan.patientAge || plan.selectedPlan.basicProfile?.age || "N/A",
+      gender: plan.selectedPlan.patientGender || plan.selectedPlan.basicProfile?.gender || "N/A",
+      weight: plan.selectedPlan.weight || plan.selectedPlan.basicProfile?.weight || "N/A",
+      activityLevel: plan.selectedPlan.activityLevel || plan.selectedPlan.basicProfile?.activityLevel || "N/A",
+    },
+  };
+
   return (
-    <div className="container mx-auto px-6 pt-24 pb-20">
-      <button
-        onClick={onBack}
-        className="mb-8 inline-flex items-center gap-2 text-blue-600 hover:text-blue-800 transition"
-      >
-        ← Back to Providers
-      </button>
-
-      <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-8">
-        <div className="flex justify-between items-start mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">
-              {plan.selectedPlan.name}
-            </h1>
-            <p className="text-gray-600 mt-2">
-              Saved on {formatDate(plan.createdAt)}
-            </p>
-          </div>
-          <div className="flex gap-3">
-            <button
-              onClick={onExport}
-              className="inline-flex items-center gap-2 rounded-lg border border-blue-600 bg-white px-4 py-2 text-sm font-semibold text-blue-600 hover:bg-blue-50 transition"
-            >
-              <Download className="w-4 h-4" />
-              Export JSON
-            </button>
-            <button
-              onClick={onDelete}
-              className="inline-flex items-center gap-2 rounded-lg border border-red-600 bg-white px-4 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 transition"
-            >
-              <Trash2 className="w-4 h-4" />
-              Delete Plan
-            </button>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="bg-blue-50 rounded-xl p-5">
-            <h3 className="text-sm font-medium text-blue-700 mb-2">
-              Patient Information
-            </h3>
-            <p className="text-lg font-semibold text-gray-900">
-              {plan.selectedPlan.patientName}
-            </p>
-            <p className="text-sm text-gray-600 mt-1">Meal Plan Patient</p>
-          </div>
-
-          <div
-            className={`rounded-xl p-5 ${
-              plan.selectedPlan.bmiCategory === "Normal"
-                ? "bg-green-50"
-                : plan.selectedPlan.bmiCategory === "Underweight"
-                ? "bg-blue-50"
-                : plan.selectedPlan.bmiCategory === "Overweight"
-                ? "bg-yellow-50"
-                : "bg-red-50"
-            }`}
-          >
-            <h3 className="text-sm font-medium text-gray-700 mb-2">
-              BMI Status
-            </h3>
-            <p className="text-lg font-semibold text-gray-900">
-              {plan.selectedPlan.bmi} ({plan.selectedPlan.bmiCategory})
-            </p>
-            <p className="text-sm text-gray-600 mt-1">Health Assessment</p>
-          </div>
-
-          <div className="bg-purple-50 rounded-xl p-5">
-            <h3 className="text-sm font-medium text-purple-700 mb-2">
-              Selected Day
-            </h3>
-            <p className="text-lg font-semibold text-gray-900">
-              {plan.selectedPlan.selectedDay}
-            </p>
-            <p className="text-sm text-gray-600 mt-1">Meal Plan Day</p>
-          </div>
-
-          <div className="bg-green-50 rounded-xl p-5">
-            <h3 className="text-sm font-medium text-green-700 mb-2">
-              Nutrition Summary
-            </h3>
-            <p className="text-lg font-semibold text-gray-900">
-              {plan.selectedPlan.totalCalories} kcal
-            </p>
-            <p className="text-sm text-gray-600 mt-1">
-              {plan.selectedPlan.numberOfMeals} meals
-            </p>
-          </div>
-        </div>
-
-        <div className="bg-gray-50 rounded-xl p-6">
-          <h3 className="text-lg font-bold text-gray-900 mb-4">Plan Details</h3>
-          <div className="space-y-4">
-            <div>
-              <h4 className="font-medium text-gray-700 mb-2">Plan Overview</h4>
-              <p className="text-gray-600">
-                This meal plan was created for {plan.selectedPlan.patientName}{" "}
-                with a BMI of {plan.selectedPlan.bmi}(
-                {plan.selectedPlan.bmiCategory}). The plan provides{" "}
-                {plan.selectedPlan.totalCalories} calories across{" "}
-                {plan.selectedPlan.numberOfMeals} meals for{" "}
-                {plan.selectedPlan.selectedDay}.
-              </p>
-            </div>
-
-            <div>
-              <h4 className="font-medium text-gray-700 mb-2">
-                Storage Information
-              </h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                <div>
-                  <p className="text-gray-600">
-                    <span className="font-medium">Plan ID:</span> {plan.id}
-                  </p>
-                  <p className="text-gray-600">
-                    <span className="font-medium">Created:</span>{" "}
-                    {formatDate(plan.createdAt)}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-gray-600">
-                    <span className="font-medium">Storage:</span> Local Browser
-                    Storage
-                  </p>
-                  <p className="text-gray-600">
-                    <span className="font-medium">Data Type:</span> Meal Plan
-                    Selection
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-8 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-          <p className="text-sm text-yellow-800">
-            💡 <span className="font-medium">Note:</span> This is a summary
-            view. For detailed meal information including specific foods and
-            ingredients, please check the Firebase database or export the
-            complete plan.
-          </p>
-        </div>
+    <div className="pt-16 pb-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-4">
+        <button
+          onClick={onBack}
+          className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-800 transition font-medium"
+        >
+          ← Back to Saved Plans
+        </button>
       </div>
+      <MealPlanResult result={mappedResult} />
     </div>
   );
-};
-
-// Helper function for date formatting
-const formatDate = (dateString: string) => {
-  return new Date(dateString).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
 };
