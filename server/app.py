@@ -31,6 +31,8 @@ from routes.occupation_route import occupation_bp
 print("✅ Loaded occupation route")
 from routes.advice_route import advice_bp
 print("✅ Loaded advice route")
+from routes.vitamin_deficiency_route import vitamin_deficiency_bp
+print("✅ Loaded vitamin deficiency route")
 
 from db import get_db
 print("✅ Loaded database connection")
@@ -56,6 +58,7 @@ app.register_blueprint(full_assessment_bp)
 app.register_blueprint(meal_plan_bp)
 app.register_blueprint(occupation_bp)
 app.register_blueprint(advice_bp)
+app.register_blueprint(vitamin_deficiency_bp)
 
 @app.route('/')
 def health_check():
