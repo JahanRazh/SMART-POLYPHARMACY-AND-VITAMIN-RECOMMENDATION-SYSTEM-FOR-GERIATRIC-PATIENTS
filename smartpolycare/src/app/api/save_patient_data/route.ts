@@ -51,6 +51,11 @@ export async function POST(req: Request) {
     const adminSdk = initFirebaseAdmin();
     const db = adminSdk.firestore();
 
+    // Normalize email to lowercase for consistency
+    if (body && body.email) {
+      body.email = String(body.email).toLowerCase().trim();
+    }
+
     // Persist incoming payload. If `email` is provided, upsert using a
     // deterministic document id derived from the email to avoid duplicate
     // documents for the same user. Otherwise create a new document.
@@ -63,23 +68,48 @@ export async function POST(req: Request) {
       const docId = String(body.email).replaceAll("@", "_at_").replaceAll(".", "_");
       const docRef = db.collection("patient_assessment").doc(docId);
       const snap = await docRef.get();
+      
+      console.log(`💾 Saving patient data for ${body.email}:`);
+      console.log(`  - Emotion: ${body.detectedEmotion || "Not set"}`);
+      console.log(`  - Mental Health: ${body.mentalHealthLevel || "Not set"}`);
+      console.log(`  - Occupation: ${body.occupation || "Not set"}`);
+      console.log(`  - Name: ${body.name || "Not set"}`);
+      console.log(`  - Age: ${body.age || "Not set"}`);
+      
       if (snap.exists) {
-        await docRef.set({ ...body, updatedAt: adminSdk.firestore.FieldValue.serverTimestamp() }, { merge: true });
+        await docRef.set(
+          {
+            ...body,
+            updatedAt: adminSdk.firestore.FieldValue.serverTimestamp(),
+          },
+          { merge: true }
+        );
+        console.log(`✅ Updated existing patient assessment for ${body.email}`);
       } else {
-        await docRef.set({ ...body, createdAt: adminSdk.firestore.FieldValue.serverTimestamp(), updatedAt: adminSdk.firestore.FieldValue.serverTimestamp() }, { merge: true });
+        await docRef.set(
+          {
+            ...body,
+            createdAt: adminSdk.firestore.FieldValue.serverTimestamp(),
+            updatedAt: adminSdk.firestore.FieldValue.serverTimestamp(),
+          },
+          { merge: true }
+        );
+        console.log(`✅ Created new patient assessment for ${body.email}`);
       }
-      return NextResponse.json({ success: true, id: docId });
+      return NextResponse.json({ success: true, id: docId, email: body.email });
     }
 
     // No email — create a new document with a createdAt timestamp
+    console.warn("⚠️ No email provided in patient data");
     const anonPayload = { ...payload, createdAt: adminSdk.firestore.FieldValue.serverTimestamp() };
     const docRef = await db.collection("patient_assessment").add(anonPayload as any);
+    console.log(`✅ Created anonymous patient assessment with ID: ${docRef.id}`);
 
     return NextResponse.json({ success: true, id: docRef.id });
   } catch (err: any) {
     // Log and return a helpful error
     // Note: server console logs appear in the Next.js terminal
-    console.error("/api/save_patient_data error:", err);
+    console.error("❌ /api/save_patient_data error:", err);
     const message = err?.message || String(err);
     return NextResponse.json({ success: false, error: message }, { status: 500 });
   }
