@@ -83,3 +83,7 @@ serviceAccountKey.json
 
 server/.env
 server/start_flask_with_api_key.py
+# start flask
+start_flask_with_api_key.py
+env
+start_flask.bat
