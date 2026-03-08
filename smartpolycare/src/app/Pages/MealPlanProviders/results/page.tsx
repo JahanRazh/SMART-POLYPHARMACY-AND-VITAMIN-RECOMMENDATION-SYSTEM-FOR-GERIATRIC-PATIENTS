@@ -10,7 +10,8 @@ const MealPlanResultPage = () => {
 
   useEffect(() => {
     const result = sessionStorage.getItem("mealPlanResult");
-    const profile = sessionStorage.getItem("patientProfile");
+    // Check both session and local storage for the profile
+    const profile = sessionStorage.getItem("patientProfile") || localStorage.getItem("patientProfile");
 
     console.log("DEBUG Refresh - Raw Result from session:", result ? "Present (length: " + result.length + ")" : "MISSING");
     console.log("DEBUG Refresh - Raw Profile from session:", profile ? "Present (length: " + profile.length + ")" : "MISSING");
@@ -40,32 +41,43 @@ const MealPlanResultPage = () => {
           
         if (parsedProfile.dietaryRestrictions?.other) restrictions.push(parsedProfile.dietaryRestrictions.other);
 
-        // Merge everything into a unified object for MealPlanResult
+        // Helper to sanitize "N/A" and handle fallback
+        const sanitize = (val: any, fallback: any) => {
+          if (val === undefined || val === null || val === "" || val === "N/A" || val === "n/a") {
+            return fallback || "N/A";
+          }
+          return val;
+        };
+
+        const profileData = parsedProfile.basicProfile || {};
+
         const mergedResult = {
           ...parsedResult,
-          basicProfile: parsedProfile.basicProfile || parsedResult.basicProfile,
-          conditions: conditions,
-          dietary_restrictions: restrictions,
-          vitamin_deficiencies: parsedProfile.vitaminDeficiencies || parsedResult.vitamin_deficiencies || [],
-          // Top-level Redundancy (for resilience)
-          weight: parsedProfile.basicProfile?.weight || parsedResult.weight || parsedResult.basicProfile?.weight || parsedResult.patientWeight || "N/A",
-          height: parsedProfile.basicProfile?.height || parsedResult.height || parsedResult.basicProfile?.height || parsedResult.patientHeight || "N/A",
-          activityLevel: parsedProfile.basicProfile?.activityLevel || parsedResult.activityLevel || parsedResult.basicProfile?.activityLevel || parsedResult.patientActivityLevel || "N/A",
-          plan_duration: parsedResult.plan_duration || parsedProfile.plan_duration || parsedResult.planDuration || "1 Month",
-          // CamelCase Redundancy (for resilience)
-          patientWeight: parsedProfile.basicProfile?.weight || parsedResult.weight || parsedResult.basicProfile?.weight || parsedResult.patientWeight,
-          patientHeight: parsedProfile.basicProfile?.height || parsedResult.height || parsedResult.basicProfile?.height || parsedResult.patientHeight,
-          patientActivityLevel: parsedProfile.basicProfile?.activityLevel || parsedResult.activityLevel || parsedResult.basicProfile?.activityLevel || parsedResult.patientActivityLevel,
-          planDuration: parsedResult.plan_duration || parsedProfile.plan_duration || parsedResult.planDuration || "1 Month",
-          dailyCalorieRange: parsedResult.daily_calorie_range || parsedResult.dailyCalorieRange || "N/A",
-          // BMI Details
-          bmi: parsedProfile.basicProfile?.bmi || parsedResult.bmi || parsedResult.basicProfile?.bmi,
-          bmi_category: parsedProfile.basicProfile?.bmiLevel || parsedResult.bmi_category || parsedResult.bmiCategory || parsedResult.bmi_category
+          basicProfile: {
+            name: sanitize(parsedResult.patient_name || parsedResult.patientName, profileData.name || "Unknown Patient"),
+            age: sanitize(parsedResult.patient_age || parsedResult.patientAge, profileData.age),
+            gender: sanitize(parsedResult.patient_gender || parsedResult.patientGender, profileData.gender),
+            height: sanitize(parsedResult.height || parsedResult.patientHeight, profileData.height),
+            weight: sanitize(parsedResult.weight || parsedResult.patientWeight, profileData.weight),
+            bmi: sanitize(parsedResult.bmi, profileData.bmi),
+            bmiLevel: sanitize(parsedResult.bmi_category || parsedResult.bmiCategory, profileData.bmiLevel),
+            activityLevel: sanitize(parsedResult.activity_level || parsedResult.activityLevel, profileData.activityLevel),
+          },
+          // Maintenance for flat keys
+          patient_name: sanitize(parsedResult.patient_name || parsedResult.patientName, profileData.name || "Unknown Patient"),
+          weight: sanitize(parsedResult.weight || parsedResult.patientWeight, profileData.weight),
+          height: sanitize(parsedResult.height || parsedResult.patientHeight, profileData.height),
+          activity_level: sanitize(parsedResult.activity_level || parsedResult.activityLevel, profileData.activityLevel),
+          plan_duration: sanitize(parsedResult.plan_duration || parsedResult.planDuration, parsedProfile.plan_duration || "1 Month"),
+          bmi_category: sanitize(parsedResult.bmi_category || parsedResult.bmiCategory, profileData.bmiLevel),
+          // Deficiencies and conditions
+          vitamin_deficiencies: (parsedResult.vitamin_deficiencies && parsedResult.vitamin_deficiencies.length > 0) ? parsedResult.vitamin_deficiencies : (parsedProfile.vitaminDeficiencies || []),
+          conditions: (parsedResult.conditions && parsedResult.conditions.length > 0) ? parsedResult.conditions : (parsedProfile.medicalConditions ? Object.keys(parsedProfile.medicalConditions).filter(k => k !== 'other' && parsedProfile.medicalConditions[k]) : [])
         };
 
         console.log("Unified Meal Result (Robust Merge):", mergedResult);
         setMealResult(mergedResult);
-        setPatient(parsedProfile.basicProfile || parsedResult.basicProfile);
+        setPatient(mergedResult.basicProfile);
       } catch (error) {
         console.error("Error synchronizing meal results:", error);
         // Fallback to raw result if parsing profile fails

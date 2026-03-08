@@ -63,6 +63,12 @@ interface SavedMealPlan {
       };
     };
   };
+  height?: string;
+  weight?: string;
+  activityLevel?: string;
+  plan_duration?: string;
+  vitamin_deficiencies?: any[];
+  user?: any;
   createdAt: string;
   planName: string;
   patientName: string;
@@ -857,78 +863,50 @@ const PlanDetailsView: React.FC<PlanDetailsViewProps> = ({
       (plan.selectedPlan as any).id,
     bmi: plan.selectedPlan.bmi,
     bmi_category:
-      plan.selectedPlan.bmiCategory ||
-      plan.selectedPlan.bmi_category ||
-      plan.selectedPlan.basicProfile?.bmiLevel ||
-      "N/A",
+      (!plan.selectedPlan.bmiCategory || plan.selectedPlan.bmiCategory === "N/A")
+        ? (plan.selectedPlan.bmi_category || plan.user?.bmiLevel || "N/A")
+        : plan.selectedPlan.bmiCategory,
     bmi_advice:
-      plan.selectedPlan.bmiAdvice ||
-      "Follow this personalised meal plan based on your health assessment.",
-    daily_calorie_range: plan.selectedPlan.dailyCalorieRange || plan.selectedPlan.daily_calorie_range || "N/A",
-    plan_duration: plan.selectedPlan.plan_duration || plan.selectedPlan.planDuration || "N/A",
+      (!plan.selectedPlan.bmiAdvice || plan.selectedPlan.bmiAdvice === "N/A")
+        ? "Follow this personalised meal plan based on your health assessment."
+        : plan.selectedPlan.bmiAdvice,
+    daily_calorie_range: 
+      (!plan.selectedPlan.dailyCalorieRange || plan.selectedPlan.dailyCalorieRange === "N/A")
+        ? (plan.selectedPlan.daily_calorie_range || "N/A")
+        : plan.selectedPlan.dailyCalorieRange,
+    plan_duration: 
+      (!plan.selectedPlan.plan_duration || plan.selectedPlan.plan_duration === "N/A")
+        ? (plan.selectedPlan.planDuration || "1 Month")
+        : plan.selectedPlan.plan_duration,
     conditions:
-      plan.selectedPlan.medicalConditions || plan.selectedPlan.conditions || [],
+      (plan.selectedPlan.medicalConditions && plan.selectedPlan.medicalConditions.length > 0)
+        ? plan.selectedPlan.medicalConditions
+        : (plan.selectedPlan.conditions || []),
     dietary_restrictions:
-      plan.selectedPlan.dietaryRestrictions ||
-      plan.selectedPlan.dietary_restrictions ||
-      [],
+      (plan.selectedPlan.dietaryRestrictions && plan.selectedPlan.dietaryRestrictions.length > 0)
+        ? plan.selectedPlan.dietaryRestrictions
+        : (plan.selectedPlan.dietary_restrictions || []),
     vitamin_deficiencies:
-      plan.selectedPlan.vitaminDeficiencies ||
-      plan.selectedPlan.vitamin_deficiencies ||
-      [],
+      (plan.selectedPlan.vitaminDeficiencies && plan.selectedPlan.vitaminDeficiencies.length > 0)
+        ? plan.selectedPlan.vitaminDeficiencies
+        : (plan.selectedPlan.vitamin_deficiencies || plan.vitamin_deficiencies || []),
     mealPlanOptions: [plan.selectedPlan as any],
     basicProfile: {
-      name: plan.selectedPlan.patientName,
-      age:
-        plan.selectedPlan.patientAge ||
-        plan.selectedPlan.basicProfile?.age ||
-        "N/A",
-      gender:
-        plan.selectedPlan.patientGender ||
-        plan.selectedPlan.basicProfile?.gender ||
-        "N/A",
-      weight:
-        plan.selectedPlan.weight ||
-        plan.selectedPlan.basicProfile?.weight ||
-        "N/A",
-      height:
-        (plan.selectedPlan as any).height ||
-        plan.selectedPlan.basicProfile?.height ||
-        "N/A",
-      activityLevel:
-        plan.selectedPlan.activityLevel ||
-        plan.selectedPlan.basicProfile?.activityLevel ||
-        "N/A",
+      name: plan.patientName || plan.selectedPlan.patientName || plan.user?.name || "Patient",
+      age: plan.selectedPlan.patientAge || plan.user?.age || "N/A",
+      gender: plan.selectedPlan.patientGender || plan.user?.gender || "N/A",
+      weight: plan.weight || plan.selectedPlan.weight || (plan.user?.weight || "N/A"),
+      height: plan.height || (plan.selectedPlan as any).height || (plan.user?.height || "N/A"),
+      activityLevel: plan.activityLevel || plan.selectedPlan.activityLevel || (plan.user?.activityLevel || "N/A"),
     },
-    weight:
-      plan.selectedPlan.weight ||
-      plan.selectedPlan.basicProfile?.weight ||
-      "N/A",
-    height:
-      (plan.selectedPlan as any).height ||
-      plan.selectedPlan.basicProfile?.height ||
-      "N/A",
-    activityLevel:
-      plan.selectedPlan.activityLevel ||
-      plan.selectedPlan.basicProfile?.activityLevel ||
-      "N/A",
-    planDuration:
-      plan.selectedPlan.plan_duration ||
-      plan.selectedPlan.planDuration ||
-      "1 Month",
-    patientWeight:
-      plan.selectedPlan.weight ||
-      plan.selectedPlan.basicProfile?.weight,
-    patientHeight:
-      (plan.selectedPlan as any).height ||
-      plan.selectedPlan.basicProfile?.height,
-    patientActivityLevel:
-      plan.selectedPlan.activityLevel ||
-      plan.selectedPlan.basicProfile?.activityLevel,
-    dailyCalorieRange:
-      plan.selectedPlan.dailyCalorieRange ||
-      plan.selectedPlan.daily_calorie_range ||
-      "N/A",
+    weight: plan.weight || plan.selectedPlan.weight || (plan.user?.weight || "N/A"),
+    height: plan.height || (plan.selectedPlan as any).height || (plan.user?.height || "N/A"),
+    activityLevel: plan.activityLevel || plan.selectedPlan.activityLevel || (plan.user?.activityLevel || "N/A"),
+    planDuration: plan.plan_duration || plan.selectedPlan.plan_duration || plan.selectedPlan.planDuration || "1 Month",
+    patientWeight: plan.weight || plan.selectedPlan.weight || (plan.user?.weight || "N/A"),
+    patientHeight: plan.height || (plan.selectedPlan as any).height || (plan.user?.height || "N/A"),
+    patientActivityLevel: plan.activityLevel || plan.selectedPlan.activityLevel || (plan.user?.activityLevel || "N/A"),
+    dailyCalorieRange: plan.selectedPlan.dailyCalorieRange || plan.selectedPlan.daily_calorie_range || "N/A",
   };
 
   return (

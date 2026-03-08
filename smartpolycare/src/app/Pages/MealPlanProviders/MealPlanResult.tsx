@@ -266,7 +266,7 @@ const MealPlanResult: React.FC<MealPlanResultProps> = ({
                       <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Sex & Age</span>
                    </div>
                    <p className="text-base font-black text-gray-900 uppercase">
-                     {result.basicProfile?.gender || result.patientGender || "N/A"} • {result.basicProfile?.age || result.patientAge || "N/A"}y
+                     {result.basicProfile?.gender || result.patient_gender || result.patientGender || "N/A"} • {result.basicProfile?.age || result.patient_age || result.patientAge || "N/A"}y
                    </p>
                 </div>
 
@@ -318,7 +318,7 @@ const MealPlanResult: React.FC<MealPlanResultProps> = ({
                       <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Activity</span>
                    </div>
                    <p className="text-base font-black text-gray-900 truncate uppercase">
-                      {result.basicProfile?.activityLevel || result.activityLevel || result.patientActivityLevel || "N/A"}
+                      {result.basicProfile?.activityLevel || result.activity_level || result.activityLevel || result.patientActivityLevel || "N/A"}
                    </p>
                 </div>
 
