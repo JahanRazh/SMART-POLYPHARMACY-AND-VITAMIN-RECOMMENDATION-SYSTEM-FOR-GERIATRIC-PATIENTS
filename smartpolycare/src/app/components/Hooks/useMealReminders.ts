@@ -19,6 +19,7 @@ export const useMealReminders = (mealPlan: MealPlan | null) => {
   
   const [nextMeal, setNextMeal] = useState<string | null>(null);
   const [timeToNextMeal, setTimeToNextMeal] = useState<string>("00:00:00");
+  const [timeToDayEnd, setTimeToDayEnd] = useState<string>("00:00:00");
   const [dailyProgress, setDailyProgress] = useState<number>(0);
 
   useEffect(() => {
@@ -58,6 +59,15 @@ export const useMealReminders = (mealPlan: MealPlan | null) => {
 
       setNextMeal(targetLabel);
       setTimeToNextMeal(`${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`);
+
+      // Day End Countdown (to midnight)
+      const dayEnd = new Date();
+      dayEnd.setHours(23, 59, 59, 999);
+      const dayDiff = dayEnd.getTime() - now.getTime();
+      const dh = Math.floor(dayDiff / (1000 * 60 * 60));
+      const dm = Math.floor((dayDiff % (1000 * 60 * 60)) / (1000 * 60));
+      const ds = Math.floor((dayDiff % (1000 * 60)) / 1000);
+      setTimeToDayEnd(`${dh.toString().padStart(2, "0")}:${dm.toString().padStart(2, "0")}:${ds.toString().padStart(2, "0")}`);
     };
 
     const checkReminders = () => {
@@ -95,6 +105,62 @@ export const useMealReminders = (mealPlan: MealPlan | null) => {
           notifiedRef.current.add(key);
         }
       }
+
+      // --- PREP NOTIFICATIONS (3x Daily) ---
+      // Morning Prep: 9:00 AM
+      if (currentHour === 9 && currentMinute === 0) {
+        const key = `prep-9-${now.toDateString()}`;
+        if (!notifiedRef.current.has(key)) {
+          addNotification({ 
+            title: "🛒 Ready for Buy", 
+            message: "Get ready for the next 48 hours! Check your upcoming prep list now.", 
+            type: "success",
+            link: "#prep-section"
+          });
+          notifiedRef.current.add(key);
+        }
+      }
+
+      // Afternoon Prep: 15:00 (3:00 PM)
+      if (currentHour === 15 && currentMinute === 0) {
+        const key = `prep-15-${now.toDateString()}`;
+        if (!notifiedRef.current.has(key)) {
+          addNotification({ 
+            title: "🥗 Prep Ahead Reminder", 
+            message: "Planning ahead reduces stress. View your upcoming 2-day meal list.", 
+            type: "success",
+            link: "#prep-section"
+          });
+          notifiedRef.current.add(key);
+        }
+      }
+
+      // Evening Prep: 20:00 (8:00 PM)
+      if (currentHour === 20 && currentMinute === 0) {
+        const key = `prep-20-${now.toDateString()}`;
+        if (!notifiedRef.current.has(key)) {
+          addNotification({ 
+            title: "📋 Tomorrow's Checklist", 
+            message: "Ensure you have all ingredients for tomorrow. Tap to view prep list.", 
+            type: "success",
+            link: "#prep-section"
+          });
+          notifiedRef.current.add(key);
+        }
+      }
+
+      // Day Over Reminder: 9:00 PM (21:00)
+      if (currentHour === 21 && currentMinute === 0) {
+        const key = `day-over-${now.toDateString()}`;
+        if (!notifiedRef.current.has(key)) {
+          addNotification({ 
+            title: "🌙 Day Almost Over", 
+            message: "Did you eat your planned meals today? Check the boxes and Save your progress now!", 
+            type: "warning"
+          });
+          notifiedRef.current.add(key);
+        }
+      }
     };
 
     const timerInterval = setInterval(updateTimer, 1000);
@@ -109,5 +175,5 @@ export const useMealReminders = (mealPlan: MealPlan | null) => {
     };
   }, [addNotification]);
 
-  return { nextMeal, timeToNextMeal, dailyProgress, setDailyProgress };
+  return { nextMeal, timeToNextMeal, timeToDayEnd, dailyProgress, setDailyProgress };
 };

@@ -31,7 +31,12 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     const saved = localStorage.getItem("smart_polycare_notifications");
     if (saved) {
       try {
-        setNotifications(JSON.parse(saved));
+        const parsed: Notification[] = JSON.parse(saved);
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        
+        const filtered = parsed.filter(n => new Date(n.timestamp) >= sevenDaysAgo);
+        setNotifications(filtered);
       } catch (e) {
         console.error("Failed to parse notifications", e);
       }
