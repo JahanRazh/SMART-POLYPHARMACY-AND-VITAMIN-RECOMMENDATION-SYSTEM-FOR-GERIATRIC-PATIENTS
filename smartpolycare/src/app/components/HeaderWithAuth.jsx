@@ -4,6 +4,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { motion } from "framer-motion";
 import UserProfile from "./UserProfile";
 import NotificationBell from "./NotificationBell";
 
@@ -11,6 +12,57 @@ export default function HeaderWithAuth() {
   const [menuOpen, setMenuOpen] = useState(false);
 
   const closeMenu = () => setMenuOpen(false);
+
+  // Navigation items
+  const navItems = [
+    { href: "/", label: "Home" },
+    { href: "/Pages/Polypharmacy/Homepage", label: "Polypharmacy Risk" },
+    { href: "/Pages/LifestyleAdvice", label: "Lifestyle Advice" },
+    { href: "/Pages/About", label: "About" },
+  ];
+
+  // Desktop NavLink Component - Glassmorphism on hover
+  const DesktopNavLink = ({ href, label }) => (
+    <motion.div
+      whileHover={{ scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
+      className="relative group"
+    >
+      <Link
+        href={href}
+        className="relative inline-flex items-center gap-2 px-4 py-2 rounded-2xl font-medium text-sm transition-all duration-300
+          text-gray-800 hover:backdrop-blur-md hover:bg-white/20 hover:shadow-lg hover:shadow-inner"
+      >
+        <span>{label}</span>
+      </Link>
+    </motion.div>
+  );
+
+  // Mobile NavLink Component - Glassmorphism on hover
+  const MobileNavLink = ({ href, label, index }) => (
+    <motion.div
+      initial={{ x: -20, opacity: 0 }}
+      animate={{ x: 0, opacity: 1 }}
+      transition={{ duration: 0.3, delay: index * 0.1 }}
+      whileHover={{ x: 8 }}
+    >
+      <Link
+        href={href}
+        onClick={closeMenu}
+        className="flex items-center gap-3 px-4 py-3 rounded-2xl font-medium text-gray-800 transition-all duration-300
+          hover:backdrop-blur-md hover:bg-white/20 hover:shadow-lg hover:shadow-inner"
+      >
+        <span>{label}</span>
+        <motion.span
+          className="ml-auto"
+          animate={{ x: [0, 4, 0] }}
+          transition={{ duration: 1.5, repeat: Infinity }}
+        >
+          →
+        </motion.span>
+      </Link>
+    </motion.div>
+  );
 
   return (
     <header className="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
@@ -38,32 +90,14 @@ export default function HeaderWithAuth() {
         </Link>
 
         {/* DESKTOP NAV */}
-        <nav className="hidden lg:flex items-center gap-6 text-sm">
-          <Link
-            href="/"
-            className="text-gray-700 hover:text-teal-600 font-medium transition-colors"
-          >
-            Home
-          </Link>
-          <Link
-            href="/Pages/Polypharmacy/Homepage"
-            className="text-gray-700 hover:text-teal-600 font-medium transition-colors"
-          >
-            Polypharmacy Risk
-          </Link>
-          <Link
-            href="/Pages/LifestyleAdvice"
-            className="text-gray-700 hover:text-teal-600 font-medium transition-colors"
-          >
-            Lifestyle Advice
-          </Link>
-          <Link
-            href="/Pages/About"
-            className="text-gray-700 hover:text-teal-600 font-medium transition-colors"
-          >
-            About
-          </Link>
-         
+        <nav className="hidden lg:flex items-center gap-4 text-sm">
+          {navItems.map((item) => (
+            <DesktopNavLink
+              key={item.href}
+              href={item.href}
+              label={item.label}
+            />
+          ))}
         </nav>
 
         {/* RIGHT SIDE: USER + MOBILE MENU BUTTON */}
@@ -88,42 +122,15 @@ export default function HeaderWithAuth() {
       {/* MOBILE MENU */}
       {menuOpen && (
         <nav className="lg:hidden border-t border-gray-200 bg-white">
-          <div className="max-w-6xl mx-auto px-4 py-3 flex flex-col gap-3 text-sm">
-            <Link
-              href="/"
-              onClick={closeMenu}
-              className="text-gray-800 hover:text-teal-600 font-medium"
-            >
-              Home
-            </Link>
-            <Link
-              href="/Pages/Polypharmacy"
-              onClick={closeMenu}
-              className="text-gray-800 hover:text-teal-600 font-medium"
-            >
-              Polypharmacy Risk
-            </Link>
-            <Link
-              href="/Pages/LifestyleAdvice"
-              onClick={closeMenu}
-              className="text-gray-800 hover:text-teal-600 font-medium"
-            >
-              Lifestyle Advice
-            </Link>
-            <Link
-              href="/Pages/About"
-              onClick={closeMenu}
-              className="text-gray-800 hover:text-teal-600 font-medium"
-            >
-              About
-            </Link>
-            <Link
-              href="/Pages/patients"
-              onClick={closeMenu}
-              className="text-gray-800 hover:text-teal-600 font-medium"
-            >
-              Patients
-            </Link>
+          <div className="max-w-6xl mx-auto px-4 py-4 flex flex-col gap-3 text-sm">
+            {navItems.map((item, index) => (
+              <MobileNavLink
+                key={item.href}
+                href={item.href}
+                label={item.label}
+                index={index}
+              />
+            ))}
           </div>
         </nav>
       )}
