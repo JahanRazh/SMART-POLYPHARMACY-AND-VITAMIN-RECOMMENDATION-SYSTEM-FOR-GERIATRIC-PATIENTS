@@ -144,15 +144,18 @@ def save_generated_meal_plan(result: Dict[str, Any], form_id: str) -> bool:
         }
         
         # Prepare the full basicProfile for mirroring
+        # We favor result['basicProfile'] but supplement with AI-calculated fields if available
+        src_profile = result.get("basicProfile", {})
+        
         basic_profile = {
-            "name": result.get("patient_name", "Unknown Patient"),
-            "age": str(result.get("patient_age") or result.get("basicProfile", {}).get("age", "N/A")),
-            "gender": result.get("patient_gender") or result.get("basicProfile", {}).get("gender", "N/A"),
-            "height": str(result.get("height") or result.get("basicProfile", {}).get("height", "N/A")),
-            "weight": str(result.get("weight") or result.get("basicProfile", {}).get("weight", "N/A")),
-            "bmi": str(result.get("bmi", "N/A")),
-            "bmiLevel": result.get("bmi_category") or result.get("basicProfile", {}).get("bmiLevel", "N/A"),
-            "activityLevel": result.get("activity_level") or result.get("basicProfile", {}).get("activityLevel", "N/A")
+            "name": src_profile.get("name") or result.get("patient_name") or "Unknown Patient",
+            "age": str(src_profile.get("age") or result.get("patient_age") or "N/A"),
+            "gender": src_profile.get("gender") or result.get("patient_gender") or "N/A",
+            "height": str(src_profile.get("height") or result.get("height") or "N/A"),
+            "weight": str(src_profile.get("weight") or result.get("weight") or "N/A"),
+            "bmi": str(src_profile.get("bmi") or result.get("bmi") or "N/A"),
+            "bmiLevel": result.get("bmi_category") or src_profile.get("bmiLevel") or "N/A",
+            "activityLevel": src_profile.get("activityLevel") or result.get("activity_level") or "N/A"
         }
 
         payload = {
@@ -165,9 +168,6 @@ def save_generated_meal_plan(result: Dict[str, Any], form_id: str) -> bool:
             "vitaminDeficiencies": result.get("vitaminDeficiencies", []),
             "conditions": result.get("conditions", []),
             "daily_calorie_range": result.get("daily_calorie_range", "N/A"),
-            "height": basic_profile["height"],
-            "weight": basic_profile["weight"],
-            "activityLevel": basic_profile["activityLevel"],
             "plan_duration": result.get("plan_duration") or "1 Month",
             "selectedPlan": selected_plan,
             "mealPlanOptions": result.get("mealPlanOptions", []),
