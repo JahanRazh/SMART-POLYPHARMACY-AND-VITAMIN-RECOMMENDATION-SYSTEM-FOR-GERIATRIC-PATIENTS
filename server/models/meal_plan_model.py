@@ -125,16 +125,17 @@ def save_generated_meal_plan(result: Dict[str, Any], form_id: str) -> bool:
             "name": selected_option.get("name", "Generated Plan"),
             # Patient details
             "patientName": result.get("patient_name", "Unknown Patient"),
-            "patientAge": result.get("basicProfile", {}).get("age", "N/A"),
-            "patientGender": result.get("basicProfile", {}).get("gender", "N/A"),
-            "height": result.get("basicProfile", {}).get("height", "N/A"),
-            "weight": result.get("basicProfile", {}).get("weight", "N/A"),
-            "activityLevel": result.get("basicProfile", {}).get("activityLevel", "N/A"),
-            "plan_duration": result.get("plan_duration", "N/A"),
+            "patientAge": str(result.get("patient_age") or result.get("basicProfile", {}).get("age", "N/A")),
+            "patientGender": result.get("patient_gender") or result.get("basicProfile", {}).get("gender", "N/A"),
+            "height": str(result.get("height") or result.get("basicProfile", {}).get("height", "N/A")),
+            "weight": str(result.get("weight") or result.get("basicProfile", {}).get("weight", "N/A")),
+            "activityLevel": result.get("activity_level") or result.get("basicProfile", {}).get("activityLevel", "N/A"),
+            "plan_duration": result.get("plan_duration") or "1 Month",
             "bmi": result.get("bmi", 0),
             "bmiCategory": result.get("bmi_category", ""),
             "bmiAdvice": result.get("bmi_advice", ""),
             "dailyCalorieRange": result.get("daily_calorie_range", ""),
+            "vitamin_deficiencies": result.get("vitamin_deficiencies", []),
             # Plan snapshot
             "selectedDay": "Full 7-Day Plan",
             "totalCalories": first_day_data.get("total_calories", 0),
@@ -142,15 +143,40 @@ def save_generated_meal_plan(result: Dict[str, Any], form_id: str) -> bool:
             "timestamp": timestamp,
         }
         
+        # Prepare the full basicProfile for mirroring
+        basic_profile = {
+            "name": result.get("patient_name", "Unknown Patient"),
+            "age": str(result.get("patient_age") or result.get("basicProfile", {}).get("age", "N/A")),
+            "gender": result.get("patient_gender") or result.get("basicProfile", {}).get("gender", "N/A"),
+            "height": str(result.get("height") or result.get("basicProfile", {}).get("height", "N/A")),
+            "weight": str(result.get("weight") or result.get("basicProfile", {}).get("weight", "N/A")),
+            "bmi": str(result.get("bmi", "N/A")),
+            "bmiLevel": result.get("bmi_category") or result.get("basicProfile", {}).get("bmiLevel", "N/A"),
+            "activityLevel": result.get("activity_level") or result.get("basicProfile", {}).get("activityLevel", "N/A")
+        }
+
         payload = {
             "userId": user_id,
             "user": result.get("user", {}),
             "polypharmacyRisk": result.get("polypharmacyRisk", "N/A"),
+            "basicProfile": basic_profile,
+            "medicalConditions": result.get("medicalConditions", {}),
+            "dietaryRestrictions": result.get("dietaryRestrictions", {}),
+            "vitaminDeficiencies": result.get("vitaminDeficiencies", []),
+            "conditions": result.get("conditions", []),
+            "daily_calorie_range": result.get("daily_calorie_range", "N/A"),
+            "height": basic_profile["height"],
+            "weight": basic_profile["weight"],
+            "activityLevel": basic_profile["activityLevel"],
+            "plan_duration": result.get("plan_duration") or "1 Month",
             "selectedPlan": selected_plan,
+            "mealPlanOptions": result.get("mealPlanOptions", []),
             "originalPlanId": form_id or "unknown",
             "formDataSaved": True if form_id else False,
             "createdAt": created_at,
             "updatedAt": timestamp,
+            "status": "active",
+            "source": "meal_details_form"
         }
         
         doc_ref.set(payload)

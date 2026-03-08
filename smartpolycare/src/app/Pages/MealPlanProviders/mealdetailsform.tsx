@@ -85,6 +85,14 @@ const MealPlanForm: React.FC<MealPlanFormProps> = ({ onBack, onSavePlan }) => {
 
   const [initialFillDone, setInitialFillDone] = useState(false);
 
+  // Helper to determine BMI level
+  const getBMICategory = (bmi: number): string => {
+    if (bmi < 18.5) return "Underweight";
+    if (bmi < 25) return "Normal";
+    if (bmi < 30) return "Overweight";
+    return "Obese";
+  };
+
   // Auto-fill from user profile
   useEffect(() => {
     if (userProfile && !initialFillDone) {
@@ -98,14 +106,43 @@ const MealPlanForm: React.FC<MealPlanFormProps> = ({ onBack, onSavePlan }) => {
           name: prev.basicProfile.name || nameFromProfile || "",
           age: prev.basicProfile.age || String(userProfile.age || ""),
           gender: prev.basicProfile.gender || userProfile.gender || "",
+          height: prev.basicProfile.height || String(userProfile.height || ""),
+          weight: prev.basicProfile.weight || String(userProfile.weight || ""),
+          activityLevel: prev.basicProfile.activityLevel || userProfile.activityLevel || "",
+          bmi: prev.basicProfile.bmi || String(userProfile.bmi || ""),
+          bmiLevel: prev.basicProfile.bmiLevel || userProfile.bmiLevel || "",
         }
       }));
 
-      if (nameFromProfile || userProfile.age || userProfile.gender) {
+      if (nameFromProfile || userProfile.age || userProfile.gender || userProfile.height || userProfile.weight) {
         setInitialFillDone(true);
       }
     }
   }, [userProfile, initialFillDone]);
+
+  // Real-time BMI Calculation
+  useEffect(() => {
+    const h = parseFloat(formData.basicProfile.height);
+    const w = parseFloat(formData.basicProfile.weight);
+    
+    if (h > 0 && w > 0) {
+      const heightInMeters = h / 100;
+      const bmiValue = w / (heightInMeters * heightInMeters);
+      const bmiString = bmiValue.toFixed(1);
+      const bmiLevel = getBMICategory(bmiValue);
+      
+      if (formData.basicProfile.bmi !== bmiString || formData.basicProfile.bmiLevel !== bmiLevel) {
+        setFormData(prev => ({
+          ...prev,
+          basicProfile: {
+            ...prev.basicProfile,
+            bmi: bmiString,
+            bmiLevel: bmiLevel
+          }
+        }));
+      }
+    }
+  }, [formData.basicProfile.height, formData.basicProfile.weight]);
 
   // Auto-fill from Vitamin Deficiencies Assessment
   useEffect(() => {
@@ -374,6 +411,11 @@ const MealPlanForm: React.FC<MealPlanFormProps> = ({ onBack, onSavePlan }) => {
       // Save data to sessionStorage
       sessionStorage.setItem("mealPlanResult", JSON.stringify(data));
       sessionStorage.setItem(
+        "patientProfile",
+        JSON.stringify(formData)
+      );
+      // Also save to localStorage for better persistence after refresh
+      localStorage.setItem(
         "patientProfile",
         JSON.stringify(formData)
       );
