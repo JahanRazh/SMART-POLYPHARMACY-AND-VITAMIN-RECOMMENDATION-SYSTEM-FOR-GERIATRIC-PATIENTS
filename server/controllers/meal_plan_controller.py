@@ -107,6 +107,10 @@ def create_meal_plan():
             result["dietary_restrictions"].append(diet_restrictions["other"])
             
         result["vitamin_deficiencies"] = payload.get("vitaminDeficiencies", [])
+        result["vitaminDeficiencies"] = payload.get("vitaminDeficiencies", [])
+        result["medicalConditions"] = payload.get("medicalConditions", {})
+        result["dietaryRestrictions"] = payload.get("dietaryRestrictions", {})
+        
         # Ensure userId is present for saving
         result["userId"] = payload.get("userId") or payload.get("email")
         
