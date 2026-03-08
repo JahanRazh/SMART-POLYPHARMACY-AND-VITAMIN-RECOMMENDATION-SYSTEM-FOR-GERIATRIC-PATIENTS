@@ -216,6 +216,61 @@ def filter_foods(patient_data, active_conditions):
     return filtered
 
 # ==================================================
+# CLINICAL PREPARATION DATA
+# ==================================================
+PREP_TIPS = {
+    "vitamin_a_deficiency": [
+        "Carotenoids (Vit A) are fat-soluble. Always cook these with a small amount of healthy oil/fat to double absorption.",
+        "Mashing or pureeing carrots/sweet potatoes increases the availability of Vitamin A by breaking down plant walls."
+    ],
+    "vitamin_c_deficiency": [
+        "Vitamin C is heat-sensitive. Avoid prolonged boiling; brief steaming or raw consumption preserves the highest nutrient content.",
+        "Store cut fruits and vegetables in airtight containers and consume quickly, as oxygen lightens the Vitamin C content."
+    ],
+    "vitamin_b12_deficiency": [
+        "For B12 sourced from meats, avoid overcooking (well-done), as extreme heat can reduce B12 concentration by up to 30%.",
+        "Fermented foods listed in your plan can help naturally improve the gut environment for B12 absorption."
+    ],
+    "diabetes": [
+        "Allow cooked starches (like potatoes or rice) to cool slightly before eating; this creates 'resistant starch' which lowers the glycemic index.",
+        "Pair all fruits with nuts or seeds to slow down sugar absorption."
+    ],
+    "hypertension": [
+        "Use lemon juice, zest, or fresh herbs instead of any salt during the preparation phase to keep sodium levels clinical.",
+        "Rinse any canned beans or vegetables thoroughly under cold water to remove up to 40% of residual sodium."
+    ]
+}
+
+SAFETY_ALERTS = {
+    "High": [
+        "MEDICATION SAFETY: Avoid Grapefruit and Seville oranges as they interact with common geriatric medications.",
+        "Check with your doctor before using salt substitutes (Potassium Chloride) if you are on ACE inhibitors."
+    ],
+    "Very High": [
+        "CRITICAL SAFETY: Maintain consistent Vitamin K intake. Avoid sudden increases in leafy greens if on blood thinners.",
+        "Limit caffeine and alcohol strictly as they increase the risk of drug-drug adverse reactions in polypharmacy cases."
+    ],
+    "Moderate": [
+        "Safety Note: Take medications at least 1 hour before or 2 hours after high-fiber meals to ensure proper drug absorption."
+    ]
+}
+
+def get_clinical_guides(active_conditions, poly_risk):
+    guides = []
+    alerts = []
+    
+    for condition in active_conditions:
+        if condition in PREP_TIPS:
+            guides.extend(PREP_TIPS[condition])
+            
+    risk_level = poly_risk if poly_risk else "Low"
+    if risk_level in SAFETY_ALERTS:
+        alerts.extend(SAFETY_ALERTS[risk_level])
+        
+    # Return unique items
+    return list(dict.fromkeys(guides)), list(dict.fromkeys(alerts))
+
+# ==================================================
 # DAILY MEAL PLAN – Now accepts dynamic calorie range
 # ==================================================
 def generate_daily_plan(filtered_df, seed=42, calorie_min=1800, calorie_max=2200):
@@ -366,17 +421,31 @@ def generate_full_meal_plan(patient_data):
             "weeklyPlan": full_plan
         })
     
+    # Generate Preparation and Safety Guides
+    poly_risk = patient_data.get("polypharmacyRisk", "Low")
+    prep_guides, safety_alerts = get_clinical_guides(active_conditions, poly_risk)
+    
     return {
         "success": True,
         "patient_name": patient_name,
+        "patient_age": basic.get("age", "N/A"),
+        "patient_gender": basic.get("gender", "N/A"),
+        "height": basic.get("height", "N/A"),
+        "weight": basic.get("weight", "N/A"),
+        "activity_level": basic.get("activityLevel", "N/A"),
         "bmi": round(bmi, 1),
         "bmi_category": bmi_category,
         "bmi_advice": bmi_advice,
         "daily_calorie_range": f"{calorie_min}–{calorie_max} kcal",
         "conditions": active_conditions,
+        "vitamin_deficiencies": vitamin_defs,
+        "basicProfile": basic,
         "suitable_foods_count": len(foods),
         "plan_duration": duration_label,
-        "mealPlanOptions": options
+        "mealPlanOptions": options,
+        "preparationGuides": prep_guides,
+        "safetyAlerts": safety_alerts,
+        "polypharmacyRisk": poly_risk
     }
 
 # ==================================================

@@ -85,6 +85,14 @@ const MealPlanForm: React.FC<MealPlanFormProps> = ({ onBack, onSavePlan }) => {
 
   const [initialFillDone, setInitialFillDone] = useState(false);
 
+  // Helper to determine BMI level
+  const getBMICategory = (bmi: number): string => {
+    if (bmi < 18.5) return "Underweight";
+    if (bmi < 25) return "Normal";
+    if (bmi < 30) return "Overweight";
+    return "Obese";
+  };
+
   // Auto-fill from user profile
   useEffect(() => {
     if (userProfile && !initialFillDone) {
@@ -98,15 +106,78 @@ const MealPlanForm: React.FC<MealPlanFormProps> = ({ onBack, onSavePlan }) => {
           name: prev.basicProfile.name || nameFromProfile || "",
           age: prev.basicProfile.age || String(userProfile.age || ""),
           gender: prev.basicProfile.gender || userProfile.gender || "",
+          height: prev.basicProfile.height || String(userProfile.height || ""),
+          weight: prev.basicProfile.weight || String(userProfile.weight || ""),
+          activityLevel: prev.basicProfile.activityLevel || userProfile.activityLevel || "",
+          bmi: prev.basicProfile.bmi || String(userProfile.bmi || ""),
+          bmiLevel: prev.basicProfile.bmiLevel || userProfile.bmiLevel || "",
         }
       }));
 
-      if (nameFromProfile || userProfile.age || userProfile.gender) {
+      if (nameFromProfile || userProfile.age || userProfile.gender || userProfile.height || userProfile.weight) {
         setInitialFillDone(true);
       }
     }
   }, [userProfile, initialFillDone]);
 
+  // Real-time BMI Calculation
+  useEffect(() => {
+    const h = parseFloat(formData.basicProfile.height);
+    const w = parseFloat(formData.basicProfile.weight);
+    
+    if (h > 0 && w > 0) {
+      const heightInMeters = h / 100;
+      const bmiValue = w / (heightInMeters * heightInMeters);
+      const bmiString = bmiValue.toFixed(1);
+      const bmiLevel = getBMICategory(bmiValue);
+      
+      if (formData.basicProfile.bmi !== bmiString || formData.basicProfile.bmiLevel !== bmiLevel) {
+        setFormData(prev => ({
+          ...prev,
+          basicProfile: {
+            ...prev.basicProfile,
+            bmi: bmiString,
+            bmiLevel: bmiLevel
+          }
+        }));
+      }
+    }
+  }, [formData.basicProfile.height, formData.basicProfile.weight]);
+
+  // Auto-fill from Vitamin Deficiencies Assessment
+  useEffect(() => {
+    const fetchVitaminDeficiencies = async () => {
+      if (user?.uid) {
+        try {
+          const response = await fetch(`http://127.0.0.1:5000/api/vitamin-deficiency/assessment?userId=${user.uid}`);
+          if (response.ok) {
+            const data = await response.json();
+            if (data.predictions && data.predictions.length > 0) {
+              setFormData((prev) => {
+                // Keep existing manually added ones and only add new unique vitamins
+                const existingNames = new Set(prev.vitaminDeficiencies.map(v => v.name));
+                const newDeficiencies = data.predictions
+                  .filter((p: any) => !existingNames.has(p.vitamin))
+                  .map((p: any) => ({ name: p.vitamin, level: "Moderate" }));
+                
+                if (newDeficiencies.length > 0) {
+                  return {
+                    ...prev,
+                    vitaminDeficiencies: [...prev.vitaminDeficiencies, ...newDeficiencies]
+                  };
+                }
+                return prev;
+              });
+            }
+          }
+        } catch (err) {
+          console.error("Failed to fetch pre-existing vitamin deficiencies:", err);
+        }
+      }
+    };
+    
+    fetchVitaminDeficiencies();
+  }, [user?.uid]);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -281,7 +352,7 @@ const MealPlanForm: React.FC<MealPlanFormProps> = ({ onBack, onSavePlan }) => {
         console.warn("⚠️ API response received but formDataSaved is false and no databaseId found!");
       }
 
-      // Auto-save the generated plan to localStorage
+      // Auto-save the generated plan to localStorage and prepare for display
       if (data.mealPlanOptions && data.mealPlanOptions.length > 0) {
         try {
           const selectedOption = data.mealPlanOptions[0];
@@ -299,8 +370,10 @@ const MealPlanForm: React.FC<MealPlanFormProps> = ({ onBack, onSavePlan }) => {
               bmiCategory: data.bmi_category,
               bmiAdvice: data.bmi_advice,
               dailyCalorieRange: data.daily_calorie_range,
+              height: formData.basicProfile.height,
               weight: formData.basicProfile.weight,
               activityLevel: formData.basicProfile.activityLevel,
+              plan_duration: data.plan_duration,
               medicalConditions: Object.keys(formData.medicalConditions).filter(k => k !== 'other' && formData.medicalConditions[k as keyof MedicalConditions]),
               dietaryRestrictions: Object.keys(formData.dietaryRestrictions).filter(k => k !== 'other' && formData.dietaryRestrictions[k as keyof DietaryRestrictions]),
               vitaminDeficiencies: formData.vitaminDeficiencies,
@@ -311,22 +384,24 @@ const MealPlanForm: React.FC<MealPlanFormProps> = ({ onBack, onSavePlan }) => {
             },
             originalPlanId: data.databaseId || data.id || data.originalPlanId || "unknown",
             formDataSaved: data.formDataSaved || false,
+            createdAt: new Date().toISOString(),
+            planName: selectedOption.name,
+            patientName: data.patient_name || formData.basicProfile.name || "Unknown Patient",
+            bmi: data.bmi,
           };
 
           const localStoragePlan = {
-            id: Date.now().toString(),
+            id: user?.uid || Date.now().toString(),
             selectedPlan: savePayload.selectedPlan,
             originalPlanId: savePayload.originalPlanId,
-            createdAt: new Date().toISOString(),
-            planName: savePayload.selectedPlan.name,
-            patientName: savePayload.selectedPlan.patientName,
-            bmi: savePayload.selectedPlan.bmi,
+            createdAt: savePayload.createdAt,
+            planName: savePayload.planName,
+            patientName: savePayload.patientName,
+            bmi: savePayload.bmi,
           };
           
-          const existingPlans = JSON.parse(localStorage.getItem("savedMealPlans") || "[]");
-          const updatedPlans = [localStoragePlan, ...existingPlans.slice(0, 9)];
-          localStorage.setItem("savedMealPlans", JSON.stringify(updatedPlans));
-          console.log("✅ Auto-saved to localStorage!");
+          localStorage.setItem("savedMealPlans", JSON.stringify([localStoragePlan]));
+          console.log("✅ Auto-saved active plan to localStorage!", localStoragePlan);
           
         } catch (e) {
           console.error("Auto-save to local storage failed", e);
@@ -336,6 +411,11 @@ const MealPlanForm: React.FC<MealPlanFormProps> = ({ onBack, onSavePlan }) => {
       // Save data to sessionStorage
       sessionStorage.setItem("mealPlanResult", JSON.stringify(data));
       sessionStorage.setItem(
+        "patientProfile",
+        JSON.stringify(formData)
+      );
+      // Also save to localStorage for better persistence after refresh
+      localStorage.setItem(
         "patientProfile",
         JSON.stringify(formData)
       );
@@ -670,86 +750,27 @@ const MealPlanForm: React.FC<MealPlanFormProps> = ({ onBack, onSavePlan }) => {
               </h2>
               
               <div className="bg-gray-50 p-6 rounded-xl border border-gray-200">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Vitamin/Mineral
-                    </label>
-                    <select
-                      id="vitamin-select"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
-                    >
-                      <option value="">Select Vitamin...</option>
-                      <option value="Vitamin A">Vitamin A</option>
-                      <option value="Vitamin B6">Vitamin B6</option>
-                      <option value="Vitamin B12">Vitamin B12</option>
-                      <option value="Vitamin C">Vitamin C</option>
-                      <option value="Vitamin E">Vitamin E</option>
-                      <option value="Vitamin K">Vitamin K</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Deficiency Level
-                    </label>
-                    <select
-                      id="level-select"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
-                    >
-                      <option value="">Select Level...</option>
-                      <option value="Mild">Mild</option>
-                      <option value="Moderate">Moderate</option>
-                      <option value="Severe">Severe</option>
-                    </select>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const vit = (document.getElementById('vitamin-select') as HTMLSelectElement).value;
-                    const lvl = (document.getElementById('level-select') as HTMLSelectElement).value;
-                    if (vit && lvl) {
-                       if (!formData.vitaminDeficiencies.find(v => v.name === vit)) {
-                          setFormData(prev => ({
-                            ...prev,
-                            vitaminDeficiencies: [...prev.vitaminDeficiencies, { name: vit, level: lvl }]
-                          }));
-                       }
-                       (document.getElementById('vitamin-select') as HTMLSelectElement).value = '';
-                       (document.getElementById('level-select') as HTMLSelectElement).value = '';
-                    }
-                  }}
-                  className="px-4 py-2 bg-blue-100 text-blue-700 font-medium rounded-lg hover:bg-blue-200 transition"
-                >
-                  Add Deficiency
-                </button>
-              </div>
+                <p className="text-gray-600 mb-4 whitespace-pre-wrap">
+                  Based on your prior Vitamin Deficiency Assessment, the following
+                  deficiencies have been automatically identified and pre-filled into your profile.
+                </p>
 
-              {formData.vitaminDeficiencies.length > 0 && (
-                <div className="mt-4 space-y-2">
-                  <h4 className="text-sm font-medium text-gray-700">Added Deficiencies:</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {formData.vitaminDeficiencies.map((def, idx) => (
-                      <div key={idx} className="flex items-center gap-2 bg-white border border-gray-200 px-3 py-1.5 rounded-full shadow-sm">
-                        <span className="text-sm font-medium text-gray-800">{def.name}</span>
-                        <span className="text-xs px-2 py-0.5 bg-red-100 text-red-700 rounded-full font-semibold">{def.level}</span>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setFormData(prev => ({
-                              ...prev,
-                              vitaminDeficiencies: prev.vitaminDeficiencies.filter(v => v.name !== def.name)
-                            }));
-                          }}
-                          className="text-gray-400 hover:text-red-500 ml-1 pb-0.5"
-                        >
-                          &times;
-                        </button>
-                      </div>
-                    ))}
+                {formData.vitaminDeficiencies.length > 0 ? (
+                  <div className="mt-4 space-y-2">
+                    <h4 className="text-sm font-medium text-gray-700">Identified Deficiencies:</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {formData.vitaminDeficiencies.map((def, idx) => (
+                        <div key={idx} className="flex items-center gap-2 bg-white border border-gray-200 px-3 py-1.5 rounded-full shadow-sm">
+                          <span className="text-sm font-medium text-gray-800">{def.name}</span>
+                          <span className="text-xs px-2 py-0.5 bg-red-100 text-red-700 rounded-full font-semibold">{def.level}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
+                ) : (
+                   <p className="text-sm text-gray-500 italic">No previous deficiency records found.</p>
+                )}
+              </div>
             </section>
           </div>
 

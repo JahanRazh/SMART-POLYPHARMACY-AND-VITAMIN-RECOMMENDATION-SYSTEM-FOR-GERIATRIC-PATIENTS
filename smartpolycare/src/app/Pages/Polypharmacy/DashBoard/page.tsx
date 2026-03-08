@@ -726,7 +726,7 @@ const DashboardPage = () => {
                                 ⚠️ Adverse Drug Event Predictions
                             </h2>
                             <p className="text-sm text-gray-500 mb-4">
-                                ML-predicted adverse events based on your medications, age, and existing conditions.
+                                ML-predicted adverse events based on your medications,age,gender and existing conditions.
                             </p>
                             <div className="overflow-x-auto">
                                 <table className="w-full text-sm text-left">

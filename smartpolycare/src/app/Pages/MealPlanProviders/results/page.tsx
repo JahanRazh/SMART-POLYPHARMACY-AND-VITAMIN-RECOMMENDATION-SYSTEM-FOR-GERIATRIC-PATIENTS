@@ -10,39 +10,80 @@ const MealPlanResultPage = () => {
 
   useEffect(() => {
     const result = sessionStorage.getItem("mealPlanResult");
-    const profile = sessionStorage.getItem("patientProfile");
+    // Check both session and local storage for the profile
+    const profile = sessionStorage.getItem("patientProfile") || localStorage.getItem("patientProfile");
 
-    if (result && profile) {
+    console.log("DEBUG Refresh - Raw Result from session:", result ? "Present (length: " + result.length + ")" : "MISSING");
+    console.log("DEBUG Refresh - Raw Profile from session:", profile ? "Present (length: " + profile.length + ")" : "MISSING");
+
+    if (result) {
       try {
         const parsedResult = JSON.parse(result);
-        const parsedProfile = JSON.parse(profile);
+        const parsedProfile = profile ? JSON.parse(profile) : {};
         
+        console.log("DEBUG Refresh - Parsed Result Keys:", Object.keys(parsedResult));
+        console.log("DEBUG Refresh - Parsed Profile Keys:", Object.keys(parsedProfile));
+        if (parsedResult.basicProfile) console.log("DEBUG Refresh - Result.basicProfile Keys:", Object.keys(parsedResult.basicProfile));
+        if (parsedProfile.basicProfile) console.log("DEBUG Refresh - Profile.basicProfile Keys:", Object.keys(parsedProfile.basicProfile));
+
         // Extract clinical data from Profile (Conditions, Restrictions, Deficiencies)
-        const conditions = Object.keys(parsedProfile.medicalConditions || {})
-          .filter(k => k !== 'other' && parsedProfile.medicalConditions[k]);
+        const conditions = parsedProfile.medicalConditions 
+          ? Object.keys(parsedProfile.medicalConditions)
+            .filter(k => k !== 'other' && parsedProfile.medicalConditions[k])
+          : (parsedResult.conditions || []);
+        
         if (parsedProfile.medicalConditions?.other) conditions.push(parsedProfile.medicalConditions.other);
 
-        const restrictions = Object.keys(parsedProfile.dietaryRestrictions || {})
-          .filter(k => k !== 'other' && parsedProfile.dietaryRestrictions[k]);
+        const restrictions = parsedProfile.dietaryRestrictions
+          ? Object.keys(parsedProfile.dietaryRestrictions)
+            .filter(k => k !== 'other' && parsedProfile.dietaryRestrictions[k])
+          : (parsedResult.dietary_restrictions || []);
+          
         if (parsedProfile.dietaryRestrictions?.other) restrictions.push(parsedProfile.dietaryRestrictions.other);
 
-        // Merge everything into a unified object for MealPlanResult
-        const mergedResult = {
-          ...parsedResult,
-          basicProfile: parsedProfile.basicProfile,
-          conditions: conditions,
-          dietary_restrictions: restrictions,
-          vitamin_deficiencies: parsedProfile.vitaminDeficiencies || [],
-          weight: parsedProfile.basicProfile?.weight,
-          bmi: parsedProfile.basicProfile?.bmi,
-          bmi_category: parsedProfile.basicProfile?.bmiLevel
+        // Helper to sanitize "N/A" and handle fallback
+        const sanitize = (val: any, fallback: any) => {
+          if (val === undefined || val === null || val === "" || val === "N/A" || val === "n/a") {
+            return fallback || "N/A";
+          }
+          return val;
         };
 
-        console.log("Unified Meal Result:", mergedResult);
+        const profileData = parsedProfile.basicProfile || {};
+
+        const mergedResult = {
+          ...parsedResult,
+          basicProfile: {
+            name: sanitize(parsedResult.patient_name || parsedResult.patientName, profileData.name || "Unknown Patient"),
+            age: sanitize(parsedResult.patient_age || parsedResult.patientAge, profileData.age),
+            gender: sanitize(parsedResult.patient_gender || parsedResult.patientGender, profileData.gender),
+            height: sanitize(parsedResult.height || parsedResult.patientHeight, profileData.height),
+            weight: sanitize(parsedResult.weight || parsedResult.patientWeight, profileData.weight),
+            bmi: sanitize(parsedResult.bmi, profileData.bmi),
+            bmiLevel: sanitize(parsedResult.bmi_category || parsedResult.bmiCategory, profileData.bmiLevel),
+            activityLevel: sanitize(parsedResult.activity_level || parsedResult.activityLevel, profileData.activityLevel),
+          },
+          // Maintenance for flat keys
+          patient_name: sanitize(parsedResult.patient_name || parsedResult.patientName, profileData.name || "Unknown Patient"),
+          weight: sanitize(parsedResult.weight || parsedResult.patientWeight, profileData.weight),
+          height: sanitize(parsedResult.height || parsedResult.patientHeight, profileData.height),
+          activity_level: sanitize(parsedResult.activity_level || parsedResult.activityLevel, profileData.activityLevel),
+          plan_duration: sanitize(parsedResult.plan_duration || parsedResult.planDuration, parsedProfile.plan_duration || "1 Month"),
+          bmi_category: sanitize(parsedResult.bmi_category || parsedResult.bmiCategory, profileData.bmiLevel),
+          // Deficiencies and conditions
+          vitamin_deficiencies: (parsedResult.vitamin_deficiencies && parsedResult.vitamin_deficiencies.length > 0) ? parsedResult.vitamin_deficiencies : (parsedProfile.vitaminDeficiencies || []),
+          conditions: (parsedResult.conditions && parsedResult.conditions.length > 0) ? parsedResult.conditions : (parsedProfile.medicalConditions ? Object.keys(parsedProfile.medicalConditions).filter(k => k !== 'other' && parsedProfile.medicalConditions[k]) : [])
+        };
+
+        console.log("Unified Meal Result (Robust Merge):", mergedResult);
         setMealResult(mergedResult);
-        setPatient(parsedProfile.basicProfile);
+        setPatient(mergedResult.basicProfile);
       } catch (error) {
         console.error("Error synchronizing meal results:", error);
+        // Fallback to raw result if parsing profile fails
+        try {
+          setMealResult(JSON.parse(result));
+        } catch (e) {}
       }
     } else if (result) {
       setMealResult(JSON.parse(result));
