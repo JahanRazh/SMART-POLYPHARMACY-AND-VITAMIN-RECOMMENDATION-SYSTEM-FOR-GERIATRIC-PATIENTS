@@ -243,7 +243,7 @@ def patient_advice():
                     try:
                         if isinstance(generated_date, str):
                             generated_date = datetime.fromisoformat(generated_date)
-                        days_old = (datetime.utcnow() - generated_date).days
+                        days_old = (datetime.now() - generated_date).days
                         if days_old < 7:
                             cached_advice = cached_data
                             print(f"✅ Using cached advice for {email} (generated {days_old} days ago)")
@@ -309,7 +309,7 @@ def patient_advice():
         }), 500
 
     # Store advice in Firestore
-    now = datetime.utcnow()
+    now = datetime.now()
     expires = now + timedelta(days=7)
     
     advice_to_store = {
@@ -319,8 +319,8 @@ def patient_advice():
         "week_1": week_1,
         "week_2": week_2,
         "summary": advice_result.get("summary", ""),
-        "advice_generated_date": now.isoformat(),
-        "advice_expires_date": expires.isoformat(),
+        "advice_generated_date": now.strftime('%Y-%m-%dT%H:%M:%S'),
+        "advice_expires_date": expires.strftime('%Y-%m-%dT%H:%M:%S'),
         "inputs": {
             "emotion": emotion,
             "mental_health_level": mental_health,
@@ -348,8 +348,8 @@ def patient_advice():
         "week_2": week_2,
         "summary": advice_result.get("summary", ""),
         "source": "gemini_api",
-        "generated_date": now.isoformat(),
-        "expires_date": expires.isoformat(),
+        "generated_date": now.strftime('%Y-%m-%dT%H:%M:%S'),
+        "expires_date": expires.strftime('%Y-%m-%dT%H:%M:%S'),
         "inputs": {
             "emotion": emotion,
             "mental_health_level": mental_health,
