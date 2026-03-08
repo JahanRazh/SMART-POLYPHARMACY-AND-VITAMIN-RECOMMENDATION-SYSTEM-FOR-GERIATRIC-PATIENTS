@@ -264,7 +264,7 @@ export default function Footer() {
 
                         {/* Research badges */}
                         <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                            {["SLIIT Research", "AI-Powered", "Clinical Grade"].map(
+                            {["AI-Powered", "Clinical Grade"].map(
                                 (badge) => (
                                     <span
                                         key={badge}

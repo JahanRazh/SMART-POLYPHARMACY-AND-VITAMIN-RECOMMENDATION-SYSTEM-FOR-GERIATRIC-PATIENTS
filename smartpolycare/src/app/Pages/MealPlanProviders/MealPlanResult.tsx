@@ -1,31 +1,19 @@
-import React, { useState, useMemo, useCallback, useEffect } from "react";
-import { useAuth } from "../../components/Contexts/AuthContext";
-import { useMealReminders } from "../../components/Hooks/useMealReminders";
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { 
-  CheckCircle, 
-  Calendar, 
-  ChevronRight, 
-  Clock, 
-  Info, 
-  ArrowLeft,
-  Settings,
-  Download,
-  Printer,
-  Trash2,
-  Lock,
-  ChevronDown,
-  User,
-  Heart,
-  ShieldAlert,
-  Zap,
-  Activity
-} from "lucide-react";
+  ArrowLeft, Download, Printer, User, Heart, Zap, Info, ShieldAlert, 
+  Calendar, Clock, CheckCircle, Lock, Save, Settings,
+  Activity, Scale, Ruler, Pill, Loader2,
+  ChevronLeft, ChevronRight
+} from 'lucide-react';
+import { useAuth } from '@/app/components/Contexts/AuthContext';
+import { useMealReminders } from '@/app/components/Hooks/useMealReminders';
 
-interface MealPlanResultProps {
-  result: any;
-  onBack?: () => void;
-  onDelete?: () => void;
-  isSavedView?: boolean;
+interface ParsedMeal {
+  foodName: string;
+  servingSize: number;
+  calories: number;
+  caloriesPerGram: string;
+  rawString: string;
 }
 
 interface DailyNutrition {
@@ -36,12 +24,11 @@ interface DailyNutrition {
   mealCount: number;
 }
 
-interface ParsedMeal {
-  foodName: string;
-  servingSize: number;
-  calories: number;
-  caloriesPerGram: string;
-  rawString: string;
+interface MealPlanResultProps {
+  result: any;
+  onBack?: () => void;
+  onDelete?: (id: string) => void;
+  isSavedView?: boolean;
 }
 
 const MealPlanResult: React.FC<MealPlanResultProps> = ({ 
@@ -53,7 +40,7 @@ const MealPlanResult: React.FC<MealPlanResultProps> = ({
   const { user } = useAuth();
   
   // HUD Data from useMealReminders
-  const { nextMeal, timeToNextMeal, dailyProgress, setDailyProgress } = useMealReminders(result);
+  const { nextMeal, timeToNextMeal, timeToDayEnd, dailyProgress, setDailyProgress } = useMealReminders(result as any);
 
   const [selectedOptionIndex, setSelectedOptionIndex] = useState(0);
   const [isExporting, setIsExporting] = useState(false);
@@ -62,7 +49,7 @@ const MealPlanResult: React.FC<MealPlanResultProps> = ({
   const [selectedDay, setSelectedDay] = useState("Day 1");
   const [showRawData, setShowRawData] = useState(false);
   const [checkedMeals, setCheckedMeals] = useState<Record<string, boolean>>({});
-  const [savingProgress, setSavingProgress] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [trackingError, setTrackingError] = useState("");
 
   const selectedOption = useMemo(() => 
@@ -73,7 +60,9 @@ const MealPlanResult: React.FC<MealPlanResultProps> = ({
   const allDays = useMemo(() => {
     if (!selectedOption?.weeklyPlan) return [];
     return Object.keys(selectedOption.weeklyPlan).sort((a, b) => {
-      return parseInt(a.replace("Day ", "")) - parseInt(b.replace("Day ", ""));
+      const numA = parseInt(a.replace("Day ", "")) || 0;
+      const numB = parseInt(b.replace("Day ", "")) || 0;
+      return numA - numB;
     });
   }, [selectedOption]);
 
@@ -81,6 +70,16 @@ const MealPlanResult: React.FC<MealPlanResultProps> = ({
     const startIdx = (currentWeek - 1) * 7;
     return allDays.slice(startIdx, startIdx + 7);
   }, [allDays, currentWeek]);
+
+  const totalWeeks = useMemo(() => Math.ceil(allDays.length / 7), [allDays]);
+
+  const handleWeekChange = (direction: 'next' | 'prev') => {
+    if (direction === 'next' && currentWeek < totalWeeks) {
+      setCurrentWeek(prev => prev + 1);
+    } else if (direction === 'prev' && currentWeek > 1) {
+      setCurrentWeek(prev => prev - 1);
+    }
+  };
 
   const selectedDayData = useMemo(() => {
     if (!selectedOption?.weeklyPlan) return null;
@@ -113,517 +112,576 @@ const MealPlanResult: React.FC<MealPlanResultProps> = ({
   const checkDayCompletion = useCallback((dayName: string) => {
     const dayData = selectedOption?.weeklyPlan?.[dayName];
     if (!dayData) return false;
-    return dayData.meals.every((_: string, idx: number) => checkedMeals[`${dayName}-${idx}`]);
+    return dayData.meals.every((_: any, idx: number) => checkedMeals[`${dayName}-${idx}`]);
   }, [selectedOption, checkedMeals]);
 
   const isDayLocked = useCallback((dayName: string) => {
+    if (isSavedView) return false;
     const dayNum = parseInt(dayName.replace("Day ", ""));
     if (dayNum === 1) return false;
+    
+    // Strict sequential lock: Day N is locked if Day N-1 is not 100% complete
     const prevDayName = `Day ${dayNum - 1}`;
     return !checkDayCompletion(prevDayName);
-  }, [checkDayCompletion]);
-
-  const dailyNutrition = useMemo((): DailyNutrition => {
-    if (!selectedDayData?.meals) {
-      return { totalCalories: 0, estimatedProtein: 0, estimatedCarbs: 0, estimatedFat: 0, mealCount: 0 };
-    }
-    const parsedMeals = selectedDayData.meals.map(parseMealString);
-    const totalCalories = parsedMeals.reduce((sum: number, meal: ParsedMeal) => sum + meal.calories, 0);
-    return {
-      totalCalories,
-      estimatedProtein: Math.round((totalCalories * 0.25) / 4),
-      estimatedCarbs: Math.round((totalCalories * 0.5) / 4),
-      estimatedFat: Math.round((totalCalories * 0.25) / 9),
-      mealCount: selectedDayData.meals.length,
-    };
-  }, [selectedDayData, parseMealString]);
-
-  // Robust extraction of clinical data (handles both fresh and saved formats)
-  const clinicalConditions = useMemo(() => {
-    const raw = result.conditions || result.medicalConditions;
-    if (Array.isArray(raw)) return raw;
-    if (raw && typeof raw === 'object') {
-      const filtered = Object.keys(raw).filter(k => k !== 'other' && (raw as any)[k]);
-      if ((raw as any).other) filtered.push((raw as any).other);
-      return filtered;
-    }
-    return [];
-  }, [result.conditions, result.medicalConditions]);
-
-  const dietaryStrategy = useMemo(() => {
-    const raw = result.dietary_restrictions || result.dietaryRestrictions;
-    if (Array.isArray(raw)) return raw;
-    if (raw && typeof raw === 'object') {
-      const filtered = Object.keys(raw).filter(k => k !== 'other' && (raw as any)[k]);
-      if ((raw as any).other) filtered.push((raw as any).other);
-      return filtered;
-    }
-    return [];
-  }, [result.dietary_restrictions, result.dietaryRestrictions]);
-
-  const nutrientDeficiencies = useMemo(() => {
-    return result.vitamin_deficiencies || result.vitaminDeficiencies || [];
-  }, [result.vitamin_deficiencies, result.vitaminDeficiencies]);
-
-  // Effects
-  useEffect(() => {
-    const total = selectedDayData?.meals?.length || 1;
-    const completed = Object.keys(checkedMeals).filter(k => k.startsWith(`${selectedDay}-`) && checkedMeals[k]).length;
-    setDailyProgress((completed / total) * 100);
-  }, [checkedMeals, selectedDay, selectedDayData, setDailyProgress]);
+  }, [checkDayCompletion, isSavedView]);
 
   useEffect(() => {
-    console.log("MealPlanResult mounted with result data:", {
-      hasDatabaseId: !!result.databaseId,
-      databaseId: result.databaseId,
-      allKeys: Object.keys(result),
-      isSavedView
-    });
-  }, [result, isSavedView]);
-
-  const handleExport = useCallback(() => {
-    setIsExporting(true);
-    setTimeout(() => {
+    const saved = localStorage.getItem(`meal-progress-${result.id || result.databaseId || 'current'}`);
+    if (saved) {
       try {
-        const dataStr = JSON.stringify({
-          selectedPlan: selectedOption,
-          selectedDay: selectedDay,
-          selectedDayData: selectedDayData,
-          patientInfo: result.basicProfile,
-          clinicalData: {
-            planDuration: result.plan_duration || "1 Month",
-            bmi: result.bmi,
-            bmiCategory: result.bmi_category,
-          },
-          timestamp: new Date().toISOString(),
-        }, null, 2);
-        const dataUri = "data:application/json;charset=utf-8," + encodeURIComponent(dataStr);
-        const exportFileDefaultName = `meal-plan-${selectedOption?.name.replace(/\s+/g, "-").toLowerCase()}-${selectedDay}.json`;
-        const linkElement = document.createElement("a");
-        linkElement.setAttribute("href", dataUri);
-        linkElement.setAttribute("download", exportFileDefaultName);
-        linkElement.click();
-        setShowSuccessMessage(true);
-        setTimeout(() => setShowSuccessMessage(false), 3000);
-      } catch (error) {
-        console.error('Export failed:', error);
-      } finally {
-        setIsExporting(false);
+        setCheckedMeals(JSON.parse(saved));
+      } catch (e) {
+        console.error("Failed to load progress", e);
       }
-    }, 500);
-  }, [selectedOption, selectedDay, selectedDayData, result]);
+    }
+  }, [result.id, result.databaseId]);
 
-  const handleSaveTracking = async () => {
-    if (!user) {
-      setTrackingError("You must be logged in to save progress.");
-      return;
-    }
-    const planId = result.databaseId || (result as any).id || (selectedOption as any)?.databaseId || (selectedOption as any)?.id;
-    if (!planId) {
-      setTrackingError(`Tracking ID not found. Please regenerate.`);
-      return;
-    }
-    setSavingProgress(true);
+  const toggleMeal = (day: string, idx: number) => {
+    if (isDayLocked(day) || !selectedOption) return;
+    const key = `${day}-${idx}`;
+    const newChecked = { ...checkedMeals, [key]: !checkedMeals[key] };
+    setCheckedMeals(newChecked);
+    localStorage.setItem(`meal-progress-${result.id || result.databaseId || 'current'}`, JSON.stringify(newChecked));
+    
+    // Update daily progress for HUD
+    const today = selectedDay;
+    const todayMeals = selectedOption?.weeklyPlan?.[today]?.meals || [];
+    const completedCount = todayMeals.filter((_: any, i: number) => newChecked[`${today}-${i}`]).length;
+    const progress = todayMeals.length > 0 ? (completedCount / todayMeals.length) * 100 : 0;
+    setDailyProgress(progress);
+  };
+
+  const saveToCloud = async (day: string) => {
+    if (!user?.uid) return;
+    setIsSaving(true);
     setTrackingError("");
+    
     try {
-      const consumedMeals = selectedDayData?.meals?.filter((_: string, idx: number) => checkedMeals[`${selectedDay}-${idx}`]) || [];
-      const response = await fetch("http://127.0.0.1:5000/api/meal-plans/track", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: user.uid, planId: planId, day: selectedDay, consumedMeals: consumedMeals }),
+      const dayMeals = selectedOption?.weeklyPlan?.[day]?.meals || [];
+      const consumedMeals = dayMeals
+        .map((m: string, i: number) => ({ name: parseMealString(m).foodName, index: i }))
+        .filter((_: any, i: number) => checkedMeals[`${day}-${i}`]);
+
+      const payload = {
+        userId: user.uid,
+        planId: result.id || result.databaseId || "unknown",
+        day: day,
+        consumedMeals: consumedMeals,
+        timestamp: new Date().toISOString()
+      };
+
+      const response = await fetch('http://127.0.0.1:5000/api/meal-plans/track', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
       });
-      if (!response.ok) throw new Error("Failed to save tracking progress");
-      setTrackingError("");
+
+      if (!response.ok) throw new Error("Failed to sync progress");
+      
       setShowSuccessMessage(true);
       setTimeout(() => setShowSuccessMessage(false), 3000);
-    } catch (err: any) {
-      console.error("Tracking save failed:", err);
-      setTrackingError(err.message || "An error occurred");
+    } catch (err) {
+      setTrackingError("Sync failed. Local progress saved.");
     } finally {
-      setSavingProgress(false);
+      setIsSaving(false);
     }
   };
 
-  if (!result || !result.mealPlanOptions || result.mealPlanOptions.length === 0) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
-          <div className="w-20 h-20 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Info className="w-10 h-10 text-yellow-600" />
-          </div>
-          <h3 className="text-2xl font-bold text-gray-800 mb-2">Outdated Meal Plan Format</h3>
-          <button onClick={() => window.location.href = "/Pages/MealPlanProviders"} className="px-6 py-3 bg-indigo-600 text-white rounded-lg">Generate New Plan</button>
-        </div>
-      </div>
-    );
-  }
+  if (!result) return null;
 
-  if (!selectedOption || !selectedOption.weeklyPlan) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
-          <div className="w-20 h-20 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Info className="w-10 h-10 text-yellow-600" />
-          </div>
-          <h3 className="text-2xl font-bold text-gray-800 mb-2">Invalid Plan Data</h3>
-          <button onClick={() => window.location.href = "/Pages/MealPlanProviders"} className="px-6 py-3 bg-indigo-600 text-white rounded-lg">Generate New Plan</button>
-        </div>
-      </div>
-    );
-  }
+  const clinicalConditions = result.conditions || [];
+  const nutrientDeficiencies = result.vitamin_deficiencies || [];
+
+  const upcomingPrepDays = allDays.filter(d => {
+    const dNum = parseInt(d.replace("Day ", ""));
+    const selNum = parseInt(selectedDay.replace("Day ", ""));
+    return dNum > selNum && dNum <= selNum + 3;
+  });
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
-      {/* HUD DASHBOARD */}
-      <div className="sticky top-[113px] sm:top-[73px] z-[40] bg-white border-b border-gray-100 shadow-sm px-4 py-3">
+    <div className="min-h-screen bg-slate-50/50 pb-24">
+      {/* Top Navigation Bar */}
+      <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-gray-100 px-6 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-           <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
-                <Clock className="h-5 w-5" />
-              </div>
-              <div className="hidden sm:block">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Current Progress</p>
-                <h4 className="text-sm font-bold text-gray-900">{selectedDay} Plan</h4>
-              </div>
-           </div>
-           <div className="flex items-center gap-6">
-              <div className="text-right">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Daily Goal</p>
-                <p className="text-sm font-bold text-teal-600">{selectedDayData?.total_calories || 0} kcal</p>
-              </div>
-              <div className="h-2 w-24 sm:w-48 bg-gray-100 rounded-full overflow-hidden">
-                 <div className="h-full bg-indigo-500 transition-all duration-500" style={{ width: `${dailyProgress}%` }} />
-              </div>
-           </div>
-        </div>
-      </div>
-
-      <div className="max-w-7xl mx-auto px-4 pt-6 pb-10 sm:px-6 lg:px-8">
-        {showSuccessMessage && (
-          <div className="fixed top-24 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg animate-slide-in z-50">
-            <div className="flex items-center gap-2">
-              <CheckCircle className="w-5 h-5" />
-              <span>Operation Successful!</span>
-            </div>
-          </div>
-        )}
-
-        <div className="mx-auto max-w-6xl space-y-6">
-          {onBack && (
-            <button onClick={onBack} className="flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-all">
-              <ArrowLeft className="w-4 h-4" /> Back to Providers
+          <div className="flex items-center gap-4">
+            <button 
+              onClick={onBack}
+              className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5 text-gray-500" />
             </button>
-          )}
-
-          {/* Header Card */}
-          <div className="rounded-3xl bg-white p-6 sm:p-8 shadow-sm border border-gray-100">
-             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-widest text-indigo-500 mb-1">Meal Dashboard</p>
-                  <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">Your Personalized Plan</h1>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <button onClick={handleExport} disabled={isExporting} className="flex items-center gap-2 px-4 py-2.5 bg-emerald-50 text-emerald-700 rounded-xl font-bold text-sm border border-emerald-100 hover:bg-emerald-100 transition-all">
-                    <Download className="w-4 h-4" /> Export JSON
-                  </button>
-                  <button onClick={() => window.print()} className="flex items-center gap-2 px-4 py-2.5 bg-indigo-50 text-indigo-700 rounded-xl font-bold text-sm border border-indigo-100 hover:bg-indigo-100 transition-all">
-                    <Printer className="w-4 h-4" /> Print
-                  </button>
-                </div>
-             </div>
+            <div className="h-6 w-px bg-gray-200" />
+            <h1 className="text-sm font-black text-gray-900 uppercase tracking-widest">
+              Geriatric Performance Dashboard
+            </h1>
           </div>
+          
+          <div className="flex items-center gap-3">
+            {showSuccessMessage && (
+               <div className="px-4 py-2 bg-emerald-50 text-emerald-600 rounded-xl text-[10px] font-black uppercase tracking-widest border border-emerald-100 animate-fade-in">
+                  Cloud Sync Successful
+               </div>
+            )}
+            <button className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-xl text-[10px] font-black uppercase tracking-widest hover:border-gray-900 transition-all hover:shadow-sm">
+              <Printer className="w-4 h-4" />
+              Print Report
+            </button>
+            <button className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all hover:shadow-lg shadow-gray-200">
+              <Download className="w-4 h-4" />
+              Export .JSON
+            </button>
+          </div>
+        </div>
+      </nav>
 
-          {/* Clinical & Health Profile Restoration */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-slide-up" style={{ animationDelay: '0.1s' }}>
-             {/* Patient Overview */}
-             <div className="lg:col-span-2 bg-white rounded-3xl border border-gray-100 p-6 shadow-sm flex flex-col justify-between">
-                <div className="flex items-center gap-3 mb-6">
-                   <div className="p-2.5 bg-blue-50 rounded-xl text-blue-600">
-                      <User className="w-5 h-5" />
-                   </div>
-                   <h3 className="text-lg font-black text-gray-900">Clinical Profile</h3>
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                   <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">Sex & Age</p>
-                      <p className="text-sm font-bold text-gray-900 capitalize">
-                        {result.basicProfile?.gender || "N/A"} • {result.basicProfile?.age || "N/A"}y
-                      </p>
-                   </div>
-                   <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">Weight</p>
-                      <p className="text-sm font-bold text-gray-900">{result.basicProfile?.weight || result.weight || "N/A"} kg</p>
-                   </div>
-                   <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">BMI Category</p>
-                      <div className="flex items-center gap-2">
-                        <div className={`w-2 h-2 rounded-full ${
-                          result.bmi_category === "Normal" ? "bg-emerald-500" :
-                          result.bmi_category === "Underweight" ? "bg-blue-500" :
-                          result.bmi_category === "Overweight" ? "bg-amber-500" : "bg-red-500"
-                        }`} />
-                        <p className="text-sm font-bold text-gray-900">{result.bmi_category || "N/A"}</p>
+      <div className="max-w-7xl mx-auto px-6 py-12">
+        {/* Clinical Profile Header */}
+        <div className="mb-12">
+           <div className="flex items-center gap-2 mb-6">
+              <span className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full text-[10px] font-black uppercase tracking-widest border border-indigo-100">
+                Clinical Profile
+              </span>
+           </div>
+           
+           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                {/* Card 1: Name */}
+                <div className="bg-white border border-gray-100 p-5 rounded-[24px] shadow-sm hover:shadow-md transition-all group">
+                   <div className="flex items-center gap-3 mb-3">
+                      <div className="p-2 bg-indigo-50 rounded-xl group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                         <User className="w-4 h-4" />
                       </div>
+                      <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Patient Name</span>
                    </div>
-                   <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">Activity</p>
-                      <p className="text-sm font-bold text-gray-900 capitalize">{result.basicProfile?.activityLevel || "Moderate"}</p>
-                   </div>
+                   <p className="text-base font-black text-gray-900 truncate">
+                      {result.basicProfile?.name || result.patient_name || result.patientName || "N/A"}
+                   </p>
                 </div>
-                <div className="mt-6 p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100 flex items-center justify-between">
-                   <div className="flex items-center gap-3">
-                      <Zap className="w-5 h-5 text-indigo-500" />
+
+                {/* Card 2: Sex & Age */}
+                <div className="bg-white border border-gray-100 p-5 rounded-[24px] shadow-sm hover:shadow-md transition-all group">
+                   <div className="flex items-center gap-3 mb-3">
+                      <div className="p-2 bg-emerald-50 rounded-xl group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+                         <Calendar className="w-4 h-4" />
+                      </div>
+                      <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Sex & Age</span>
+                   </div>
+                   <p className="text-base font-black text-gray-900 uppercase">
+                     {result.basicProfile?.gender || result.patient_gender || result.patientGender || "N/A"} • {result.basicProfile?.age || result.patient_age || result.patientAge || "N/A"}y
+                   </p>
+                </div>
+
+                {/* Card 3: Height */}
+                <div className="bg-white border border-gray-100 p-5 rounded-[24px] shadow-sm hover:shadow-md transition-all group">
+                   <div className="flex items-center gap-3 mb-3">
+                      <div className="p-2 bg-sky-50 rounded-xl group-hover:bg-sky-600 group-hover:text-white transition-colors">
+                         <Ruler className="w-4 h-4" />
+                      </div>
+                      <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Height</span>
+                   </div>
+                   <p className="text-base font-black text-gray-900">
+                      {result.basicProfile?.height || result.height || result.patientHeight || "N/A"} cm
+                   </p>
+                </div>
+
+                {/* Card 4: Weight */}
+                <div className="bg-white border border-gray-100 p-5 rounded-[24px] shadow-sm hover:shadow-md transition-all group">
+                   <div className="flex items-center gap-3 mb-3">
+                      <div className="p-2 bg-rose-50 rounded-xl group-hover:bg-rose-600 group-hover:text-white transition-colors">
+                         <Scale className="w-4 h-4" />
+                      </div>
+                      <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Weight</span>
+                   </div>
+                   <p className="text-base font-black text-gray-900">
+                      {result.basicProfile?.weight || result.weight || result.patientWeight || "N/A"} kg
+                   </p>
+                </div>
+
+                {/* Card 5: BMI Category */}
+                <div className="bg-white border border-gray-100 p-5 rounded-[24px] shadow-sm hover:shadow-md transition-all group">
+                   <div className="flex items-center gap-3 mb-3">
+                      <div className="p-2 bg-amber-50 rounded-xl group-hover:bg-amber-600 group-hover:text-white transition-colors">
+                         <Activity className="w-4 h-4" />
+                      </div>
+                      <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">BMI Status</span>
+                   </div>
+                    <p className="text-base font-black text-gray-900 truncate uppercase">
+                       {result.bmi_category || result.bmiCategory || result.bmiLevel || "N/A"}
+                    </p>
+                </div>
+
+                {/* Card 6: Activity Level */}
+                <div className="bg-white border border-gray-100 p-5 rounded-[24px] shadow-sm hover:shadow-md transition-all group">
+                   <div className="flex items-center gap-3 mb-3">
+                      <div className="p-2 bg-purple-50 rounded-xl group-hover:bg-purple-600 group-hover:text-white transition-colors">
+                         <Zap className="w-4 h-4" />
+                      </div>
+                      <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Activity</span>
+                   </div>
+                   <p className="text-base font-black text-gray-900 truncate uppercase">
+                      {result.basicProfile?.activityLevel || result.activity_level || result.activityLevel || result.patientActivityLevel || "N/A"}
+                   </p>
+                </div>
+
+                <div className="lg:col-span-6 mt-4 p-6 bg-emerald-950 rounded-[32px] text-white flex items-center justify-between shadow-xl shadow-emerald-900/10">
+                   <div className="flex items-center gap-4">
+                      <div className="p-3 bg-emerald-500/10 rounded-2xl border border-emerald-500/20">
+                         <Heart className="w-6 h-6 text-emerald-400" />
+                      </div>
                       <div>
-                        <p className="text-[10px] font-black uppercase tracking-widest text-indigo-400">Target Range</p>
-                        <p className="text-sm font-bold text-indigo-900">{result.daily_calorie_range || "N/A"}</p>
+                         <p className="text-[10px] font-black text-emerald-400 uppercase tracking-[0.2em]">Target Deficiency Resolution</p>
+                         <h3 className="text-xl font-black">Daily Calorie Target: {result.daily_calorie_range || result.dailyCalorieRange || "N/A"}</h3>
                       </div>
                    </div>
                    <div className="text-right">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-indigo-400">BMI Score</p>
-                      <p className="text-lg font-black text-indigo-600">{result.bmi || "N/A"}</p>
+                      <p className="text-[10px] font-black text-emerald-400/60 uppercase tracking-widest">Plan Duration</p>
+                      <p className="text-xl font-black uppercase">{result.plan_duration || result.planDuration || "N/A"}</p>
                    </div>
                 </div>
-             </div>
+           </div>
+        </div>
 
-             {/* Health Assessment */}
-             <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm">
-                <div className="flex items-center gap-3 mb-6">
-                   <div className="p-2.5 bg-rose-50 rounded-xl text-rose-600">
-                      <Heart className="w-5 h-5" />
+        {/* Nutritional Guidance Section */}
+        <div className="mb-16">
+           <div className="flex items-center gap-3 mb-8">
+              <div className="p-2 bg-amber-100 text-amber-700 rounded-xl">
+                 <ShieldAlert className="w-5 h-5" />
+              </div>
+              <h2 className="text-xl font-black text-gray-900 uppercase tracking-tight italic">Nutrient Focus & Guidance</h2>
+           </div>
+
+           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {nutrientDeficiencies.map((def: any, i: number) => (
+                <div key={i} className="bg-white border border-gray-100 rounded-[32px] p-6 shadow-sm hover:shadow-xl transition-all hover:border-amber-200 group">
+                   <div className="flex items-center justify-between mb-4">
+                      <div className="p-3 bg-amber-50 text-amber-600 rounded-2xl group-hover:bg-amber-600 group-hover:text-white transition-all">
+                        <Pill className="w-6 h-6" />
+                      </div>
+                      <div className="px-3 py-1 bg-gray-50 text-gray-400 rounded-full text-[10px] font-black uppercase tracking-widest">
+                         Deficiency
+                      </div>
                    </div>
-                   <h3 className="text-lg font-black text-gray-900">Health Outlook</h3>
+                   <h3 className="text-lg font-black text-gray-900 mb-1">{def.name}</h3>
+                   <div className="flex items-center gap-2 mb-4">
+                      <span className="px-2 py-0.5 bg-rose-50 text-rose-600 rounded-lg text-[10px] font-black uppercase tracking-widest">
+                        {def.level || 'Moderate'}
+                      </span>
+                   </div>
+                   <div className="w-full h-1.5 bg-gray-50 rounded-full overflow-hidden">
+                      <div className="h-full bg-amber-400 w-2/3" />
+                   </div>
                 </div>
-                <div className="space-y-4">
-                   <div>
-                      <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">Conditions & Risks</p>
-                      <div className="flex flex-wrap gap-2">
-                         {clinicalConditions.length > 0 ? (
-                           clinicalConditions.map((c: string, i: number) => (
-                             <span key={i} className="px-3 py-1 bg-rose-50 text-rose-700 rounded-lg text-xs font-bold border border-rose-100 capitalize">{c}</span>
-                           ))
-                         ) : (
-                           <span className="px-3 py-1 bg-emerald-50 text-emerald-700 rounded-lg text-xs font-bold border border-emerald-100">No Chronic Conditions</span>
-                         )}
-                      </div>
-                   </div>
-                   <div>
-                      <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">Dietary Strategy</p>
-                      <div className="flex flex-wrap gap-2">
-                         {dietaryStrategy.length > 0 ? (
-                           dietaryStrategy.map((r: string, i: number) => (
-                             <span key={i} className="px-3 py-1 bg-amber-50 text-amber-700 rounded-lg text-xs font-bold border border-amber-100 capitalize">{r}</span>
-                           ))
-                         ) : (
-                           <span className="px-3 py-1 bg-blue-50 text-blue-700 rounded-lg text-xs font-bold border border-blue-100">Standard Nutrition</span>
-                         )}
-                      </div>
-                   </div>
-                   {nutrientDeficiencies.length > 0 && (
-                     <div>
-                        <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">Nutrient Deficiencies</p>
-                        <div className="flex flex-wrap gap-2">
-                           {nutrientDeficiencies.map((v: any, i: number) => (
-                             <span key={i} className="px-3 py-1 bg-indigo-50 text-indigo-700 rounded-lg text-xs font-bold border border-indigo-100">
-                               {typeof v === 'string' ? v : `${v.name} (${v.level})`}
-                             </span>
-                           ))}
-                        </div>
+              ))}
+              
+              {nutrientDeficiencies.length === 0 && (
+                 <div className="lg:col-span-4 p-8 bg-gray-50 rounded-[32px] border border-dashed border-gray-300 text-center">
+                    <p className="text-gray-400 font-bold uppercase tracking-widest text-xs">No Critical Deficiencies Flagged</p>
+                 </div>
+              )}
+           </div>
+        </div>
+
+        {/* Live HUD Section */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
+            <div className="bg-gray-900 rounded-3xl p-6 text-white shadow-xl shadow-gray-200 relative overflow-hidden group">
+               <div className="absolute top-0 right-0 w-32 h-32 -mr-16 -mt-16 bg-white/5 rounded-full group-hover:scale-150 transition-transform duration-700" />
+               <div className="relative z-10">
+                  <div className="flex items-center gap-3 mb-4">
+                     <div className="p-2 bg-white/10 rounded-xl">
+                        <Clock className="w-5 h-5 text-amber-400" />
                      </div>
-                   )}
-                </div>
-                <div className="mt-8 pt-4 border-t border-gray-50">
-                   <div className="flex items-start gap-3">
-                      <ShieldAlert className="w-4 h-4 text-amber-500 mt-0.5" />
-                      <p className="text-[11px] font-bold text-gray-500 leading-relaxed">
-                        {result.bmi_advice || "Follow the calibrated portion sizes to maintain stable glycemic and metabolic levels."}
-                      </p>
-                   </div>
-                </div>
-             </div>
-          </div>
-
-          {/* Horizontal Calendar Hook */}
-          <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm overflow-hidden">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
-              <div className="flex items-center gap-4">
-                 <div className="p-3 bg-indigo-50 rounded-2xl text-indigo-600">
-                    <Calendar className="w-6 h-6" />
-                 </div>
-                 <div>
-                    <h3 className="text-xl font-black text-gray-900 tracking-tight">Plan Schedule</h3>
-                    <div className="mt-1">
-                      <select 
-                        className="text-sm font-bold text-indigo-600 bg-indigo-50 rounded-lg px-3 py-1 outline-none cursor-pointer"
-                        value={currentWeek}
-                        onChange={(e) => {
-                          const w = parseInt(e.target.value);
-                          setCurrentWeek(w);
-                          setSelectedDay(`Day ${(w - 1) * 7 + 1}`);
-                        }}
-                      >
-                        {Array.from({ length: Math.ceil(allDays.length / 7) }).map((_, i) => (
-                          <option key={i} value={i + 1}>Week {i + 1} (Days {i * 7 + 1}-{Math.min((i + 1) * 7, allDays.length)})</option>
-                        ))}
-                      </select>
-                    </div>
-                 </div>
-              </div>
-
-              {/* HUD Timer in Calendar */}
-              <div className="bg-indigo-600 px-6 py-4 rounded-2xl text-white shadow-xl flex items-center gap-6 relative overflow-hidden group">
-                 <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -mr-16 -mt-16"></div>
-                 <div className="relative z-10 border-r border-white/20 pr-6">
-                    <p className="text-[10px] font-black uppercase tracking-widest opacity-70 mb-0.5">Next Meal In</p>
-                    <p className="text-3xl font-black tabular-nums">{timeToNextMeal}</p>
-                 </div>
-                 <div className="hidden sm:flex gap-4 relative z-10">
-                    {[{l:"B", t:"08:00"}, {l:"L", t:"13:00"}, {l:"D", t:"19:30"}].map((m, i) => (
-                      <div key={i} className="flex flex-col items-center gap-1">
-                        <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center text-[10px] font-bold">{m.l}</div>
-                        <span className="text-[9px] opacity-60">{m.t}</span>
-                      </div>
-                    ))}
-                 </div>
-              </div>
+                     <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Day Countdown</span>
+                  </div>
+                  <p className="text-3xl font-black tabular-nums tracking-tighter mb-1">{timeToDayEnd}</p>
+                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Until Day Over</p>
+               </div>
             </div>
 
-            {/* Horizontal Carousel */}
-            <div className="flex items-center gap-4 overflow-x-auto pb-4 scrollbar-hide snap-x">
-               {daysInWeek.map((day) => {
-                  const isSelected = selectedDay === day;
-                  const isLocked = isDayLocked(day);
-                  const isDone = checkDayCompletion(day);
-                  const dayNum = parseInt(day.replace("Day ", ""));
+            <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm">
+               <div className="flex items-center gap-3 mb-4">
+                  <div className="p-2 bg-emerald-50 rounded-xl text-emerald-600">
+                     <CheckCircle className="w-5 h-5" />
+                  </div>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Daily Progress</span>
+               </div>
+               <p className="text-3xl font-black text-gray-900 tracking-tighter mb-2">{Math.round(dailyProgress)}%</p>
+               <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-emerald-500 transition-all duration-1000 ease-out"
+                    style={{ width: `${dailyProgress}%` }}
+                  />
+               </div>
+            </div>
 
+            <div className="md:col-span-2 bg-indigo-600 rounded-3xl p-6 text-white shadow-xl shadow-indigo-200 relative overflow-hidden flex items-center justify-between">
+               <div className="absolute top-0 right-0 w-64 h-64 -mr-32 -mt-32 bg-white/10 rounded-full" />
+               <div className="relative z-10">
+                  <div className="flex items-center gap-3 mb-2">
+                     <div className="p-2 bg-white/20 rounded-xl backdrop-blur-md">
+                        <Zap className="w-5 h-5 text-amber-300" />
+                     </div>
+                     <span className="text-[10px] font-black uppercase tracking-widest text-indigo-100">Next Scheduled Meal</span>
+                  </div>
+                  <h3 className="text-xl font-black tracking-tight">{(nextMeal as any)?.name || "All Meals Logged"}</h3>
+                  <p className="text-sm font-bold text-indigo-100/80">{(nextMeal as any)?.time || "Great job!"}</p>
+               </div>
+               <div className="relative z-10 text-right">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-indigo-100 mb-1">Incoming In</p>
+                  <p className="text-3xl font-black tabular-nums tracking-tighter">{timeToNextMeal}</p>
+               </div>
+            </div>
+        </div>
+
+        <div className="bg-white rounded-[40px] border border-gray-100 p-8 lg:p-12 shadow-sm mb-12">
+          <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8 mb-12">
+            <div>
+              <div className="flex items-center gap-3 mb-4">
+                 <Calendar className="w-6 h-6 text-gray-900" />
+                 <h2 className="text-3xl font-black text-gray-900 tracking-tighter">Clinical Meal Calendar</h2>
+              </div>
+              <p className="text-gray-500 font-medium max-w-xl text-lg">
+                Strict sequential progression. Complete each day to unlock the next calibrated meal plan.
+              </p>
+            </div>
+            
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center justify-between bg-gray-100 p-2 rounded-2xl">
+                <button 
+                  onClick={() => handleWeekChange('prev')}
+                  disabled={currentWeek === 1}
+                  className={`p-2 rounded-xl transition-all ${currentWeek === 1 ? 'text-gray-300 cursor-not-allowed' : 'text-gray-600 hover:bg-white hover:text-gray-900 shadow-sm'}`}
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+                <div className="text-center">
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-0.5">Timeline Navigator</p>
+                  <p className="text-sm font-black text-gray-900">Week {currentWeek} of {totalWeeks}</p>
+                </div>
+                <button 
+                  onClick={() => handleWeekChange('next')}
+                  disabled={currentWeek === totalWeeks}
+                  className={`p-2 rounded-xl transition-all ${currentWeek === totalWeeks ? 'text-gray-300 cursor-not-allowed' : 'text-gray-600 hover:bg-white hover:text-gray-900 shadow-sm'}`}
+                >
+                  <ChevronRight className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="flex p-1.5 bg-gray-100 rounded-2xl overflow-x-auto no-scrollbar scrollbar-hide">
+                {daysInWeek.map((day) => {
+                  const isLocked = isDayLocked(day);
                   return (
                     <button
                       key={day}
-                      disabled={isLocked}
-                      onClick={() => setSelectedDay(day)}
-                      className={`flex-shrink-0 min-w-[130px] p-5 rounded-3xl transition-all border snap-center group relative overflow-hidden ${
-                        isSelected ? 'bg-indigo-600 border-indigo-500 text-white shadow-xl scale-105 z-10' :
-                        isLocked ? 'bg-gray-50 border-gray-100 text-gray-400 opacity-60 grayscale cursor-not-allowed' :
-                        'bg-white border-gray-100 text-gray-600 hover:border-indigo-300'
+                      onClick={() => !isLocked && setSelectedDay(day)}
+                      className={`flex flex-col items-center justify-center min-w-[80px] h-20 rounded-xl transition-all relative ${
+                        selectedDay === day 
+                          ? "bg-white text-gray-900 shadow-sm" 
+                          : isLocked 
+                            ? "text-gray-400 cursor-not-allowed" 
+                            : "text-gray-500 hover:text-gray-900 hover:bg-white/50"
                       }`}
                     >
-                      <div className="flex flex-col items-center gap-3">
-                         <div className={`w-10 h-10 rounded-2xl flex items-center justify-center text-lg font-black ${isSelected ? 'bg-white/20' : 'bg-indigo-50 text-indigo-600'}`}>
-                           {isLocked ? <Lock className="w-5 h-5" /> : dayNum}
-                         </div>
-                         <div className="text-center">
-                           <span className="text-sm font-black uppercase tracking-tight block">{day}</span>
-                           <span className={`text-[10px] font-bold ${isSelected ? 'text-indigo-200' : isDone ? 'text-emerald-600' : 'text-gray-400'}`}>
-                             {isDone ? "Completed" : `${selectedOption.weeklyPlan[day].total_calories} kcal`}
-                           </span>
-                         </div>
-                      </div>
+                      <span className="text-[10px] font-black uppercase tracking-widest mb-1">{day.split(" ")[0]}</span>
+                      <span className="text-lg font-black">{day.split(" ")[1]}</span>
+                      {isLocked && <Lock className="w-3 h-3 absolute top-2 right-2 opacity-40 text-rose-500" />}
+                      {checkDayCompletion(day) && <CheckCircle className="w-3 h-3 absolute top-2 right-2 text-emerald-500" />}
                     </button>
                   );
-               })}
+                })}
+              </div>
             </div>
           </div>
 
-          {/* Details Section */}
-          <div className="space-y-6 animate-slide-up">
-             {/* Nutrition */}
-             <div className="bg-white rounded-3xl border border-gray-100 p-8 shadow-sm">
-                <h3 className="text-lg font-black text-gray-900 mb-6 flex items-center gap-2">
-                  <Info className="w-5 h-5 text-indigo-500" /> Daily Breakdown
-                </h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                   {[
-                     { label: "Calories", val: dailyNutrition.totalCalories, unit: "kcal", color: "bg-blue-500", icon: "🔥" },
-                     { label: "Protein", val: dailyNutrition.estimatedProtein, unit: "g", color: "bg-red-500", icon: "🥩" },
-                     { label: "Carbs", val: dailyNutrition.estimatedCarbs, unit: "g", color: "bg-amber-500", icon: "🍞" },
-                     { label: "Fats", val: dailyNutrition.estimatedFat, unit: "g", color: "bg-emerald-500", icon: "🥑" }
-                   ].map((item, i) => (
-                     <div key={i} className="p-4 rounded-2xl bg-gray-50 border border-gray-100 group hover:bg-white hover:shadow-md transition-all">
-                        <div className="flex justify-between items-start mb-2">
-                           <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest">{item.label}</span>
-                           <span className="text-sm">{item.icon}</span>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+            <div className="lg:col-span-8 space-y-6">
+              <div className="flex items-center justify-between mb-4">
+                 <div className="flex items-center gap-3">
+                    <div className="px-4 py-2 bg-gray-900 text-white rounded-xl text-xs font-black uppercase tracking-widest">
+                       {selectedDay} Regimen
+                    </div>
+                    {isDayLocked(selectedDay) && (
+                       <div className="flex items-center gap-2 px-3 py-1.5 bg-rose-50 text-rose-600 rounded-lg text-[10px] font-black border border-rose-100">
+                          <Lock className="w-3 h-3" />
+                          LOCKED: COMPLETE PREVIOUS DAY
+                       </div>
+                    )}
+                 </div>
+                 <div className="text-right">
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Day Highlights</p>
+                    <p className="text-sm font-black text-gray-900">High Fiber • Protein Dense</p>
+                 </div>
+              </div>
+
+              {selectedDayData?.meals?.map((meal: string, idx: number) => {
+                const p = parseMealString(meal);
+                const isChecked = checkedMeals[`${selectedDay}-${idx}`];
+                const isLocked = isDayLocked(selectedDay);
+                
+                return (
+                  <div 
+                    key={idx}
+                    className={`group relative bg-white border rounded-3xl p-6 transition-all duration-300 ${
+                      isChecked 
+                        ? "border-emerald-200 bg-emerald-50/20 shadow-none scale-[0.98]" 
+                        : isLocked
+                          ? "border-gray-100 opacity-60 grayscale cursor-not-allowed"
+                          : "border-gray-100 hover:border-gray-300 hover:bg-gray-50/50 hover:-translate-y-1 shadow-sm hover:shadow-xl hover:shadow-gray-100"
+                    }`}
+                  >
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                      <div className="flex items-start gap-4">
+                        <div className={`mt-1.5 w-6 h-6 rounded-full border-4 flex-shrink-0 transition-all duration-500 ${
+                          isChecked 
+                            ? "bg-emerald-500 border-emerald-200 scale-110 shadow-lg shadow-emerald-200" 
+                            : "bg-white border-gray-100 group-hover:border-gray-300"
+                        }`} />
+                        <div>
+                          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 flex items-center gap-2">
+                            Meal {idx + 1}
+                            {isChecked && <span className="text-emerald-600">✓ Logged</span>}
+                          </p>
+                          <h4 className={`text-xl font-black transition-all ${isChecked ? "text-emerald-900/40 line-through" : "text-gray-900"}`}>
+                            {p.foodName}
+                          </h4>
                         </div>
-                        <div className="flex items-baseline gap-1">
-                           <span className="text-2xl font-black text-gray-900">{item.val}</span>
-                           <span className="text-xs font-bold text-gray-400">{item.unit}</span>
+                      </div>
+                      
+                      <div className="flex items-center gap-6 md:border-l md:border-gray-100 md:pl-8">
+                         <div className="text-center">
+                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Serving</p>
+                            <p className="text-sm font-black text-gray-900">{p.servingSize}g</p>
+                         </div>
+                         <div className="text-center">
+                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Energy</p>
+                            <p className="text-sm font-black text-emerald-600">{p.calories} kcal</p>
+                         </div>
+                         <div className="flex items-center gap-2">
+                           <button 
+                             onClick={() => toggleMeal(selectedDay, idx)}
+                             disabled={isLocked}
+                             className={`p-3 rounded-2xl transition-all ${
+                               isChecked 
+                                 ? "bg-emerald-500 text-white shadow-lg shadow-emerald-200" 
+                                 : isLocked
+                                   ? "bg-gray-100 text-gray-300 cursor-not-allowed"
+                                   : "bg-gray-900 text-white hover:bg-black hover:scale-105"
+                             }`}
+                           >
+                             {isChecked ? <CheckCircle className="w-5 h-5" /> : <Save className="w-5 h-5" />}
+                           </button>
+                         </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="lg:col-span-4 space-y-8">
+               <div className="bg-gray-900 rounded-[32px] p-8 text-white relative overflow-hidden group">
+                  <div className="absolute top-0 right-0 w-32 h-32 -mr-16 -mt-16 bg-emerald-400/20 rounded-full blur-3xl group-hover:bg-emerald-400/40 transition-all duration-700" />
+                  <div className="relative z-10">
+                    <h5 className="text-[10px] font-black text-emerald-400 uppercase tracking-[0.2em] mb-4">Metabolic Summary</h5>
+                    <div className="space-y-6">
+                      <div>
+                        <div className="flex justify-between items-end mb-2">
+                           <p className="text-[10px] font-bold text-gray-400 uppercase">Protein Targets</p>
+                           <p className="text-sm font-black">75% Achieved</p>
                         </div>
-                        <div className="mt-3 h-1 w-full bg-gray-200 rounded-full overflow-hidden">
-                           <div className={`h-full ${item.color}`} style={{ width: '40%' }}></div>
+                        <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
+                           <div className="h-full bg-emerald-400 w-3/4" />
                         </div>
-                     </div>
-                   ))}
-                </div>
+                      </div>
+                      <div>
+                        <div className="flex justify-between items-end mb-2">
+                           <p className="text-[10px] font-bold text-gray-400 uppercase">Fiber Threshold</p>
+                           <p className="text-sm font-black text-amber-400">Critical</p>
+                        </div>
+                        <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
+                           <div className="h-full bg-amber-400 w-full animate-pulse" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+               </div>
+
+               <div className="bg-white border rounded-[32px] p-6 border-gray-100 shadow-sm">
+                  <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-50">
+                     <Settings className="w-5 h-5 text-gray-400" />
+                     <h5 className="text-xs font-black text-gray-900 uppercase tracking-widest">Regimen Controls</h5>
+                  </div>
+                  <div className="space-y-4">
+                      <button 
+                         onClick={() => saveToCloud(selectedDay)}
+                         disabled={isSaving}
+                         className="w-full py-4 px-6 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-100"
+                      >
+                         {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                         {isSaving ? "Syncing..." : "Save Daily Progress"}
+                      </button>
+                  </div>
+               </div>
+            </div>
+          </div>
+          
+          {/* Ready for Buy Advance Prep Console */}
+          <div className="mt-20 p-8 lg:p-12 bg-amber-50 rounded-[40px] border border-amber-100 relative overflow-hidden">
+             <div className="absolute top-0 right-0 w-64 h-64 -mr-32 -mt-32 bg-amber-200/20 rounded-full blur-3xl opacity-50" />
+             <div className="flex items-center justify-between mb-10 pb-6 border-b border-amber-200/50">
+                 <div className="flex items-center gap-4">
+                    <div className="p-3 bg-white rounded-2xl shadow-sm border border-amber-100 text-amber-600">
+                       <Clock className="w-6 h-6" />
+                    </div>
+                    <div>
+                       <h2 className="text-2xl font-black text-amber-900 tracking-tight italic">Ready for Buy</h2>
+                       <p className="text-[10px] font-black text-amber-700/60 uppercase tracking-widest">Next 3 days pre-shopping console</p>
+                    </div>
+                 </div>
+                 <div className="px-4 py-2 bg-amber-200/50 rounded-xl text-amber-700 text-[10px] font-black uppercase tracking-wider">
+                    3-Day Shopping List
+                 </div>
              </div>
 
-             {/* Meals */}
-             <div className="bg-white rounded-3xl border border-gray-100 p-8 shadow-sm">
-                <div className="flex justify-between items-center mb-8 pb-4 border-b border-gray-100">
-                   <div>
-                      <h3 className="text-xl font-black text-gray-900">{selectedDay} Menu</h3>
-                      <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">{dailyNutrition.mealCount} Curated Selections</p>
-                   </div>
-                   <button onClick={() => setShowRawData(!showRawData)} className="p-2 bg-gray-50 rounded-xl text-gray-600 hover:bg-gray-100">
-                      <Settings className="w-5 h-5" />
-                   </button>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                   {selectedDayData?.meals.map((meal: string, idx: number) => {
-                      const p = parseMealString(meal);
-                      const key = `${selectedDay}-${idx}`;
-                      return (
-                        <div key={idx} className={`p-4 rounded-2xl border transition-all flex items-center justify-between gap-4 ${checkedMeals[key] ? 'bg-indigo-50 border-indigo-200' : 'bg-gray-50 border-gray-100'}`}>
-                           <div className="flex items-center gap-4">
-                              <div className={`w-10 h-10 rounded-xl flex flex-shrink-0 items-center justify-center font-black ${checkedMeals[key] ? 'bg-indigo-600 text-white' : 'bg-white text-gray-400 shadow-sm'}`}>
-                                {idx + 1}
-                              </div>
-                              <div>
-                                 <h4 className={`font-bold text-sm ${checkedMeals[key] ? 'text-indigo-900' : 'text-gray-900'}`}>{p.foodName}</h4>
-                                 <p className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-tight">{p.servingSize}g • {p.calories} kcal</p>
-                              </div>
-                           </div>
-                           <input 
-                             type="checkbox" 
-                             checked={checkedMeals[key] || false}
-                             onChange={(e) => setCheckedMeals(prev => ({ ...prev, [key]: e.target.checked }))}
-                             className="w-6 h-6 rounded-lg text-indigo-600 border-gray-300 focus:ring-indigo-500"
-                           />
-                        </div>
-                      );
-                   })}
-                </div>
-
-                <div className="mt-8 pt-8 border-t border-gray-100 flex flex-col sm:flex-row justify-between items-center gap-4">
-                   <div className="flex-1">
-                      {trackingError && <p className="text-xs font-bold text-red-500 mb-1 animate-pulse">⚠️ {trackingError}</p>}
-                      {showSuccessMessage && <p className="text-xs font-bold text-emerald-600 mb-1">✅ Progress stored!</p>}
-                   </div>
-                   <button 
-                     onClick={handleSaveTracking} 
-                     disabled={savingProgress}
-                     className={`w-full sm:w-auto px-8 py-4 rounded-2xl font-black text-white shadow-xl transition-all transform active:scale-95 ${savingProgress ? 'bg-gray-400' : 'bg-indigo-600 hover:bg-indigo-700 hover:-translate-y-1 hover:shadow-indigo-200'}`}
-                   >
-                     {savingProgress ? "Processing..." : "Save Progress"}
-                   </button>
-                </div>
+             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                {upcomingPrepDays.map((prepDay) => {
+                   const dayData = selectedOption?.weeklyPlan?.[prepDay];
+                   return (
+                      <div key={prepDay} className="bg-white/60 backdrop-blur-sm rounded-3xl p-6 border border-amber-200/50 hover:bg-white transition-all group">
+                         <div className="flex items-center justify-between mb-4">
+                            <span className="px-3 py-1 bg-amber-900 text-amber-50 rounded-full text-[10px] font-black uppercase tracking-widest">
+                               {prepDay}
+                            </span>
+                            <span className="text-[10px] font-bold text-amber-600 uppercase">Prep Mode 🛒</span>
+                         </div>
+                         <div className="space-y-3">
+                            {dayData?.meals?.map((m: string, i: number) => {
+                               const mp = parseMealString(m);
+                               return (
+                                  <div key={i} className="flex items-center justify-between gap-3 text-sm">
+                                     <p className="text-amber-900 font-bold truncate flex-1">{mp.foodName}</p>
+                                     <p className="text-amber-600/60 font-black text-[10px]">{mp.servingSize}g</p>
+                                  </div>
+                               );
+                            })}
+                         </div>
+                      </div>
+                   )
+                })}
              </div>
           </div>
         </div>
+
+        <div className="flex flex-col md:flex-row items-center justify-between gap-6 pt-12 border-t border-gray-100">
+           {/* Action Buttons Footer removed */}
+        </div>
       </div>
 
-      <style jsx>{`
-        @keyframes slide-in {
-          from { transform: translateX(100%); opacity: 0; }
-          to { transform: translateX(0); opacity: 1; }
-        }
-        .animate-slide-in { animation: slide-in 0.3s ease-out; }
-        @keyframes slide-up {
-          from { transform: translateY(20px); opacity: 0; }
-          to { transform: translateY(0); opacity: 1; }
-        }
-        .animate-slide-up { animation: slide-up 0.5s ease-out; }
-        .scrollbar-hide::-webkit-scrollbar { display: none; }
-        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
-      `}</style>
+      {showRawData && (
+        <div className="max-w-7xl mx-auto px-6 mt-8">
+          <pre className="p-8 bg-gray-900 text-emerald-400 rounded-[32px] overflow-auto text-xs font-mono shadow-2xl">
+            {JSON.stringify(result, null, 2)}
+          </pre>
+        </div>
+      )}
     </div>
   );
 };

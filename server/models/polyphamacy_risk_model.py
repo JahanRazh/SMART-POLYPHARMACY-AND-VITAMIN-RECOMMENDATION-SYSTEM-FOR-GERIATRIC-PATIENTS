@@ -26,6 +26,8 @@ _ADE_MODEL = None
 _ADE_DRUG_ENCODER = None
 _ADE_DISEASE_ENCODER = None
 _ADE_TARGET_ENCODER = None
+_ADE_AGE_ENCODER = None
+_ADE_GENDER_ENCODER = None
 
 
 def _normalize_drug_name(value: str) -> str:
@@ -157,10 +159,10 @@ def search_disease_names(query: str, limit: int = 15) -> List[str]:
 
 def _load_ade_model():
     """Load the trained ADE prediction model and encoders (cached)."""
-    global _ADE_MODEL, _ADE_DRUG_ENCODER, _ADE_DISEASE_ENCODER, _ADE_TARGET_ENCODER
+    global _ADE_MODEL, _ADE_DRUG_ENCODER, _ADE_DISEASE_ENCODER, _ADE_TARGET_ENCODER, _ADE_AGE_ENCODER, _ADE_GENDER_ENCODER
 
     if _ADE_MODEL is not None:
-        return _ADE_MODEL, _ADE_DRUG_ENCODER, _ADE_DISEASE_ENCODER, _ADE_TARGET_ENCODER
+        return _ADE_MODEL, _ADE_DRUG_ENCODER, _ADE_DISEASE_ENCODER, _ADE_TARGET_ENCODER, _ADE_AGE_ENCODER, _ADE_GENDER_ENCODER
 
     model_path = os.path.join(ADE_MODEL_DIR, "rf_ade_model.pkl")
     if not os.path.exists(model_path):
@@ -176,12 +178,16 @@ def _load_ade_model():
         _ADE_DISEASE_ENCODER = pickle.load(f)
     with open(os.path.join(ADE_MODEL_DIR, "target_encoder.pkl"), "rb") as f:
         _ADE_TARGET_ENCODER = pickle.load(f)
+    with open(os.path.join(ADE_MODEL_DIR, "age_encoder.pkl"), "rb") as f:
+        _ADE_AGE_ENCODER = pickle.load(f)
+    with open(os.path.join(ADE_MODEL_DIR, "gender_encoder.pkl"), "rb") as f:
+        _ADE_GENDER_ENCODER = pickle.load(f)
 
-    return _ADE_MODEL, _ADE_DRUG_ENCODER, _ADE_DISEASE_ENCODER, _ADE_TARGET_ENCODER
+    return _ADE_MODEL, _ADE_DRUG_ENCODER, _ADE_DISEASE_ENCODER, _ADE_TARGET_ENCODER, _ADE_AGE_ENCODER, _ADE_GENDER_ENCODER
 
 
 def predict_adverse_events(
-    drugs: List[str], age: int, diseases: List[str]
+    drugs: List[str], age: int, gender: str, diseases: List[str]
 ) -> List[Dict]:
     """
     Predict adverse drug events for combinations of drugs and existing diseases.
@@ -189,10 +195,43 @@ def predict_adverse_events(
     Returns a list of dicts:
         { drug, disease, predictedADE, confidence }
     """
-    model, drug_enc, disease_enc, target_enc = _load_ade_model()
+    model, drug_enc, disease_enc, target_enc, age_enc, gender_enc = _load_ade_model()
 
     known_drugs = set(drug_enc.classes_)
     known_diseases = set(disease_enc.classes_)
+    known_ages = set(age_enc.classes_)
+    known_genders = set(gender_enc.classes_)
+
+    # Encode Age (using string representation, with fallback to closest or generic if unknown)
+    age_str = str(age)
+    if age_str in known_ages:
+        age_encoded = age_enc.transform([age_str])[0]
+    else:
+        # fallback to a known age randomly or a median age just to avoid crashing
+        # picking the first known age as a fallback for unknown ages
+        age_encoded = age_enc.transform([list(known_ages)[0]])[0]
+        
+    # Map frontend 'male'/'female' back to dataset 'M'/'F'
+    gender_str = gender.strip().lower() if gender else ""
+    if gender_str == "male":
+        mapped_gender = "M"
+    elif gender_str == "female":
+        mapped_gender = "F"
+    else:
+        mapped_gender = "Unknown"
+
+    # Try to find a case-insensitive match just in case
+    gender_match = None
+    for kg in known_genders:
+         if kg.lower() == mapped_gender.lower():
+             gender_match = kg
+             break
+    if gender_match is None and "Unknown" in known_genders:
+         gender_match = "Unknown"
+    elif gender_match is None:
+         gender_match = list(known_genders)[0]  # Fallback to whatever is first
+    
+    gender_encoded = gender_enc.transform([gender_match])[0]
 
     predictions: List[Dict] = []
 
@@ -224,7 +263,8 @@ def predict_adverse_events(
                 continue  # skip unknown diseases
 
             disease_encoded = disease_enc.transform([disease_match])[0]
-            features = np.array([[drug_encoded, age, disease_encoded]])
+            # model trained with columns: [Drug_enc, Age_enc, Gender_enc, Disease_enc]
+            features = np.array([[drug_encoded, age_encoded, gender_encoded, disease_encoded]])
 
             proba = model.predict_proba(features)[0]
             pred_idx = int(np.argmax(proba))
