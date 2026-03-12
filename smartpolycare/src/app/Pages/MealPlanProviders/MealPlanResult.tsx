@@ -204,13 +204,6 @@ const MealPlanResult: React.FC<MealPlanResultProps> = ({
       <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-gray-100 px-6 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <button 
-              onClick={onBack}
-              className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
-            >
-              <ArrowLeft className="w-5 h-5 text-gray-500" />
-            </button>
-            <div className="h-6 w-px bg-gray-200" />
             <h1 className="text-sm font-black text-gray-900 uppercase tracking-widest">
               Geriatric Performance Dashboard
             </h1>
