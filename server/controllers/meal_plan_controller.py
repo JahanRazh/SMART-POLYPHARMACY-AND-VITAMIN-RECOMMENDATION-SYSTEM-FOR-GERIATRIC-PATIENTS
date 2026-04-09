@@ -145,9 +145,10 @@ def _load_foods(conditions: list, bmi_category: str, dietary_restrictions: dict)
 # BUILD WEEKLY MEAL PLAN
 # ==================================================
 
-def _build_weekly_plan(foods: list, seed: int = 0) -> dict:
+def _build_weekly_plan(foods: list, seed: int = 0, num_days: int = 28) -> dict:
     """
-    Build a 7-day meal plan with 7 food items per day at 300g each.
+    Build a multi-week meal plan (default 28 days = 4 weeks) with 7 food items
+    per day at 300g each.
     Returns { "Day 1": { "meals": [...], "total_calories": int }, ... }
     """
     rng = random.Random(seed)
@@ -156,7 +157,7 @@ def _build_weekly_plan(foods: list, seed: int = 0) -> dict:
     pool_size = len(pool)
 
     weekly = {}
-    for day_num in range(1, 8):
+    for day_num in range(1, num_days + 1):
         offset    = ((day_num - 1) * 7) % max(pool_size, 1)
         day_slice = (pool + pool)[offset: offset + 7]
         meals     = []

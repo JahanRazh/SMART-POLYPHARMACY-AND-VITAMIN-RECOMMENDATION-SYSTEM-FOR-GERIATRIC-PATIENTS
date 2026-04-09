@@ -355,9 +355,15 @@ const MealPlanResult: React.FC<MealPlanResultProps> = ({
                    </div>
                    <h3 className="text-lg font-black text-gray-900 mb-1">{def.name}</h3>
                    <div className="flex items-center gap-2 mb-4">
-                      <span className="px-2 py-0.5 bg-rose-50 text-rose-600 rounded-lg text-[10px] font-black uppercase tracking-widest">
-                        {def.level || 'Moderate'}
-                      </span>
+                      <span className={`px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-widest ${
+                         (def.level || 'Moderate') === 'Severe'
+                           ? 'bg-rose-50 text-rose-600'
+                           : (def.level || 'Moderate') === 'Mild'
+                             ? 'bg-blue-50 text-blue-600'
+                             : 'bg-amber-50 text-amber-600'
+                       }`}>
+                         {def.level || 'Moderate'}
+                       </span>
                    </div>
                    <div className="w-full h-1.5 bg-gray-50 rounded-full overflow-hidden">
                       <div className="h-full bg-amber-400 w-2/3" />

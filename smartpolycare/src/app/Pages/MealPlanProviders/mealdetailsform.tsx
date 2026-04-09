@@ -158,7 +158,7 @@ const MealPlanForm: React.FC<MealPlanFormProps> = ({ onBack, onSavePlan }) => {
                 const existingNames = new Set(prev.vitaminDeficiencies.map(v => v.name));
                 const newDeficiencies = data.predictions
                   .filter((p: any) => !existingNames.has(p.vitamin))
-                  .map((p: any) => ({ name: p.vitamin, level: "Moderate" }));
+                  .map((p: any) => ({ name: p.vitamin, level: p.level || "Moderate" }));
                 
                 if (newDeficiencies.length > 0) {
                   return {
