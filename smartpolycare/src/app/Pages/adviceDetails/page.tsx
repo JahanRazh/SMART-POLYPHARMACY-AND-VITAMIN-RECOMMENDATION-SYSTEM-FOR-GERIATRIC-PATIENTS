@@ -4,6 +4,7 @@ import React, { useRef, useState, useEffect } from "react";
 import Webcam from "react-webcam";
 import { useAuth } from "@/app/components/Contexts/AuthContext";
 import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
 
 const PatientAssessmentForm = () => {
   const webcamRef = useRef<Webcam | null>(null);
@@ -529,94 +530,117 @@ const PatientAssessmentForm = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-10">
-      <div className="mx-auto max-w-5xl rounded-3xl bg-white p-8 shadow-xl">
-        <div className="mb-8">
-          <p className="text-xs uppercase tracking-wide text-indigo-500">
-            Patient Assessment
-          </p>
-          <h1 className="text-3xl font-bold text-gray-900">
-            Mental Health & Lifestyle Assessment
-          </h1>
-          <p className="mt-3 text-gray-600">
-            Complete this assessment to receive personalized mental health insights and lifestyle recommendations.
-          </p>
-        </div>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-teal-50 py-12 px-4 sm:px-6 lg:px-8">
+      <motion.div
+        className="mx-auto max-w-4xl"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.6 }}
+      >
+        {/* Header */}
+        <motion.div
+          className="mb-8 text-center"
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.1 }}
+        >
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">Patient Assessment</h1>
+          <p className="text-lg text-gray-600">Comprehensive health evaluation for personalized care recommendations</p>
+        </motion.div>
 
+        {/* Error Alert */}
         {error && (
-          <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-red-700">
-            {error}
-          </div>
+          <motion.div
+            className="mb-6 rounded-3xl border border-red-200/50 bg-red-50/80 backdrop-blur-md p-5 text-red-700 font-medium"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+          >
+            ❌ {error}
+          </motion.div>
         )}
 
+        {/* Success Alert */}
         {successMessage && (
-          <div className="mb-6 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-700">
-            {successMessage}
-          </div>
+          <motion.div
+            className="mb-6 rounded-3xl border border-emerald-200/50 bg-emerald-50/80 backdrop-blur-md p-5 text-emerald-700 font-medium"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+          >
+            ✅ {successMessage}
+          </motion.div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-8">
+        <form onSubmit={handleSubmit} className="space-y-6">
           {/* Personal Information Section */}
-          <section className="rounded-2xl border border-gray-100 bg-gray-50 p-6">
-            <div className="mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">
-                Personal Information
+          <motion.section
+            className="rounded-3xl border border-white/40 bg-white/20 backdrop-blur-xl p-8 shadow-xl hover:shadow-2xl transition-shadow"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            viewport={{ once: true }}
+          >
+            <div className="mb-8">
+              <h2 className="text-2xl font-bold text-gray-900 mb-2 flex items-center gap-3">
+                👤 Personal Information
               </h2>
-              <p className="text-sm text-gray-500">
-                Basic details about the patient
-              </p>
+              <p className="text-sm text-gray-600">Basic details about the patient</p>
             </div>
 
-            <div className="mt-6 grid gap-4 md:grid-cols-2">
-              <div>
-                <label className="block text-sm font-medium text-gray-600">
-                  Name *
-                </label>
-                <input
-                  type="text"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  placeholder="Enter full name"
-                  required
-                  className="mt-1 w-full rounded-xl border border-gray-200 bg-white px-4 py-2 text-gray-900 focus:border-indigo-500 focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-600">
-                  Age *
-                </label>
-                <input
-                  type="number"
-                  name="age"
-                  value={formData.age}
-                  onChange={handleChange}
-                  placeholder="Enter age"
-                  required
-                  min="1"
-                  max="120"
-                  className="mt-1 w-full rounded-xl border border-gray-200 bg-white px-4 py-2 text-gray-900 focus:border-indigo-500 focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-600">
-                  Gender *
-                </label>
+            <div className="grid gap-6 md:grid-cols-2">
+              {[
+                { name: "name", label: "Full Name", type: "text", placeholder: "Enter full name" },
+                { name: "age", label: "Age", type: "number", placeholder: "Enter age", min: 1, max: 120 },
+              ].map((field, idx) => (
+                <motion.div
+                  key={field.name}
+                  initial={{ opacity: 0, x: -20 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.5, delay: idx * 0.1 }}
+                  viewport={{ once: true }}
+                >
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    {field.label} *
+                  </label>
+                  <input
+                    type={field.type}
+                    name={field.name}
+                    value={formData[field.name as keyof typeof formData]}
+                    onChange={handleChange}
+                    placeholder={field.placeholder}
+                    required
+                    {...(field.min && { min: field.min })}
+                    {...(field.max && { max: field.max })}
+                    className="w-full rounded-2xl border border-white/50 bg-white/30 backdrop-blur-sm px-4 py-3 text-gray-900 placeholder-gray-500 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all"
+                  />
+                </motion.div>
+              ))}
+
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+                viewport={{ once: true }}
+              >
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Gender *</label>
                 <select
                   name="gender"
                   value={formData.gender}
                   onChange={handleChange}
-                  required
-                  className="mt-1 w-full rounded-xl border border-gray-200 bg-white px-4 py-2 text-gray-900 focus:border-indigo-500 focus:outline-none"
+                  className="w-full rounded-2xl border border-white/50 bg-white/30 backdrop-blur-sm px-4 py-3 text-gray-900 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all"
                 >
                   <option value="Male">Male</option>
                   <option value="Female">Female</option>
                 </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-600">
-                  Occupation
-                </label>
+              </motion.div>
+
+              <motion.div
+                className="md:col-span-2"
+                initial={{ opacity: 0, x: -20 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.5, delay: 0.3 }}
+                viewport={{ once: true }}
+              >
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Occupation *</label>
                 <div className="relative">
                   <input
                     type="text"
@@ -625,266 +649,182 @@ const PatientAssessmentForm = () => {
                     onChange={handleChange}
                     placeholder="Start typing occupation"
                     required
-                    className="mt-1 w-full rounded-xl border border-gray-200 bg-white px-4 py-2 text-gray-900 focus:border-indigo-500 focus:outline-none"
+                    className="w-full rounded-2xl border border-white/50 bg-white/30 backdrop-blur-sm px-4 py-3 text-gray-900 placeholder-gray-500 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all"
                     autoComplete="off"
                   />
 
-                  {/* Suggestions dropdown */}
                   {formData.occupation.trim().length >= 2 &&
-                    occupationSuggestions.length > 0 && !occupationSelected && (
-                      <div className="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-xl border border-gray-200 bg-white shadow-lg">
+                    occupationSuggestions.length > 0 &&
+                    !occupationSelected && (
+                      <motion.div
+                        className="absolute z-20 mt-2 max-h-60 w-full overflow-auto rounded-2xl border border-white/50 bg-white/90 backdrop-blur-xl shadow-xl"
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                      >
                         {occupationSuggestions.map((occ) => (
                           <button
                             type="button"
                             key={occ}
                             onClick={() => {
-                              setFormData((prev) => ({
-                                ...prev,
-                                occupation: occ,
-                              }));
+                              setFormData((prev) => ({ ...prev, occupation: occ }));
                               setOccupationSuggestions([]);
                               setOccupationSelected(true);
                             }}
-                            className="block w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-indigo-50"
+                            className="block w-full px-4 py-3 text-left text-sm text-gray-700 hover:bg-blue-100/50 transition-colors"
                           >
                             {occ}
                           </button>
                         ))}
-                      </div>
+                      </motion.div>
                     )}
 
-                  {/* Loading / helper text */}
                   {isFetchingOccupations && (
-                    <p className="mt-1 text-xs text-gray-400">
-                      Searching occupations...
-                    </p>
+                    <p className="mt-2 text-xs text-gray-500">Searching occupations...</p>
                   )}
-                  {!isFetchingOccupations &&
-                    formData.occupation.trim().length >= 2 &&
-                    occupationSuggestions.length === 0 && (
-                      <p className="mt-1 text-xs text-gray-400">
-                        No matching occupations found.
-                      </p>
-                    )}
                 </div>
-              </div>
+              </motion.div>
             </div>
-          </section>
+          </motion.section>
 
           {/* Lifestyle Habits Section */}
-          <section className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
-            <div className="mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">
-                Lifestyle Habits
+          <motion.section
+            className="rounded-3xl border border-white/40 bg-white/20 backdrop-blur-xl p-8 shadow-xl hover:shadow-2xl transition-shadow"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.1 }}
+            viewport={{ once: true }}
+          >
+            <div className="mb-8">
+              <h2 className="text-2xl font-bold text-gray-900 mb-2 flex items-center gap-3">
+                🌱 Lifestyle Habits
               </h2>
-              <p className="text-sm text-gray-500">
-                Information about daily habits and practices
-              </p>
+              <p className="text-sm text-gray-600">Information about daily habits and practices</p>
             </div>
 
-            <div className="mt-6 grid gap-4 md:grid-cols-2">
-              <div>
-                <label className="block text-sm font-medium text-gray-600">
-                  Smoking Habit
-                </label>
-                <select
-                  name="smoking_habit"
-                  value={formData.smoking_habit}
-                  onChange={handleChange}
-                  className="mt-1 w-full rounded-xl border border-gray-200 bg-white px-4 py-2 text-gray-900 focus:border-indigo-500 focus:outline-none"
+            <div className="grid gap-6 md:grid-cols-3">
+              {[
+                { name: "smoking_habit", label: "Smoking" },
+                { name: "alcohol_intake", label: "Alcohol" },
+                { name: "meditation_practice", label: "Meditation" },
+              ].map((field, idx) => (
+                <motion.div
+                  key={field.name}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: idx * 0.1 }}
+                  viewport={{ once: true }}
                 >
-                  <option value="No">No</option>
-                  <option value="Yes">Yes</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-600">
-                  Alcohol Intake
-                </label>
-                <select
-                  name="alcohol_intake"
-                  value={formData.alcohol_intake}
-                  onChange={handleChange}
-                  className="mt-1 w-full rounded-xl border border-gray-200 bg-white px-4 py-2 text-gray-900 focus:border-indigo-500 focus:outline-none"
-                >
-                  <option value="No">No</option>
-                  <option value="Yes">Yes</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-600">
-                  Meditation Practice
-                </label>
-                <select
-                  name="meditation_practice"
-                  value={formData.meditation_practice}
-                  onChange={handleChange}
-                  className="mt-1 w-full rounded-xl border border-gray-200 bg-white px-4 py-2 text-gray-900 focus:border-indigo-500 focus:outline-none"
-                >
-                  <option value="No">No</option>
-                  <option value="Yes">Yes</option>
-                </select>
-              </div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">{field.label}</label>
+                  <select
+                    name={field.name}
+                    value={formData[field.name as keyof typeof formData]}
+                    onChange={handleChange}
+                    className="w-full rounded-2xl border border-white/50 bg-white/30 backdrop-blur-sm px-4 py-3 text-gray-900 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all"
+                  >
+                    <option value="No">No</option>
+                    <option value="Yes">Yes</option>
+                  </select>
+                </motion.div>
+              ))}
             </div>
-          </section>
+          </motion.section>
 
           {/* Activity & Time Tracking Section */}
-          <section className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
-            <div className="mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">
-                Activity & Time Tracking
+          <motion.section
+            className="rounded-3xl border border-white/40 bg-white/20 backdrop-blur-xl p-8 shadow-xl hover:shadow-2xl transition-shadow"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            viewport={{ once: true }}
+          >
+            <div className="mb-8">
+              <h2 className="text-2xl font-bold text-gray-900 mb-2 flex items-center gap-3">
+                ⏱️ Activity & Time Tracking
               </h2>
-              <p className="text-sm text-gray-500">
-                Daily activities and time spent (in hours)
-              </p>
+              <p className="text-sm text-gray-600">Daily activities and time spent (in hours)</p>
             </div>
 
-            <div className="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              <div>
-                <label className="block text-sm font-medium text-gray-600">
-                  Exercise Time (hours/day)
-                </label>
-                <input
-                  type="number"
-                  name="exercise_time"
-                  value={formData.exercise_time}
-                  onChange={handleChange}
-                  placeholder="0"
-                  min="0"
-                  max="24"
-                  step="0.5"
-                  required
-                  className="mt-1 w-full rounded-xl border border-gray-200 bg-white px-4 py-2 text-gray-900 focus:border-indigo-500 focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-600">
-                  Sleep Duration (hours/day)
-                </label>
-                <input
-                  type="number"
-                  name="sleep_duration"
-                  value={formData.sleep_duration}
-                  onChange={handleChange}
-                  placeholder="0"
-                  min="0"
-                  max="24"
-                  step="0.5"
-                  required
-                  className="mt-1 w-full rounded-xl border border-gray-200 bg-white px-4 py-2 text-gray-900 focus:border-indigo-500 focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-600">
-                  Physical Activity (hours/day)
-                </label>
-                <input
-                  type="number"
-                  name="physical_activity"
-                  value={formData.physical_activity}
-                  onChange={handleChange}
-                  placeholder="0"
-                  min="0"
-                  max="24"
-                  step="0.5"
-                  required
-                  className="mt-1 w-full rounded-xl border border-gray-200 bg-white px-4 py-2 text-gray-900 focus:border-indigo-500 focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-600">
-                  Screen Time (hours/day)
-                </label>
-                <input
-                  type="number"
-                  name="screen_time"
-                  value={formData.screen_time}
-                  onChange={handleChange}
-                  placeholder="0"
-                  min="0"
-                  max="24"
-                  step="0.5"
-                  required
-                  className="mt-1 w-full rounded-xl border border-gray-200 bg-white px-4 py-2 text-gray-900 focus:border-indigo-500 focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-600">
-                  Work Hours (hours/day)
-                </label>
-                <input
-                  type="number"
-                  name="work_hours"
-                  value={formData.work_hours}
-                  onChange={handleChange}
-                  placeholder="0"
-                  min="0"
-                  max="24"
-                  step="0.5"
-                  required
-                  className="mt-1 w-full rounded-xl border border-gray-200 bg-white px-4 py-2 text-gray-900 focus:border-indigo-500 focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-600">
-                  Social Interaction (hours/day)
-                </label>
-                <input
-                  type="number"
-                  name="social_interaction_duration"
-                  value={formData.social_interaction_duration}
-                  onChange={handleChange}
-                  placeholder="0"
-                  min="0"
-                  max="24"
-                  step="0.5"
-                  required
-                  className="mt-1 w-full rounded-xl border border-gray-200 bg-white px-4 py-2 text-gray-900 focus:border-indigo-500 focus:outline-none"
-                />
-              </div>
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {[
+                { name: "exercise_time", label: "Exercise Time" },
+                { name: "sleep_duration", label: "Sleep Duration" },
+                { name: "physical_activity", label: "Physical Activity" },
+                { name: "screen_time", label: "Screen Time" },
+                { name: "work_hours", label: "Work Hours" },
+                { name: "social_interaction_duration", label: "Social Interaction" },
+              ].map((field, idx) => (
+                <motion.div
+                  key={field.name}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: (idx % 3) * 0.1 }}
+                  viewport={{ once: true }}
+                >
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    {field.label} (hrs/day) *
+                  </label>
+                  <input
+                    type="number"
+                    name={field.name}
+                    value={formData[field.name as keyof typeof formData]}
+                    onChange={handleChange}
+                    placeholder="0"
+                    min="0"
+                    max="24"
+                    step="0.5"
+                    required
+                    className="w-full rounded-2xl border border-white/50 bg-white/30 backdrop-blur-sm px-4 py-3 text-gray-900 placeholder-gray-500 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all"
+                  />
+                </motion.div>
+              ))}
             </div>
-          </section>
+          </motion.section>
 
-          {/* Small Webcam Preview (needed for capture to work) */}
+          {/* Camera Preview */}
           {!stopDetection && (
-            <section className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
-              <div className="mb-4">
-                <h2 className="text-lg font-semibold text-gray-900">
-                  Camera Preview
+            <motion.section
+              className="rounded-3xl border border-white/40 bg-white/20 backdrop-blur-xl p-8 shadow-xl hover:shadow-2xl transition-shadow"
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.3 }}
+              viewport={{ once: true }}
+            >
+              <div className="mb-8">
+                <h2 className="text-2xl font-bold text-gray-900 mb-2 flex items-center gap-3">
+                  📷 Emotion Detection
                 </h2>
-                <p className="text-sm text-gray-500">
-                  Small camera preview (required for emotion detection to work properly)
-                </p>
+                <p className="text-sm text-gray-600">Enable your camera for emotion analysis</p>
               </div>
 
-              {/* Camera device selector placed above preview */}
-              <div className="mb-3 flex justify-start">
-                {videoDevices.length > 0 && (
-                  <div className="flex items-center gap-2">
-                    <label htmlFor="camera-select" className="text-sm text-gray-700">Camera</label>
-                    <select
-                      id="camera-select"
-                      aria-label="Select camera"
-                      value={selectedDeviceId || ""}
-                      onChange={(e) => {
-                        setSelectedDeviceId(e.target.value || null);
-                        setWebcamReady(false);
-                      }}
-                      className="rounded-md bg-white px-2 py-1 text-sm border"
-                    >
-                      <option value="">Default camera</option>
-                      {videoDevices.map((d) => (
-                        <option key={d.deviceId} value={d.deviceId}>
-                          {d.label || d.deviceId}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-              </div>
+              {videoDevices.length > 0 && (
+                <div className="mb-6 flex items-center gap-3">
+                  <label htmlFor="camera-select" className="text-sm font-semibold text-gray-700">
+                    Camera Device
+                  </label>
+                  <select
+                    id="camera-select"
+                    value={selectedDeviceId || ""}
+                    onChange={(e) => {
+                      setSelectedDeviceId(e.target.value || null);
+                      setWebcamReady(false);
+                    }}
+                    className="rounded-xl border border-white/50 bg-white/30 backdrop-blur-sm px-3 py-2 text-sm text-gray-900 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all"
+                  >
+                    <option value="">Default camera</option>
+                    {videoDevices.map((d) => (
+                      <option key={d.deviceId} value={d.deviceId}>
+                        {d.label || d.deviceId}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
-              <div className="flex justify-center">
-                <div className="relative rounded-lg overflow-hidden border-2 border-indigo-300">
+              <div className="flex justify-center mb-6">
+                <motion.div
+                  className="relative rounded-3xl overflow-hidden border-2 border-blue-300/50 shadow-lg"
+                  animate={webcamReady ? { boxShadow: "0 0 30px rgba(59, 130, 246, 0.6)" } : {}}
+                >
                   <Webcam
                     key={selectedDeviceId || "default"}
                     ref={webcamRef}
@@ -904,160 +844,124 @@ const PatientAssessmentForm = () => {
                     onUserMediaError={handleWebcamError}
                   />
                   {webcamReady && (
-                    <div className="absolute top-2 right-2 bg-green-500 rounded-full p-1">
-                      <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-                    </div>
+                    <motion.div
+                      className="absolute top-3 right-3 bg-green-500 rounded-full p-2"
+                      animate={{ scale: [1, 1.2, 1] }}
+                      transition={{ duration: 2, repeat: Infinity }}
+                    >
+                      <div className="w-2 h-2 bg-white rounded-full"></div>
+                    </motion.div>
                   )}
-                </div>
+                </motion.div>
               </div>
 
               {!webcamReady && (
-                <div className="mt-3 text-center">
-                  <p className="text-sm text-amber-600">
-                    ⏳ Waiting for camera to initialize...
-                  </p>
+                <motion.div className="text-center" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                  <p className="text-sm text-gray-600 mb-4">⏳ Waiting for camera to initialize...</p>
                   {cameraError && (
-                    <p className="mt-2 text-xs text-red-600">{cameraError}</p>
+                    <p className="text-xs font-medium text-red-600 mb-4 bg-red-50/50 p-3 rounded-2xl">{cameraError}</p>
                   )}
-                  <div className="mt-3 flex justify-center">
-                    <button
-                      type="button"
-                      onClick={requestCameraPermission}
-                      className="rounded-md bg-indigo-600 px-4 py-2 text-sm text-white hover:bg-indigo-700"
-                    >
-                      Enable Camera
-                    </button>
-                  </div>
-                </div>
+                  <motion.button
+                    type="button"
+                    onClick={requestCameraPermission}
+                    className="rounded-2xl bg-gradient-to-r from-blue-500 to-teal-500 px-6 py-3 text-white font-semibold hover:shadow-lg transition-shadow"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    Enable Camera
+                  </motion.button>
+                </motion.div>
               )}
+
               {webcamReady && (
-                <p className="text-center text-sm text-green-600 mt-3">
-                  ✅ Camera ready - Emotion detection active
-                </p>
+                <motion.p
+                  className="text-center text-sm text-green-600 font-semibold"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                >
+                  ✅ Camera active - Detection running
+                </motion.p>
               )}
-            </section>
+            </motion.section>
           )}
 
           {stopDetection && (
-            <section className="rounded-2xl border border-gray-200 bg-gray-50 p-6 shadow-sm">
+            <motion.section
+              className="rounded-3xl border border-white/40 bg-white/20 backdrop-blur-xl p-8"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+            >
               <div className="text-center">
-                <p className="text-sm font-medium text-gray-600">
-                  📷 Camera stopped
-                </p>
-                <p className="text-xs text-gray-500 mt-1">
-                  Camera has been stopped after form submission
-                </p>
+                <p className="text-sm font-semibold text-gray-700">📷 Camera Analysis Complete</p>
+                <p className="text-xs text-gray-500 mt-2">Camera stopped after analysis</p>
               </div>
-            </section>
+            </motion.section>
           )}
 
-          {/* Emotion Detection Status Section (no emotion details shown to user) */}
-          <section className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
-            <div className="mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">
-                Background Analysis
-              </h2>
-              <p className="text-sm text-gray-500">
-                The system runs a brief background analysis during the assessment to improve recommendation quality.
-              </p>
-            </div>
+          {/* Background Analysis Status */}
+          <motion.section
+            className="rounded-3xl border border-white/40 bg-white/20 backdrop-blur-xl p-8 shadow-xl hover:shadow-2xl transition-shadow"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.4 }}
+            viewport={{ once: true }}
+          >
+            <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-3">
+              📊 Analysis Status
+            </h2>
 
-            <div className="mt-6">
-              {stopDetection && (
-                <div className="rounded-xl border border-gray-200 bg-gray-50 p-6">
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="h-3 w-3 rounded-full bg-gray-400"></div>
-                    <p className="text-sm font-medium text-gray-600">
-                      Background Analysis Finished
-                    </p>
-                  </div>
-                  <p className="text-sm text-gray-600">
-                    Analysis has been stopped for submission.
-                  </p>
+            {stopDetection && (
+              <motion.div
+                className="rounded-2xl border border-gray-300/50 bg-gray-100/50 p-5"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="h-3 w-3 rounded-full bg-gray-400"></div>
+                  <p className="text-sm font-medium text-gray-700">Analysis Complete</p>
                 </div>
-              )}
+              </motion.div>
+            )}
 
-              {!stopDetection && cameraActive && (
-                <div className="rounded-xl border border-blue-200 bg-blue-50 p-6">
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="h-3 w-3 rounded-full bg-blue-500 animate-pulse"></div>
-                    <p className="text-sm font-medium text-blue-600">
-                      Background Analysis Running
-                    </p>
-                  </div>
-                  <p className="text-sm text-blue-600">
-                    Please continue filling the form normally while we run a short analysis.
-                  </p>
+            {!stopDetection && cameraActive && (
+              <motion.div
+                className="rounded-2xl border border-blue-300/50 bg-blue-100/50 p-5"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+              >
+                <div className="flex items-center gap-3 mb-2">
+                  <motion.div
+                    className="h-3 w-3 rounded-full bg-blue-500"
+                    animate={{ opacity: [0.5, 1] }}
+                    transition={{ duration: 1.5, repeat: Infinity }}
+                  ></motion.div>
+                  <p className="text-sm font-medium text-blue-700">Analysis Running</p>
                 </div>
-              )}
-
-              {!stopDetection && !cameraActive && formData.name && formData.age && (
-                <div className="rounded-xl border border-amber-200 bg-amber-50 p-6">
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="h-3 w-3 rounded-full bg-amber-500"></div>
-                    <p className="text-sm font-medium text-amber-600">
-                      Waiting for Camera Access
-                    </p>
-                  </div>
-                  <p className="text-sm text-amber-700">
-                    Please allow camera access when prompted to enable background analysis.
-                  </p>
-                </div>
-              )}
-
-              {(!formData.name || !formData.age) && (
-                <div className="rounded-xl border border-gray-200 bg-gray-50 p-6">
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="h-3 w-3 rounded-full bg-gray-400"></div>
-                    <p className="text-sm font-medium text-gray-600">
-                      Analysis Inactive
-                    </p>
-                  </div>
-                  <p className="text-sm text-gray-600">
-                    Please fill in name and age to enable background analysis.
-                  </p>
-                </div>
-              )}
-            </div>
-          </section>
+                <p className="text-xs text-blue-600">Complete the form while we analyze emotions</p>
+              </motion.div>
+            )}
+          </motion.section>
 
           {/* Submit Button */}
-          <div className="flex justify-end">
-            <button
+          <motion.div
+            className="flex gap-4 pt-8"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.5 }}
+            viewport={{ once: true }}
+          >
+            <motion.button
               type="submit"
               disabled={isSubmitting}
-              className="rounded-2xl bg-indigo-600 px-8 py-3 text-white shadow-lg transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
+              className="flex-1 rounded-2xl bg-gradient-to-r from-blue-500 via-teal-500 to-emerald-500 px-8 py-4 font-bold text-white hover:shadow-2xl disabled:opacity-50 transition-all"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
             >
-              {isSubmitting ? "Processing..." : "Submit Assessment"}
-            </button>
-          </div>
+              {isSubmitting ? "🔄 Processing..." : "✅ Complete Assessment"}
+            </motion.button>
+          </motion.div>
         </form>
-
-        {/* Results Section (no emotion details shown) */}
-        {mentalHealthLevel && (
-          <section className="mt-10 rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
-            <div className="mb-4">
-              <p className="text-xs uppercase tracking-wide text-emerald-500">
-                Assessment Results
-              </p>
-              <h2 className="text-2xl font-semibold text-gray-900">
-                Mental Health Assessment
-              </h2>
-            </div>
-
-            <div className="mt-6 space-y-4">
-              <div className="rounded-xl border-2 border-emerald-200 bg-emerald-50 p-6">
-                <p className="text-sm font-medium text-emerald-600">
-                  Mental Health Level
-                </p>
-                <p className="mt-2 text-4xl font-bold text-emerald-900 capitalize">
-                  {mentalHealthLevel}
-                </p>
-              </div>
-            </div>
-          </section>
-        )}
-      </div>
+      </motion.div>
     </div>
   );
 };
