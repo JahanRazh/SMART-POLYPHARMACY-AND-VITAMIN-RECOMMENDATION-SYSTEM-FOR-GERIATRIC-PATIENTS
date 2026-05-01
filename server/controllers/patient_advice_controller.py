@@ -27,7 +27,7 @@ def patient_advice():
     Fetch or generate personalized 2-week health advice for a patient.
     
     Flow:
-    1. Fetch patient data (emotion, mental health, polypharmacy risk, occupation)
+    1. Fetch patient data (emotion, mental health, polypharmacy risk)
     2. Check Firestore for cached advice (< 7 days old)
     3. If not fresh → Generate new advice using Google Gemini API
     4. Store/update in Firestore
@@ -185,7 +185,7 @@ def patient_advice():
     # Extract patient input features
     emotion = _safe_get(patient_data, ["detectedEmotion", "detected_emotion", "emotion", "most_emotion"]) or ""
     mental_health = _safe_get(patient_data, ["mental_health_level", "mentalHealthLevel", "mental_health_Risk", "mental_health"]) or ""
-    occupation = _safe_get(patient_data, ["occupation", "Past_Occupation", "past_occupation"]) or ""
+
 
     risk_calc = poly_data.get("riskCalculation") if isinstance(poly_data, dict) else None
     poly_risk = ""
@@ -197,14 +197,14 @@ def patient_advice():
     emotion = (emotion or "").strip()
     mental_health = (mental_health or "").strip()
     poly_risk = (poly_risk or "").strip()
-    occupation = (occupation or "").strip()
+
 
     # Log extracted data for debugging
     print(f"\n📊 Extracted patient inputs for {email}:")
     print(f"  - Emotion: '{emotion}'")
     print(f"  - Mental Health: '{mental_health}'")
     print(f"  - Polypharmacy Risk: '{poly_risk}'")
-    print(f"  - Occupation: '{occupation}'")
+
 
     # Use defaults for missing data instead of rejecting
     # This allows advice generation even if some fields are empty
@@ -217,9 +217,7 @@ def patient_advice():
     if not poly_risk:
         poly_risk = "Unknown"
         print(f"  ⚠️ No polypharmacy risk data, using default: '{poly_risk}'")
-    if not occupation:
-        occupation = "Not specified"
-        print(f"  ⚠️ No occupation data, using default: '{occupation}'")
+
     
     # Now at least check if we found patient data at all
     if not patient_data or (not patient_name and not patient_age):
@@ -265,7 +263,7 @@ def patient_advice():
                 "emotion": emotion,
                 "mental_health_level": mental_health,
                 "polypharmacy_risk": poly_risk,
-                "occupation": occupation,
+
             }
         }), 200
 
@@ -275,7 +273,7 @@ def patient_advice():
         emotion=emotion,
         mental_health_level=mental_health,
         polypharmacy_risk=poly_risk,
-        occupation=occupation,
+
         medications=medications,
         patient_name=patient_name,
         age=patient_age
@@ -325,7 +323,7 @@ def patient_advice():
             "emotion": emotion,
             "mental_health_level": mental_health,
             "polypharmacy_risk": poly_risk,
-            "occupation": occupation,
+
         },
         "source": "gemini_api",
         "medications": medications,
@@ -354,7 +352,7 @@ def patient_advice():
             "emotion": emotion,
             "mental_health_level": mental_health,
             "polypharmacy_risk": poly_risk,
-            "occupation": occupation,
+
         }
     }), 200
 
