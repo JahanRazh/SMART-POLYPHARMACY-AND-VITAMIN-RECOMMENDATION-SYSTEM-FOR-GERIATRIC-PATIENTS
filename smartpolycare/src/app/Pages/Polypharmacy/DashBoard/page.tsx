@@ -1,7 +1,8 @@
 "use client";
 
 import { useAuth } from "@/app/components/Contexts/AuthContext";
-import React, { useEffect, useState } from "react";
+import { useNotifications } from "@/app/components/Contexts/NotificationContext";
+import React, { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as XLSX from "xlsx";
@@ -89,10 +90,42 @@ const API_BASE = process.env.NEXT_PUBLIC_LOCAL_API_URL;
 
 const DashboardPage = () => {
     const { user } = useAuth();
+    const { addNotification } = useNotifications();
     const [analysis, setAnalysis] = useState<AssessmentResponse | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
+    const [showADE, setShowADE] = useState(false);
+    const [toastMessage, setToastMessage] = useState<string | null>(null);
+    const [hasNotified, setHasNotified] = useState(false);
     const router = useRouter();
+
+    const handleSendNotification = useCallback(() => {
+        if (!analysis) return;
+        const recText =
+            analysis.riskCalculation.riskLevel === "Very High"
+                ? "Critical alert. Immediate comprehensive medication review (CMR) and specialist consultation advised."
+                : analysis.riskCalculation.riskLevel === "High"
+                ? "Urgent medication review required. Consider deprescribing non-essential drugs."
+                : analysis.riskCalculation.riskLevel === "Moderate"
+                ? "Review medication list for potential optimization. Monitor renal/hepatic function."
+                : "Routine monitoring recommended. No immediate intervention required.";
+
+        addNotification({
+            title: `Polypharmacy Risk: ${analysis.riskCalculation.riskLevel}`,
+            message: recText,
+            type: analysis.riskCalculation.riskLevel === "Very High" || analysis.riskCalculation.riskLevel === "High" ? "warning" : "info",
+        });
+
+        setToastMessage("Recommendation added to notifications!");
+        setTimeout(() => setToastMessage(null), 3000);
+    }, [analysis, addNotification]);
+
+    useEffect(() => {
+        if (analysis && !hasNotified) {
+            handleSendNotification();
+            setHasNotified(true);
+        }
+    }, [analysis, hasNotified, handleSendNotification]);
 
     // State for collapsible sections
     const [sections, setSections] = useState({
@@ -720,61 +753,83 @@ const DashboardPage = () => {
                     </div>
 
                     {/* Adverse Drug Event Predictions */}
-                    {analysis.adePredictions && analysis.adePredictions.length > 0 && (
-                        <div className="rounded-2xl border border-orange-100 bg-white p-6 shadow-sm md:col-span-2">
-                            <h2 className="text-lg font-semibold text-gray-900 mb-1">
-                                ⚠️ Adverse Drug Event Predictions
-                            </h2>
-                            <p className="text-sm text-gray-500 mb-4">
-                                ML-predicted adverse events based on your medications,age,gender and existing conditions.
-                            </p>
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-sm text-left">
-                                    <thead>
-                                        <tr className="bg-orange-50 text-gray-700">
-                                            <th className="px-4 py-3 font-semibold rounded-tl-xl">Drug</th>
-                                            <th className="px-4 py-3 font-semibold">Existing Disease</th>
-                                            <th className="px-4 py-3 font-semibold">Predicted ADE</th>
-                                            <th className="px-4 py-3 font-semibold rounded-tr-xl text-right">Confidence</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {analysis.adePredictions.map((pred, index) => (
-                                            <tr
-                                                key={`ade-${index}`}
-                                                className={`border-b border-gray-100 ${index % 2 === 0 ? "bg-white" : "bg-gray-50"
-                                                    }`}
-                                            >
-                                                <td className="px-4 py-3 font-medium text-gray-900">
-                                                    {pred.drug}
-                                                </td>
-                                                <td className="px-4 py-3 text-gray-700">
-                                                    {pred.disease}
-                                                </td>
-                                                <td className="px-4 py-3">
-                                                    <span className="inline-block rounded-full bg-red-50 px-3 py-1 text-xs font-semibold text-red-700">
-                                                        {pred.predictedADE}
-                                                    </span>
-                                                </td>
-                                                <td className="px-4 py-3 text-right">
-                                                    <span
-                                                        className={`inline-block rounded-full px-3 py-1 text-xs font-bold ${pred.confidence >= 50
-                                                            ? "bg-red-100 text-red-800"
-                                                            : pred.confidence >= 30
-                                                                ? "bg-orange-100 text-orange-800"
-                                                                : "bg-yellow-100 text-yellow-800"
+                    <div className="rounded-2xl border border-orange-100 bg-white p-6 shadow-sm md:col-span-2">
+                        <div className="flex flex-wrap items-center justify-between gap-4 mb-2">
+                            <div>
+                                <h2 className="text-lg font-semibold text-gray-900 mb-1">
+                                    ⚠️ Adverse Drug Event Predictions
+                                </h2>
+                                <p className="text-sm text-gray-500">
+                                    ML-predicted adverse events based on your medications, age, gender and existing conditions.
+                                </p>
+                            </div>
+                            <button
+                                onClick={() => setShowADE(!showADE)}
+                                className="rounded-lg bg-orange-100 px-4 py-2 text-sm font-semibold text-orange-700 transition hover:bg-orange-200"
+                            >
+                                {showADE ? "Hide Results" : "Check Predictions"}
+                            </button>
+                        </div>
+                        
+                        {showADE && (
+                            <div className="mt-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                                {analysis.adePredictions && analysis.adePredictions.length > 0 ? (
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-sm text-left">
+                                            <thead>
+                                                <tr className="bg-orange-50 text-gray-700">
+                                                    <th className="px-4 py-3 font-semibold rounded-tl-xl">Drug</th>
+                                                    <th className="px-4 py-3 font-semibold">Existing Disease</th>
+                                                    <th className="px-4 py-3 font-semibold">Predicted ADE</th>
+                                                    <th className="px-4 py-3 font-semibold rounded-tr-xl text-right">Confidence</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {analysis.adePredictions.map((pred, index) => (
+                                                    <tr
+                                                        key={`ade-${index}`}
+                                                        className={`border-b border-gray-100 ${index % 2 === 0 ? "bg-white" : "bg-gray-50"
                                                             }`}
                                                     >
-                                                        {pred.confidence}%
-                                                    </span>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                                                        <td className="px-4 py-3 font-medium text-gray-900">
+                                                            {pred.drug}
+                                                        </td>
+                                                        <td className="px-4 py-3 text-gray-700">
+                                                            {pred.disease}
+                                                        </td>
+                                                        <td className="px-4 py-3">
+                                                            <span className="inline-block rounded-full bg-red-50 px-3 py-1 text-xs font-semibold text-red-700">
+                                                                {pred.predictedADE}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-4 py-3 text-right">
+                                                            <span
+                                                                className={`inline-block rounded-full px-3 py-1 text-xs font-bold ${pred.confidence >= 50
+                                                                    ? "bg-red-100 text-red-800"
+                                                                    : pred.confidence >= 30
+                                                                        ? "bg-orange-100 text-orange-800"
+                                                                        : "bg-yellow-100 text-yellow-800"
+                                                                    }`}
+                                                            >
+                                                                {pred.confidence}%
+                                                            </span>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                ) : (
+                                    <div className="rounded-lg bg-emerald-50 p-4 border border-emerald-100 text-emerald-700 flex items-center gap-3">
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-emerald-600">
+                                            <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm13.36-1.814a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clipRule="evenodd" />
+                                        </svg>
+                                        <p className="font-medium text-sm">Great news! No significant adverse drug events were predicted for this combination.</p>
+                                    </div>
+                                )}
                             </div>
-                        </div>
-                    )}
+                        )}
+                    </div>
 
                 </div>
 
@@ -1003,27 +1058,38 @@ const DashboardPage = () => {
                                     </div>
 
                                     {/* Medical Recommendation */}
-                                    <div className={`mt-6 p-4 rounded-lg border flex gap-3 ${analysis.riskCalculation.riskLevel === "Very High" ? "bg-rose-50 border-rose-100 text-rose-800" :
+                                    <div className={`mt-6 p-4 rounded-lg border flex flex-col sm:flex-row sm:items-center gap-4 ${analysis.riskCalculation.riskLevel === "Very High" ? "bg-rose-50 border-rose-100 text-rose-800" :
                                         analysis.riskCalculation.riskLevel === "High" ? "bg-orange-50 border-orange-100 text-orange-800" :
                                             analysis.riskCalculation.riskLevel === "Moderate" ? "bg-yellow-50 border-yellow-100 text-yellow-800" :
                                                 "bg-emerald-50 border-emerald-100 text-emerald-800"
                                         }`}>
-                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 flex-shrink-0 mt-0.5">
-                                            <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zM12 8.25a.75.75 0 01.75.75v3.75a.75.75 0 01-1.5 0V9a.75.75 0 01.75-.75zm0 8.25a.75.75 0 100-1.5.75.75 0 000 1.5z" clipRule="evenodd" />
-                                        </svg>
-                                        <div>
-                                            <h4 className="text-sm font-bold mb-1">Medical Recommendation</h4>
-                                            <p className="text-sm opacity-90 leading-relaxed">
-                                                {analysis.riskCalculation.riskLevel === "Very High"
-                                                    ? "Critical alert. Immediate comprehensive medication review (CMR) and specialist consultation advised."
-                                                    : analysis.riskCalculation.riskLevel === "High"
-                                                        ? "Urgent medication review required. Consider deprescribing non-essential drugs."
-                                                        : analysis.riskCalculation.riskLevel === "Moderate"
-                                                            ? "Review medication list for potential optimization. Monitor renal/hepatic function."
-                                                            : "Routine monitoring recommended. No immediate intervention required."
-                                                }
-                                            </p>
+                                        <div className="flex gap-3 flex-1">
+                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 flex-shrink-0 mt-0.5">
+                                                <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zM12 8.25a.75.75 0 01.75.75v3.75a.75.75 0 01-1.5 0V9a.75.75 0 01.75-.75zm0 8.25a.75.75 0 100-1.5.75.75 0 000 1.5z" clipRule="evenodd" />
+                                            </svg>
+                                            <div>
+                                                <h4 className="text-sm font-bold mb-1">Medical Recommendation</h4>
+                                                <p className="text-sm opacity-90 leading-relaxed">
+                                                    {analysis.riskCalculation.riskLevel === "Very High"
+                                                        ? "Critical alert. Immediate comprehensive medication review (CMR) and specialist consultation advised."
+                                                        : analysis.riskCalculation.riskLevel === "High"
+                                                            ? "Urgent medication review required. Consider deprescribing non-essential drugs."
+                                                            : analysis.riskCalculation.riskLevel === "Moderate"
+                                                                ? "Review medication list for potential optimization. Monitor renal/hepatic function."
+                                                                : "Routine monitoring recommended. No immediate intervention required."
+                                                    }
+                                                </p>
+                                            </div>
                                         </div>
+                                        <button
+                                            onClick={handleSendNotification}
+                                            className="whitespace-nowrap rounded-md bg-white/60 px-3 py-1.5 text-xs font-semibold shadow-sm ring-1 ring-inset ring-gray-400/50 hover:bg-white transition flex items-center justify-center gap-1.5 text-gray-800"
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
+                                              <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" />
+                                            </svg>
+                                            Notify
+                                        </button>
                                     </div>
                                 </div>
 
@@ -1654,7 +1720,15 @@ const DashboardPage = () => {
                     </div>
                 )}
 
-
+                {/* Toast Message */}
+                {toastMessage && (
+                    <div className="fixed bottom-4 right-4 bg-gray-900 text-white px-6 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-in fade-in slide-in-from-bottom-5 z-[100]">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-emerald-400">
+                            <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm13.36-1.814a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clipRule="evenodd" />
+                        </svg>
+                        <span className="text-sm font-medium">{toastMessage}</span>
+                    </div>
+                )}
             </div>
         </div>
     );
