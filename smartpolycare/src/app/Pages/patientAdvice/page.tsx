@@ -22,8 +22,21 @@ type TwoWeekAdvice = {
     emotion: string;
     mental_health_level: string;
     polypharmacy_risk: string;
-    occupation: string;
+
   };
+};
+
+const VITAMIN_LAB_TESTS: Record<string, { test: string, description: string, why?: string }> = {
+  "D": { test: "25-Hydroxy Vitamin D (25(OH)D)", description: "Bone pain, weakness, fatigue", why: "Best indicator of overall Vitamin D status" },
+  "B12": { test: "Serum Vitamin B12", description: "Nerve problems, anemia, memory issues", why: "More accurate (if borderline): Methylmalonic Acid (MMA), Homocysteine" },
+  "Folate": { test: "Serum Folate (or RBC Folate for long-term status)", description: "Anemia, fatigue" },
+  "B1": { test: "Whole blood Thiamine or Thiamine Pyrophosphate", description: "Nerve and heart issues (common in alcohol use)" },
+  "B6": { test: "Plasma Pyridoxal-5-Phosphate (PLP)", description: "Skin issues, anemia, confusion" },
+  "B7": { test: "Serum Biotin (rare)", description: "Hair loss, dermatitis" },
+  "A": { test: "Serum Retinol", description: "Night blindness, dry eyes" },
+  "E": { test: "Serum Alpha-Tocopherol", description: "Nerve and muscle damage (rare)" },
+  "K": { test: "Prothrombin Time (PT/INR) (indirect test)", description: "Bleeding problems" },
+  "C": { test: "Plasma/Serum Ascorbic Acid", description: "Measures level of ascorbic acid in blood" }
 };
 
 // ─── Stable axios instance outside component to avoid re-creation ────────────
@@ -71,6 +84,7 @@ function PatientAdviceContent() {
   const [error, setError]           = useState<string>('');
   const [activeWeek, setActiveWeek] = useState<'week_1' | 'week_2'>('week_1');
   const [refreshing, setRefreshing] = useState<boolean>(false);
+  const [vitaminAssessment, setVitaminAssessment] = useState<any>(null);
 
   // ── fetchAdvice is stable thanks to useCallback ──────────────────────────
   const saveAdviceToHistory = useCallback(
@@ -128,6 +142,19 @@ function PatientAdviceContent() {
           setAdvice(data);
           // Auto-save to history
           await saveAdviceToHistory(data);
+          
+          // Also try to fetch the vitamin deficiency assessment for lab tests
+          try {
+            const vitEndpoint = `/vitamin-deficiency/assessment?userId=${encodeURIComponent(identifier)}`;
+            console.log(`📡 Fetching vitamin assessment: ${vitEndpoint}`);
+            const vitResponse = await api.get(vitEndpoint);
+            if (vitResponse.data && vitResponse.data.predictions) {
+              setVitaminAssessment(vitResponse.data);
+            }
+          } catch (vitErr) {
+            console.warn("No vitamin deficiency assessment found or error:", vitErr);
+          }
+          
         } else {
           console.error('Invalid response structure:', data);
           setError(
@@ -283,7 +310,7 @@ function PatientAdviceContent() {
                       {advice.inputs?.emotion            && <li>• Emotion: {advice.inputs.emotion}</li>}
                       {advice.inputs?.mental_health_level && <li>• Mental Health: {advice.inputs.mental_health_level}</li>}
                       {advice.inputs?.polypharmacy_risk   && <li>• Medication Risk: {advice.inputs.polypharmacy_risk}</li>}
-                      {advice.inputs?.occupation          && <li>• Occupation: {advice.inputs.occupation}</li>}
+
                     </ul>
                   </div>
 
@@ -297,6 +324,59 @@ function PatientAdviceContent() {
                     </ul>
                   </div>
                 </div>
+              </motion.div>
+
+              {/* Recommended Lab Tests Cage (Vitamin Deficiencies) */}
+              <motion.div
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: 0.1 }}
+                className="rounded-2xl bg-blue-50 border border-blue-200 shadow-sm p-6 mb-8"
+              >
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="flex items-center justify-center h-10 w-10 rounded-full bg-blue-100 text-blue-600 text-xl">
+                    🧪
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold text-gray-900">Recommended Lab Tests</h2>
+                    <p className="text-sm text-gray-600">Based on your analyzed vitamin deficiencies</p>
+                  </div>
+                </div>
+
+                {!vitaminAssessment || !vitaminAssessment.predictions || vitaminAssessment.predictions.length === 0 ? (
+                  <div className="text-center p-6 bg-white rounded-xl border border-blue-100">
+                    <p className="text-gray-600 font-medium">No specific vitamin deficiencies detected requiring lab testing.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {vitaminAssessment.predictions.map((pred: any, idx: number) => {
+                      const labTestInfo = VITAMIN_LAB_TESTS[pred.vitamin];
+                      if (!labTestInfo) return null;
+                      return (
+                        <div key={idx} className="rounded-xl border border-blue-100 bg-white p-4 flex flex-col gap-2 shadow-sm">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-xl">{pred.icon || "💊"}</span>
+                            <h3 className="font-bold text-blue-900">{pred.name || `Vitamin ${pred.vitamin}`} Deficiency</h3>
+                          </div>
+                          
+                          <div className="bg-blue-50/50 rounded-lg p-3 border border-blue-100/50">
+                            <p className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-1">Recommended Test</p>
+                            <p className="text-sm font-medium text-gray-900">{labTestInfo.test}</p>
+                            {labTestInfo.why && <p className="text-xs text-gray-600 mt-1 italic">Why: {labTestInfo.why}</p>}
+                          </div>
+                          
+                          <div className="mt-1">
+                            <p className="text-xs text-blue-800"><strong>Linked to:</strong> {labTestInfo.description}</p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+                
+                <p className="mt-4 text-xs text-gray-500 italic">
+                  * Please present these recommendations to your physician before undergoing any laboratory tests.
+                </p>
               </motion.div>
 
               {/* Week tabs */}

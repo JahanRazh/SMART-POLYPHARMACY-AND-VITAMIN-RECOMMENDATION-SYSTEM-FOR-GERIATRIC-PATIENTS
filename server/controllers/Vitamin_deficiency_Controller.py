@@ -5,7 +5,8 @@ from models.Vitamin_deficiency_model import (
     search_drug_names,
     get_all_symptoms,
     save_vitamin_assessment,
-    get_vitamin_assessment
+    get_vitamin_assessment,
+    delete_vitamin_assessment
 )
 
 
@@ -19,6 +20,7 @@ def predict_deficiency():
     user_id = payload.get("userId")
     drugs = payload.get("drugs", [])
     symptoms = payload.get("symptoms", [])
+    dosage_info = payload.get("dosageInfo", [])
 
     if not isinstance(drugs, list) or len(drugs) < 2:
         return jsonify({"message": "At least 2 drugs are required"}), 400
@@ -40,7 +42,7 @@ def predict_deficiency():
         return jsonify({"message": "At least one symptom is required"}), 400
 
     try:
-        result = predict_vitamin_deficiency(clean_drugs, symptoms)
+        result = predict_vitamin_deficiency(clean_drugs, symptoms, dosage_info)
         
         # Save to Firebase if user is logged in
         if user_id:
@@ -50,7 +52,9 @@ def predict_deficiency():
                     drugs=result.get("drugs", clean_drugs),
                     symptoms=result.get("symptoms", symptoms),
                     predictions=result.get("predictions", []),
-                    pair_details=result.get("pair_details", [])
+                    pair_details=result.get("pair_details", []),
+                    dosage_info=result.get("dosage_info", []),
+                    overall_risk_percentage=result.get("overall_risk_percentage"),
                 )
                 result["savedId"] = saved_doc.get("id")
             except Exception as e:
@@ -106,3 +110,20 @@ def get_assessment():
         return jsonify(data), 200
     except Exception as e:
         return jsonify({"message": f"Error fetching assessment: {str(e)}"}), 500
+
+def delete_assessment():
+    """
+    DELETE /api/vitamin-deficiency/assessment?userId=...
+    Deletes the user's latest vitamin deficiency assessment.
+    """
+    user_id = request.args.get("userId")
+    if not user_id:
+        return jsonify({"message": "userId is required"}), 400
+        
+    try:
+        deleted = delete_vitamin_assessment(user_id)
+        if not deleted:
+            return jsonify({"message": "No assessment found to delete"}), 404
+        return jsonify({"message": "Assessment deleted successfully"}), 200
+    except Exception as e:
+        return jsonify({"message": f"Error deleting assessment: {str(e)}"}), 500

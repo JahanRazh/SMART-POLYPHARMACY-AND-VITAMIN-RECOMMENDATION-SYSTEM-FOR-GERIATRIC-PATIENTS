@@ -18,7 +18,7 @@ type SavedAdvice = {
     emotion: string;
     mental_health_level: string;
     polypharmacy_risk: string;
-    occupation: string;
+
   };
   saved_at: string;
 };
@@ -228,7 +228,7 @@ function AdviceHistoryContent() {
                     <div className="mt-2 text-xs text-gray-600 space-y-1">
                       {advice.inputs?.emotion && <p>🎭 Emotion: {advice.inputs.emotion}</p>}
                       {advice.inputs?.mental_health_level && <p>🧠 Mental Health: {advice.inputs.mental_health_level}</p>}
-                      {advice.inputs?.occupation && <p>💼 Occupation: {advice.inputs.occupation}</p>}
+
                     </div>
                   </div>
                 </motion.div>
@@ -278,7 +278,7 @@ function AdviceHistoryContent() {
                       {selectedAdvice.inputs?.emotion && <li>• Emotion: {selectedAdvice.inputs.emotion}</li>}
                       {selectedAdvice.inputs?.mental_health_level && <li>• Mental Health: {selectedAdvice.inputs.mental_health_level}</li>}
                       {selectedAdvice.inputs?.polypharmacy_risk && <li>• Medication Risk: {selectedAdvice.inputs.polypharmacy_risk}</li>}
-                      {selectedAdvice.inputs?.occupation && <li>• Occupation: {selectedAdvice.inputs.occupation}</li>}
+
                     </ul>
                   </div>
 

@@ -72,7 +72,7 @@ export async function POST(req: Request) {
       console.log(`💾 Saving patient data for ${body.email}:`);
       console.log(`  - Emotion: ${body.detectedEmotion || "Not set"}`);
       console.log(`  - Mental Health: ${body.mentalHealthLevel || "Not set"}`);
-      console.log(`  - Occupation: ${body.occupation || "Not set"}`);
+
       console.log(`  - Name: ${body.name || "Not set"}`);
       console.log(`  - Age: ${body.age || "Not set"}`);
       

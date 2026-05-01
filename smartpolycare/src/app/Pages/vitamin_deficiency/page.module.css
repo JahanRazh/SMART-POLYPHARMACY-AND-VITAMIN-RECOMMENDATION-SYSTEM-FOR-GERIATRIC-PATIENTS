@@ -782,3 +782,74 @@
   height: 1.25rem;
   animation: spin 1s linear infinite;
 }
+
+/* ── Dosage Row ── */
+.dosageRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.dosageField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.dosageField .textInput {
+  padding: 0.55rem 0.75rem;
+  font-size: 0.8rem;
+}
+
+/* ── Risk Percentage Bar ── */
+.riskSection {
+  margin: 0.75rem 0 1rem;
+  padding: 0.75rem 1rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+}
+
+.riskLabelRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.riskLabel {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #64748b;
+}
+
+.riskValue {
+  font-size: 1rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.riskBarTrack {
+  width: 100%;
+  height: 10px;
+  background: #e2e8f0;
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+.riskBarFill {
+  height: 100%;
+  border-radius: 9999px;
+  transition: width 0.8s ease;
+}
+
+.riskNote {
+  font-size: 0.72rem;
+  color: #64748b;
+  margin-top: 0.5rem;
+  margin-bottom: 0;
+  line-height: 1.4;
+}
+
