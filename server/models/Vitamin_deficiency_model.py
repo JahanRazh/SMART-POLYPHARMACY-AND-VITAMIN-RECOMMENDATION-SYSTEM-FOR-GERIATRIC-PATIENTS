@@ -137,7 +137,35 @@ def _predict_pair(drug1: str, drug2: str, symptoms_clean: list) -> list:
     return list(pair_vitamins)
 
 
-def predict_vitamin_deficiency(drugs: list, symptoms: list) -> dict:
+def _calculate_risk_percentage(drug_details: list) -> float:
+    """
+    Calculate risk percentage based on dosage and duration heuristic.
+    Base risk percentage starts at 45%.
+    +1% for every 10mg over both drugs (qty * dosage)
+    +0.5% for every 1 day of duration over both drugs.
+    Maximum 100%.
+
+    Args:
+        drug_details: list of dicts with keys 'dosage' (mg), 'qty', 'duration' (days)
+
+    Returns:
+        float: risk percentage between 45.0 and 100.0
+    """
+    risk = 45.0
+    for detail in drug_details:
+        try:
+            dosage = float(detail.get("dosage", 0) or 0)
+            qty = float(detail.get("qty", 1) or 1)
+            duration = float(detail.get("duration", 0) or 0)
+            total_mg = qty * dosage
+            risk += total_mg / 10.0      # +1% per 10mg
+            risk += duration * 0.5       # +0.5% per day
+        except (TypeError, ValueError):
+            pass
+    return min(round(risk, 1), 100.0)
+
+
+def predict_vitamin_deficiency(drugs: list, symptoms: list, drug_details: list = None) -> dict:
     """
     Predict vitamin deficiencies from multiple drugs and a list of symptoms.
 
@@ -148,6 +176,7 @@ def predict_vitamin_deficiency(drugs: list, symptoms: list) -> dict:
     Args:
         drugs: list of drug name strings (minimum 2)
         symptoms: list of symptom strings
+        drug_details: optional list of dicts with dosage, qty, duration per drug
 
     Returns:
         dict with 'predictions', 'pair_details', 'drugs', 'symptoms', etc.
@@ -155,6 +184,7 @@ def predict_vitamin_deficiency(drugs: list, symptoms: list) -> dict:
     _load_artifacts()
 
     symptoms_clean = [s.strip().lower().replace(" ", "") for s in symptoms if s.strip()]
+    drug_details = drug_details or []
 
     # Generate all pairwise combinations and predict
     all_vitamins = set()
@@ -169,6 +199,9 @@ def predict_vitamin_deficiency(drugs: list, symptoms: list) -> dict:
                 "drug2": d2.strip(),
                 "vitamins": [v.strip() for v in pair_vitamins],
             })
+
+    # Calculate overall risk percentage using all drug details
+    risk_pct = _calculate_risk_percentage(drug_details) if all_vitamins else 0.0
 
     # Build rich result with vitamin metadata
     results = []
@@ -190,6 +223,7 @@ def predict_vitamin_deficiency(drugs: list, symptoms: list) -> dict:
             "vitamin": v_stripped,
             **info,
             "contributing_pairs": contributing_pairs,
+            "risk_percentage": risk_pct,
         })
 
     return {
@@ -199,6 +233,7 @@ def predict_vitamin_deficiency(drugs: list, symptoms: list) -> dict:
         "predicted_vitamins": sorted([v.strip() for v in all_vitamins]),
         "pair_details": pair_details,
         "total_pairs_analyzed": len(list(combinations(drugs, 2))),
+        "overall_risk_percentage": risk_pct,
     }
 
 
@@ -246,7 +281,9 @@ def save_vitamin_assessment(
     drugs: list,
     symptoms: list,
     predictions: list,
-    pair_details: list
+    pair_details: list,
+    drug_details: list = None,
+    overall_risk_percentage: float = None
 ) -> dict:
     """Persist the latest vitamin deficiency assessment for the user."""
     db = get_db()
@@ -272,8 +309,10 @@ def save_vitamin_assessment(
         "user": patient_data,
         "inputDrugs": drugs,
         "inputSymptoms": symptoms,
+        "drugDetails": drug_details or [],
         "predictions": predictions,
         "pairDetails": pair_details,
+        "overallRiskPercentage": overall_risk_percentage,
         "updatedAt": timestamp,
     }
     
