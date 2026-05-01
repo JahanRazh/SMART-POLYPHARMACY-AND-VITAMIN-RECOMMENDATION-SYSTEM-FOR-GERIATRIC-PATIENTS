@@ -783,90 +783,57 @@
   animation: spin 1s linear infinite;
 }
 
-/* ── Drug card (name + meta fields) ── */
-.drugCard {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 1rem;
-  padding: 1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-.drugCard:focus-within {
-  border-color: #7dd3fc;
-  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1);
-}
-
-.drugNameRow {
-  display: flex;
-  align-items: flex-end;
-  gap: 0.5rem;
-}
-
-.drugMetaRow {
+/* ── Dosage Row ── */
+.dosageRow {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
   gap: 0.5rem;
 }
 
-.metaField {
+.dosageField {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0.2rem;
 }
 
-.metaInput {
-  width: 100%;
-  background: white;
-  border: 1px solid #cbd5e1;
-  border-radius: 0.6rem;
-  padding: 0.5rem 0.75rem;
+.dosageField .textInput {
+  padding: 0.55rem 0.75rem;
   font-size: 0.8rem;
-  color: #0f172a;
-  outline: none;
-  transition: all 0.2s ease;
-  box-shadow: inset 0 1px 2px rgba(0,0,0,0.04);
 }
 
-.metaInput:focus {
-  border-color: #0ea5e9;
-  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.15);
+/* ── Risk Percentage Bar ── */
+.riskSection {
+  margin: 0.75rem 0 1rem;
+  padding: 0.75rem 1rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
 }
 
-.metaInput::placeholder {
-  color: #94a3b8;
-}
-
-/* ── Risk percentage bar ── */
-.riskBarWrapper {
-  margin: 0.5rem 0 0.75rem;
-}
-
-.riskBarHeader {
+.riskLabelRow {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 0.4rem;
+  margin-bottom: 0.5rem;
 }
 
-.riskBarLabel {
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: #64748b;
+.riskLabel {
+  font-size: 0.75rem;
   font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #64748b;
 }
 
-.riskBarPct {
-  font-size: 0.85rem;
-  font-weight: 700;
+.riskValue {
+  font-size: 1rem;
+  font-weight: 800;
+  color: #0f172a;
 }
 
 .riskBarTrack {
-  height: 8px;
+  width: 100%;
+  height: 10px;
   background: #e2e8f0;
   border-radius: 9999px;
   overflow: hidden;
@@ -875,5 +842,14 @@
 .riskBarFill {
   height: 100%;
   border-radius: 9999px;
-  transition: width 0.8s cubic-bezier(0.25, 0.8, 0.25, 1);
+  transition: width 0.8s ease;
 }
+
+.riskNote {
+  font-size: 0.72rem;
+  color: #64748b;
+  margin-top: 0.5rem;
+  margin-bottom: 0;
+  line-height: 1.4;
+}
+

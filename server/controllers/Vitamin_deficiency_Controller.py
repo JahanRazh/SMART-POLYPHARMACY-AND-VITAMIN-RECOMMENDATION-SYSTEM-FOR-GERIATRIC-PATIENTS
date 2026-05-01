@@ -19,7 +19,7 @@ def predict_deficiency():
     user_id = payload.get("userId")
     drugs = payload.get("drugs", [])
     symptoms = payload.get("symptoms", [])
-    drug_details = payload.get("drugDetails", [])
+    dosage_info = payload.get("dosageInfo", [])
 
     if not isinstance(drugs, list) or len(drugs) < 2:
         return jsonify({"message": "At least 2 drugs are required"}), 400
@@ -41,7 +41,7 @@ def predict_deficiency():
         return jsonify({"message": "At least one symptom is required"}), 400
 
     try:
-        result = predict_vitamin_deficiency(clean_drugs, symptoms, drug_details)
+        result = predict_vitamin_deficiency(clean_drugs, symptoms, dosage_info)
         
         # Save to Firebase if user is logged in
         if user_id:
@@ -52,8 +52,8 @@ def predict_deficiency():
                     symptoms=result.get("symptoms", symptoms),
                     predictions=result.get("predictions", []),
                     pair_details=result.get("pair_details", []),
-                    drug_details=drug_details,
-                    overall_risk_percentage=result.get("overall_risk_percentage")
+                    dosage_info=result.get("dosage_info", []),
+                    overall_risk_percentage=result.get("overall_risk_percentage"),
                 )
                 result["savedId"] = saved_doc.get("id")
             except Exception as e:
