@@ -36,7 +36,7 @@ type SavedAdvice = {
     emotion: string;
     mental_health_level: string;
     polypharmacy_risk: string;
-    occupation: string;
+
   };
   saved_at?: string;
 };
@@ -398,6 +398,13 @@ export default function LifestyleAdvicePage() {
                   <span>Generate New Advice</span>
                   <span className="transform transition-transform group-hover:translate-x-1">→</span>
                 </Link>
+                <Link
+                  href="/Pages/bookCounsellor"
+                  className="group inline-flex items-center gap-2 rounded-xl bg-white border-2 border-teal-500 px-8 py-4 text-teal-700 font-semibold shadow-lg hover:shadow-xl hover:bg-teal-50 transform transition-all hover:scale-105"
+                >
+                  <span>Book Counsellor</span>
+                  <span className="transform transition-transform group-hover:translate-x-1">🗓️</span>
+                </Link>
               </motion.div>
             </motion.div>
 
@@ -671,15 +678,7 @@ export default function LifestyleAdvicePage() {
                           </p>
                         </div>
                       )}
-                      {recentAdvice.inputs.occupation && (
-                        <div className="bg-white/70 rounded-lg p-4 text-center">
-                          <p className="text-2xl mb-2">💼</p>
-                          <p className="text-xs text-gray-600 font-semibold uppercase">Occupation</p>
-                          <p className="text-sm font-bold text-indigo-700 mt-1">
-                            {recentAdvice.inputs.occupation}
-                          </p>
-                        </div>
-                      )}
+
                     </div>
                   </motion.div>
                 )}
