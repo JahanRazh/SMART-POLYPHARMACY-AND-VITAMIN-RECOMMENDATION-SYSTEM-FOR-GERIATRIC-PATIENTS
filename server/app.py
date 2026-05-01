@@ -27,14 +27,15 @@ from routes.full_assessment_route import full_assessment_bp
 print("✅ Loaded full assessment route")
 from routes.meal_plan_route import meal_plan_bp
 print("✅ Loaded meal plan route")
-from routes.occupation_route import occupation_bp
-print("✅ Loaded occupation route")
+
 from routes.advice_route import advice_bp
 print("✅ Loaded advice route")
 from routes.vitamin_deficiency_route import vitamin_deficiency_bp
 print("✅ Loaded vitamin deficiency route")
 from routes.advice_history_route import advice_history_bp
 print("✅ Loaded advice history route")
+from routes.counsellor_booking_route import counsellor_booking_bp
+print("✅ Loaded counsellor booking route")
 
 from db import get_db
 print("✅ Loaded database connection")
@@ -47,7 +48,7 @@ CORS(app, resources={
     r"/api/*": {"origins": "*"},
     r"/full_assessment": {"origins": "*"},
     r"/detect_emotion": {"origins": "*"},
-    r"/occupation_suggestions": {"origins": "*"},
+
     r"/meal_plan": {"origins": "*"},
     r"/polypharmacy_assessment": {"origins": "*"},
     r"/patient*": {"origins": "*"},
@@ -58,10 +59,11 @@ app.register_blueprint(polypharmacy_bp)
 app.register_blueprint(emotion_bp)
 app.register_blueprint(full_assessment_bp)
 app.register_blueprint(meal_plan_bp)
-app.register_blueprint(occupation_bp)
+
 app.register_blueprint(advice_bp)
 app.register_blueprint(vitamin_deficiency_bp)
 app.register_blueprint(advice_history_bp)
+app.register_blueprint(counsellor_booking_bp)
 
 @app.route('/')
 def health_check():
