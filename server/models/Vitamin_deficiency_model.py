@@ -376,6 +376,19 @@ def save_vitamin_assessment(
         
     doc_ref.set(payload)
     
+    # Add to history records collection to match the removed frontend logic
+    try:
+        db.collection("vitamin_deficiency_records").add({
+            "userEmail": user_profile.get("email", "unknown"),
+            "userId": user_id,
+            "inputDrugs": drugs,
+            "inputSymptoms": symptoms,
+            "predictionResults": payload,
+            "timestamp": datetime.utcnow()
+        })
+    except Exception as e:
+        print(f"Failed to append to history records: {e}")
+    
     payload["id"] = doc_ref.id
     return payload
 

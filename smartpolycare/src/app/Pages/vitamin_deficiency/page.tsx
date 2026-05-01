@@ -7,8 +7,6 @@ import { Plus, X, Search, Beaker, RotateCcw, Activity, Download, FileText, FileS
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
-import { db } from "@/app/lib/firebaseConfig";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 
 /* ================= TYPES ================= */
 
@@ -205,21 +203,6 @@ export default function VitaminDeficiencyPage() {
       }
 
       setResults(data as PredictionResponse);
-
-      // Store assessment in database
-      try {
-        await addDoc(collection(db, "vitamin_deficiency_records"), {
-          userEmail: user?.email || "unknown",
-          userId: user?.uid || "unknown",
-          inputDrugs: validDrugs,
-          inputSymptoms: selectedSymptoms,
-          predictionResults: data,
-          timestamp: serverTimestamp(),
-        });
-        console.log("Assessment recorded successfully");
-      } catch (dbError) {
-        console.error("Error storing assessment:", dbError);
-      }
     } catch {
       setError("Server error — make sure the backend is running");
     } finally {
