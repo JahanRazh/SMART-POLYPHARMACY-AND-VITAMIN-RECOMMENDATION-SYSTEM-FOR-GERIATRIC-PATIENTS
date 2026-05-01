@@ -403,3 +403,13 @@ def get_vitamin_assessment(user_id: str) -> dict:
     data = doc.to_dict()
     data["id"] = doc.id
     return data
+
+def delete_vitamin_assessment(user_id: str) -> bool:
+    """Delete the latest vitamin deficiency assessment for a user."""
+    db = get_db()
+    doc_ref = db.collection(VITAMIN_COLLECTION).document(user_id)
+    doc = doc_ref.get()
+    if doc.exists:
+        doc_ref.delete()
+        return True
+    return False
