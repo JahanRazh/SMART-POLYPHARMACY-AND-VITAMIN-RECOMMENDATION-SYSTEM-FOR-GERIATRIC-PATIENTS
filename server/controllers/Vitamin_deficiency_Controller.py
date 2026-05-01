@@ -5,7 +5,8 @@ from models.Vitamin_deficiency_model import (
     search_drug_names,
     get_all_symptoms,
     save_vitamin_assessment,
-    get_vitamin_assessment
+    get_vitamin_assessment,
+    delete_vitamin_assessment
 )
 
 
@@ -109,3 +110,20 @@ def get_assessment():
         return jsonify(data), 200
     except Exception as e:
         return jsonify({"message": f"Error fetching assessment: {str(e)}"}), 500
+
+def delete_assessment():
+    """
+    DELETE /api/vitamin-deficiency/assessment?userId=...
+    Deletes the user's latest vitamin deficiency assessment.
+    """
+    user_id = request.args.get("userId")
+    if not user_id:
+        return jsonify({"message": "userId is required"}), 400
+        
+    try:
+        deleted = delete_vitamin_assessment(user_id)
+        if not deleted:
+            return jsonify({"message": "No assessment found to delete"}), 404
+        return jsonify({"message": "Assessment deleted successfully"}), 200
+    except Exception as e:
+        return jsonify({"message": f"Error deleting assessment: {str(e)}"}), 500

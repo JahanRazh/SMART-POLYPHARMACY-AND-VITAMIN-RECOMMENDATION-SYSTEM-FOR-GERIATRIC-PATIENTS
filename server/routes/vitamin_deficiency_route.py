@@ -5,6 +5,7 @@ from controllers.Vitamin_deficiency_Controller import (
     get_drugs,
     get_symptoms,
     get_assessment,
+    delete_assessment
 )
 
 vitamin_deficiency_bp = Blueprint(
@@ -15,3 +16,4 @@ vitamin_deficiency_bp.add_url_rule("/predict", view_func=predict_deficiency, met
 vitamin_deficiency_bp.add_url_rule("/drugs", view_func=get_drugs, methods=["GET"])
 vitamin_deficiency_bp.add_url_rule("/symptoms", view_func=get_symptoms, methods=["GET"])
 vitamin_deficiency_bp.add_url_rule("/assessment", view_func=get_assessment, methods=["GET"])
+vitamin_deficiency_bp.add_url_rule("/assessment", view_func=delete_assessment, methods=["DELETE"])

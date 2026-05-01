@@ -83,8 +83,35 @@ export default function VitaminDeficiencyPage() {
       .then((r) => r.ok ? r.json() : null)
       .then((data) => {
         if (data && data.inputDrugs) {
-          setDrugs(data.inputDrugs);
+          // Restore input drugs
+          const restoredDrugs = [...data.inputDrugs];
+          // Ensure we have at least 5 empty slots if less than 5 drugs were saved
+          while (restoredDrugs.length < 5) restoredDrugs.push("");
+          setDrugs(restoredDrugs);
+
           setSelectedSymptoms(data.inputSymptoms || []);
+
+          if (data.dosageInfo && data.dosageInfo.length > 0) {
+            const restoredDosages = [...data.dosageInfo];
+            while (restoredDosages.length < 5) {
+              restoredDosages.push({ dosage_mg: "", quantity: "", duration_weeks: "" });
+            }
+            setDrugDosages(restoredDosages);
+          }
+
+          if (data.predictions) {
+            const validCount = data.inputDrugs.length;
+            setResults({
+              predictions: data.predictions,
+              drugs: data.inputDrugs,
+              symptoms: data.inputSymptoms || [],
+              predicted_vitamins: [],
+              pair_details: data.pairDetails || [],
+              total_pairs_analyzed: validCount >= 2 ? (validCount * (validCount - 1)) / 2 : 0,
+              overall_risk_percentage: data.overallRiskPercentage || 0,
+              dosage_info: data.dosageInfo || []
+            });
+          }
         }
       })
       .catch(() => { });
@@ -211,13 +238,24 @@ export default function VitaminDeficiencyPage() {
   };
 
   /* ---- reset ---- */
-  const handleReset = () => {
+  const handleReset = async () => {
     setDrugs(["", "", "", "", ""]);
     setDrugDosages(Array(5).fill(null).map(() => ({ dosage_mg: "", quantity: "", duration_weeks: "" })));
     setSelectedSymptoms([]);
     setResults(null);
     setError("");
     setDrugSuggestions({});
+
+    // Delete saved assessment from DB
+    if (user) {
+      try {
+        await fetch(`${API}/assessment?userId=${user.uid}`, {
+          method: "DELETE",
+        });
+      } catch (err) {
+        console.error("Failed to delete assessment", err);
+      }
+    }
   };
 
   /* ---- handle exports ---- */
