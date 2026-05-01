@@ -6,6 +6,63 @@ import { useAuth } from "@/app/components/Contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 
+// --- Questionnaire Data Structures ---
+const gda15Questions = [
+  "Are you basically satisfied with your life?",
+  "Have you dropped many of your activities and interests?",
+  "Do you feel that your life is empty?",
+  "Do you often get bored?",
+  "Are you in good spirits most of the time?",
+  "Are you afraid that something bad is going to happen to you?",
+  "Do you feel happy most of the time?",
+  "Do you often feel helpless?",
+  "Do you prefer to stay at home, rather than going out and doing new things?",
+  "Do you feel you have more problems with memory than most?",
+  "Do you think it is wonderful to be alive now?",
+  "Do you feel pretty worthless the way you are now?",
+  "Do you feel full of energy?",
+  "Do you feel that your situation is hopeless?",
+  "Do you think that most people are better off than you are?"
+];
+const gad7Questions = [
+  "Feeling nervous, anxious, or on edge", "Not being able to stop or control worrying",
+  "Worrying too much about different things", "Trouble relaxing",
+  "Being so restless that it's hard to sit still", "Becoming easily annoyed or irritable",
+  "Feeling afraid as if something awful might happen"
+];
+const gad7Options = ["Not at all", "Several days", "More than half the days", "Nearly every day"];
+const marsQuestions = [
+  "1. Do you sometimes forget to take your antihypertensive medication?",
+  "2. Over the past 2 weeks, were there any days when you did not take your antihypertensive medication?",
+  "3. Have you ever cut back or stopped taking your antihypertensive medication without telling your doctor because you felt worse when you took it?",
+  "4. When you travel or leave home, do you sometimes forget to bring your antihypertensive medication?",
+  "5. Did you take your antihypertensive medicine yesterday?",
+  "6. When you feel like your blood pressure are under control, do you sometimes stop taking your antihypertensive medication?",
+  "7. Do you ever feel hassled about sticking to your treatment plan?"
+];
+const marsQ8 = "8. How often do you have difficulty remembering to take all your antihypertensive medication?";
+const marsQ8Options = ["Never/Rarely", "Once in a while", "Sometimes", "Usually", "All the time"];
+const iadlQuestions = [
+  { title: "A. Ability to Use Telephone", options: ["Operates telephone on own initiative-looks up and dials numbers, etc.", "Dials a few well-known numbers", "Answers telephone but does not dial", "Does not use telephone at all"] },
+  { title: "B. Shopping", options: ["Takes care of all shopping needs independently", "Shops independently for small purchases", "Needs to be accompanied on any shopping trip", "Completely unable to shop"] },
+  { title: "C. Food Preparation", options: ["Plans, prepares and serves adequate meals independently", "Prepares adequate meals if supplied with ingredients", "Heats, serves and prepares meals, or prepares meals but does not maintain adequate diet", "Needs to have meals prepared and served"] },
+  { title: "D. Housekeeping", options: ["Maintains house alone or with occasional assistance (e.g. \"heavy work domestic help\")", "Performs light daily tasks such as dish washing, bed making", "Performs light daily tasks but cannot maintain acceptable level of cleanliness", "Needs help with all home maintenance tasks", "Does not participate in any housekeeping tasks"] },
+  { title: "E. Laundry", options: ["Does personal laundry completely", "Launders small items-rinses stockings, etc.", "All laundry must be done by others"] },
+  { title: "F. Mode of Transportation", options: ["Travels independently on public transportation or drives own car", "Arranges own travel via taxi, but does not otherwise use public transportation", "Travels on public transportation when accompanied by another", "Travel limited to taxi or automobile with assistance of another", "Does not travel at all"] },
+  { title: "G. Responsibility for Own Medications", options: ["Is responsible for taking medication in correct dosages at correct time", "Takes responsibility if medication is prepared in advance in separate dosage", "Is not capable of dispensing own medication"] },
+  { title: "H. Ability to Handle Finances", options: ["Manages financial matters independently (budgets, writes checks, pays rent, bills, goes to bank), collects and keeps track of income", "Manages day-to-day purchases, but needs help with banking, major purchases, etc.", "Incapable of handling money"] }
+];
+
+const manualEmotions = [
+  { label: "Angry", emoji: "😠" },
+  { label: "Disgust", emoji: "🤢" },
+  { label: "Fear", emoji: "😨" },
+  { label: "Happy", emoji: "😀" },
+  { label: "Sad", emoji: "😢" },
+  { label: "Surprise", emoji: "😲" },
+  { label: "Neutral", emoji: "😐" },
+];
+
 const PatientAssessmentForm = () => {
   const webcamRef = useRef<Webcam | null>(null);
   const { userProfile, user } = useAuth();
@@ -21,7 +78,6 @@ const PatientAssessmentForm = () => {
     work_hours: "",
     social_interaction_duration: "",
     gender: "Male",
-    occupation: "",
     smoking_habit: "No",
     alcohol_intake: "No",
     meditation_practice: "No",
@@ -38,11 +94,18 @@ const PatientAssessmentForm = () => {
   const [webcamReady, setWebcamReady] = useState(false);
   const [cameraError, setCameraError] = useState("");
   const [stopDetection, setStopDetection] = useState(false);
-  const [occupationSuggestions, setOccupationSuggestions] = useState<string[]>([]);
-  const [isFetchingOccupations, setIsFetchingOccupations] = useState(false);
-  const [occupationSelected, setOccupationSelected] = useState(false);
   const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null);
-   const [videoDevices, setVideoDevices] = useState<MediaDeviceInfo[]>([]);
+  const [videoDevices, setVideoDevices] = useState<MediaDeviceInfo[]>([]);
+  const [useCamera, setUseCamera] = useState(true);
+
+  // Questionnaire States
+  const [currentStep, setCurrentStep] = useState(1);
+  const [gda15, setGda15] = useState<Record<number, string>>({});
+  const [gad7, setGad7] = useState<Record<number, string>>({});
+  const [mars, setMars] = useState<Record<number, string>>({});
+  const [mars8, setMars8] = useState<string>("");
+  const [iadl, setIadl] = useState<Record<number, string>>({});
+  const [questionnaireSaved, setQuestionnaireSaved] = useState(false);
 
   // Auto-fill from user profile
   useEffect(() => {
@@ -299,67 +362,9 @@ const PatientAssessmentForm = () => {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
-
-    // When user types occupation, show suggestions
-    if (name === "occupation") {
-      // User is typing again → unlock suggestions
-      setOccupationSelected(false);
-      setOccupationSuggestions([]);
-    }
   };
 
-  // Fuzzy occupation suggestions (from Flask API using occupation.csv)
-  useEffect(() => {
-    // If user already chose a suggestion, don't refetch until they type again
-    if (occupationSelected) return;
 
-    const query = formData.occupation.trim();
-
-    if (query.length < 2) {
-      setOccupationSuggestions([]);
-      return;
-    }
-
-    let active = true;
-    const fetchSuggestions = async () => {
-      try {
-        setIsFetchingOccupations(true);
-        const res = await fetch(
-          `http://127.0.0.1:5000/occupation_suggestions?q=${encodeURIComponent(
-            query
-          )}`
-        );
-
-        if (!res.ok) {
-          throw new Error("Failed to fetch occupation suggestions");
-        }
-
-        const data = await res.json();
-        if (!active) return;
-
-        const labels: string[] = (data.suggestions || []).map(
-          (item: { label: string }) => item.label
-        );
-        setOccupationSuggestions(labels);
-      } catch (err) {
-        console.warn("Occupation suggestions error:", err);
-        if (active) {
-          setOccupationSuggestions([]);
-        }
-      } finally {
-        if (active) {
-          setIsFetchingOccupations(false);
-        }
-      }
-    };
-
-    const timeoutId = setTimeout(fetchSuggestions, 250); // debounce typing
-
-    return () => {
-      active = false;
-      clearTimeout(timeoutId);
-    };
-  }, [formData.occupation]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -375,10 +380,7 @@ const PatientAssessmentForm = () => {
       setError("Age is required.");
       return;
     }
-    if (!formData.occupation.trim()) {
-      setError("Occupation is required.");
-      return;
-    }
+
 
     const numericFields: { key: keyof typeof formData; label: string }[] = [
       { key: "exercise_time", label: "Exercise Time" },
@@ -458,6 +460,7 @@ const PatientAssessmentForm = () => {
         emotionConfidence: allPredictions[detectedEmotion] || 0,
         allEmotionPredictions: allPredictions,
         mentalHealthLevel: assessmentData.mental_health_level,
+        questionnaire: { gda15, gad7, mars, mars8, iadl },
         timestamp: new Date().toISOString(),
       };
 
@@ -571,7 +574,7 @@ const PatientAssessmentForm = () => {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Personal Information Section */}
+          {/* Emotion Detection & Analysis Cage */}
           <motion.section
             className="rounded-3xl border border-white/40 bg-white/20 backdrop-blur-xl p-8 shadow-xl hover:shadow-2xl transition-shadow"
             initial={{ opacity: 0, y: 20 }}
@@ -579,110 +582,193 @@ const PatientAssessmentForm = () => {
             transition={{ duration: 0.6 }}
             viewport={{ once: true }}
           >
-            <div className="mb-8">
-              <h2 className="text-2xl font-bold text-gray-900 mb-2 flex items-center gap-3">
-                👤 Personal Information
-              </h2>
-              <p className="text-sm text-gray-600">Basic details about the patient</p>
-            </div>
+            <div className="flex flex-col md:flex-row gap-8 items-center justify-between">
+              <div className="flex-1 w-full">
+                <div className="mb-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
+                    <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
+                      📷 Emotion & Status Analysis
+                    </h2>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setUseCamera(!useCamera);
+                        if (useCamera) {
+                          setCameraActive(false);
+                          setStopDetection(false);
+                        }
+                      }}
+                      className="px-4 py-2 text-xs font-bold rounded-xl bg-white/50 border border-gray-300 text-gray-700 hover:bg-gray-100 transition-colors shadow-sm"
+                    >
+                      {useCamera ? "Turn Camera Off" : "Turn Camera On"}
+                    </button>
+                  </div>
+                  <p className="text-sm text-gray-600">Real-time emotion detection for your assessment or select manually</p>
+                </div>
 
-            <div className="grid gap-6 md:grid-cols-2">
-              {[
-                { name: "name", label: "Full Name", type: "text", placeholder: "Enter full name" },
-                { name: "age", label: "Age", type: "number", placeholder: "Enter age", min: 1, max: 120 },
-              ].map((field, idx) => (
-                <motion.div
-                  key={field.name}
-                  initial={{ opacity: 0, x: -20 }}
-                  whileInView={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.5, delay: idx * 0.1 }}
-                  viewport={{ once: true }}
-                >
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    {field.label} *
-                  </label>
-                  <input
-                    type={field.type}
-                    name={field.name}
-                    value={formData[field.name as keyof typeof formData]}
-                    onChange={handleChange}
-                    placeholder={field.placeholder}
-                    required
-                    {...(field.min && { min: field.min })}
-                    {...(field.max && { max: field.max })}
-                    className="w-full rounded-2xl border border-white/50 bg-white/30 backdrop-blur-sm px-4 py-3 text-gray-900 placeholder-gray-500 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all"
-                  />
-                </motion.div>
-              ))}
-
-              <motion.div
-                initial={{ opacity: 0, x: -20 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.5, delay: 0.2 }}
-                viewport={{ once: true }}
-              >
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Gender *</label>
-                <select
-                  name="gender"
-                  value={formData.gender}
-                  onChange={handleChange}
-                  className="w-full rounded-2xl border border-white/50 bg-white/30 backdrop-blur-sm px-4 py-3 text-gray-900 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all"
-                >
-                  <option value="Male">Male</option>
-                  <option value="Female">Female</option>
-                </select>
-              </motion.div>
-
-              <motion.div
-                className="md:col-span-2"
-                initial={{ opacity: 0, x: -20 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.5, delay: 0.3 }}
-                viewport={{ once: true }}
-              >
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Occupation *</label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    name="occupation"
-                    value={formData.occupation}
-                    onChange={handleChange}
-                    placeholder="Start typing occupation"
-                    required
-                    className="w-full rounded-2xl border border-white/50 bg-white/30 backdrop-blur-sm px-4 py-3 text-gray-900 placeholder-gray-500 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all"
-                    autoComplete="off"
-                  />
-
-                  {formData.occupation.trim().length >= 2 &&
-                    occupationSuggestions.length > 0 &&
-                    !occupationSelected && (
-                      <motion.div
-                        className="absolute z-20 mt-2 max-h-60 w-full overflow-auto rounded-2xl border border-white/50 bg-white/90 backdrop-blur-xl shadow-xl"
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                      >
-                        {occupationSuggestions.map((occ) => (
-                          <button
-                            type="button"
-                            key={occ}
-                            onClick={() => {
-                              setFormData((prev) => ({ ...prev, occupation: occ }));
-                              setOccupationSuggestions([]);
-                              setOccupationSelected(true);
-                            }}
-                            className="block w-full px-4 py-3 text-left text-sm text-gray-700 hover:bg-blue-100/50 transition-colors"
-                          >
-                            {occ}
-                          </button>
-                        ))}
-                      </motion.div>
-                    )}
-
-                  {isFetchingOccupations && (
-                    <p className="mt-2 text-xs text-gray-500">Searching occupations...</p>
+                {/* Analysis Status Inside Cage */}
+                <div className="mb-6">
+                  {!useCamera && detectedEmotion ? (
+                    <motion.div
+                      className="rounded-2xl border border-green-300/50 bg-green-100/50 p-5"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                    >
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="h-3 w-3 rounded-full bg-green-500"></div>
+                        <p className="text-sm font-medium text-green-700">Emotion Selected: {detectedEmotion}</p>
+                      </div>
+                      <p className="text-xs text-green-600">Manual selection recorded</p>
+                    </motion.div>
+                  ) : stopDetection ? (
+                    <motion.div
+                      className="rounded-2xl border border-gray-300/50 bg-gray-100/50 p-5"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                    >
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="h-3 w-3 rounded-full bg-gray-400"></div>
+                        <p className="text-sm font-medium text-gray-700">Analysis Complete</p>
+                      </div>
+                      <p className="text-xs text-gray-500">Camera stopped after analysis</p>
+                    </motion.div>
+                  ) : cameraActive ? (
+                    <motion.div
+                      className="rounded-2xl border border-blue-300/50 bg-blue-100/50 p-5"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                    >
+                      <div className="flex items-center gap-3 mb-2">
+                        <motion.div
+                          className="h-3 w-3 rounded-full bg-blue-500"
+                          animate={{ opacity: [0.5, 1] }}
+                          transition={{ duration: 1.5, repeat: Infinity }}
+                        ></motion.div>
+                        <p className="text-sm font-medium text-blue-700">Analysis Running</p>
+                      </div>
+                      <p className="text-xs text-blue-600">Complete the form while we analyze emotions</p>
+                    </motion.div>
+                  ) : (
+                    <div className="rounded-2xl border border-gray-200/50 bg-white/50 p-5">
+                      <p className="text-sm font-medium text-gray-600">Camera inactive / Manual mode</p>
+                    </div>
                   )}
                 </div>
-              </motion.div>
+
+                {!stopDetection && useCamera && videoDevices.length > 0 && (
+                  <div className="flex items-center gap-3">
+                    <label htmlFor="camera-select" className="text-sm font-semibold text-gray-700">
+                      Camera:
+                    </label>
+                    <select
+                      id="camera-select"
+                      value={selectedDeviceId || ""}
+                      onChange={(e) => {
+                        setSelectedDeviceId(e.target.value || null);
+                        setWebcamReady(false);
+                      }}
+                      className="rounded-xl border border-white/50 bg-white/30 backdrop-blur-sm px-3 py-2 text-sm text-gray-900 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all flex-1"
+                    >
+                      <option value="">Default camera</option>
+                      {videoDevices.map((d) => (
+                        <option key={d.deviceId} value={d.deviceId}>
+                          {d.label || d.deviceId}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+
+              {/* Webcam Component */}
+              <div className="shrink-0 w-full md:w-auto flex flex-col items-center">
+                {!useCamera ? (
+                  <div className="w-full md:w-[280px] p-5 rounded-3xl bg-white/50 border border-white/50 shadow-md backdrop-blur-md">
+                    <p className="text-sm font-semibold text-center text-gray-700 mb-4">Select Emotion Manually</p>
+                    <div className="flex flex-wrap justify-center gap-2">
+                      {manualEmotions.map((emo) => (
+                        <button
+                          key={emo.label}
+                          type="button"
+                          onClick={() => {
+                            setDetectedEmotion(emo.label);
+                            setAllPredictions({ [emo.label]: 1.0 });
+                            setStopDetection(true);
+                          }}
+                          className={`flex flex-col items-center justify-center p-2 w-[70px] h-[70px] rounded-2xl transition-all ${
+                            detectedEmotion === emo.label 
+                              ? 'bg-blue-100 border-2 border-blue-400 shadow-md scale-105' 
+                              : 'bg-white border border-gray-200 hover:bg-gray-50'
+                          }`}
+                        >
+                          <span className="text-3xl mb-1">{emo.emoji}</span>
+                          <span className="text-[10px] font-bold text-gray-600">{emo.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : !stopDetection ? (
+                  <div className="flex flex-col items-center gap-4">
+                    <motion.div
+                      className="relative rounded-3xl overflow-hidden border-2 border-blue-300/50 shadow-lg bg-gray-900 w-[160px] h-[120px]"
+                      animate={webcamReady ? { boxShadow: "0 0 30px rgba(59, 130, 246, 0.6)" } : {}}
+                    >
+                      <Webcam
+                        key={selectedDeviceId || "default"}
+                        ref={webcamRef}
+                        audio={false}
+                        screenshotFormat="image/jpeg"
+                        screenshotQuality={0.95}
+                        width={160}
+                        height={120}
+                        className="object-cover w-full h-full"
+                        videoConstraints={{
+                          ...(selectedDeviceId
+                            ? { deviceId: { exact: selectedDeviceId } }
+                            : { facingMode: "user" }),
+                          width: { ideal: 640 },
+                          height: { ideal: 480 },
+                        }}
+                        onUserMedia={handleWebcamLoad}
+                        onUserMediaError={handleWebcamError}
+                      />
+                      {webcamReady && (
+                        <motion.div
+                          className="absolute top-2 right-2 bg-green-500 rounded-full p-1.5"
+                          animate={{ scale: [1, 1.2, 1] }}
+                          transition={{ duration: 2, repeat: Infinity }}
+                        >
+                          <div className="w-1.5 h-1.5 bg-white rounded-full"></div>
+                        </motion.div>
+                      )}
+                    </motion.div>
+                    
+                    {!webcamReady && (
+                      <motion.div className="text-center" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                        <p className="text-xs text-gray-600 mb-2">⏳ Initializing...</p>
+                        {cameraError ? (
+                          <p className="text-xs font-medium text-red-600 bg-red-50/50 p-2 rounded-xl">{cameraError}</p>
+                        ) : (
+                          <motion.button
+                            type="button"
+                            onClick={requestCameraPermission}
+                            className="text-xs rounded-xl bg-gradient-to-r from-blue-500 to-teal-500 px-4 py-2 text-white font-semibold hover:shadow-lg transition-shadow"
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                          >
+                            Enable Camera
+                          </motion.button>
+                        )}
+                      </motion.div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="w-[160px] h-[120px] rounded-3xl bg-gray-100 flex flex-col items-center justify-center border-2 border-gray-200">
+                    <span className="text-2xl mb-1">✅</span>
+                    <span className="text-xs text-gray-500 font-medium">Done</span>
+                  </div>
+                )}
+              </div>
             </div>
           </motion.section>
 
@@ -780,165 +866,153 @@ const PatientAssessmentForm = () => {
             </div>
           </motion.section>
 
-          {/* Camera Preview */}
-          {!stopDetection && (
-            <motion.section
-              className="rounded-3xl border border-white/40 bg-white/20 backdrop-blur-xl p-8 shadow-xl hover:shadow-2xl transition-shadow"
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.3 }}
-              viewport={{ once: true }}
-            >
-              <div className="mb-8">
-                <h2 className="text-2xl font-bold text-gray-900 mb-2 flex items-center gap-3">
-                  📷 Emotion Detection
-                </h2>
-                <p className="text-sm text-gray-600">Enable your camera for emotion analysis</p>
-              </div>
 
-              {videoDevices.length > 0 && (
-                <div className="mb-6 flex items-center gap-3">
-                  <label htmlFor="camera-select" className="text-sm font-semibold text-gray-700">
-                    Camera Device
-                  </label>
-                  <select
-                    id="camera-select"
-                    value={selectedDeviceId || ""}
-                    onChange={(e) => {
-                      setSelectedDeviceId(e.target.value || null);
-                      setWebcamReady(false);
-                    }}
-                    className="rounded-xl border border-white/50 bg-white/30 backdrop-blur-sm px-3 py-2 text-sm text-gray-900 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all"
-                  >
-                    <option value="">Default camera</option>
-                    {videoDevices.map((d) => (
-                      <option key={d.deviceId} value={d.deviceId}>
-                        {d.label || d.deviceId}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              <div className="flex justify-center mb-6">
-                <motion.div
-                  className="relative rounded-3xl overflow-hidden border-2 border-blue-300/50 shadow-lg"
-                  animate={webcamReady ? { boxShadow: "0 0 30px rgba(59, 130, 246, 0.6)" } : {}}
-                >
-                  <Webcam
-                    key={selectedDeviceId || "default"}
-                    ref={webcamRef}
-                    audio={false}
-                    screenshotFormat="image/jpeg"
-                    screenshotQuality={0.95}
-                    width={160}
-                    height={120}
-                    videoConstraints={{
-                      ...(selectedDeviceId
-                        ? { deviceId: { exact: selectedDeviceId } }
-                        : { facingMode: "user" }),
-                      width: { ideal: 640 },
-                      height: { ideal: 480 },
-                    }}
-                    onUserMedia={handleWebcamLoad}
-                    onUserMediaError={handleWebcamError}
-                  />
-                  {webcamReady && (
-                    <motion.div
-                      className="absolute top-3 right-3 bg-green-500 rounded-full p-2"
-                      animate={{ scale: [1, 1.2, 1] }}
-                      transition={{ duration: 2, repeat: Infinity }}
-                    >
-                      <div className="w-2 h-2 bg-white rounded-full"></div>
-                    </motion.div>
-                  )}
-                </motion.div>
-              </div>
-
-              {!webcamReady && (
-                <motion.div className="text-center" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                  <p className="text-sm text-gray-600 mb-4">⏳ Waiting for camera to initialize...</p>
-                  {cameraError && (
-                    <p className="text-xs font-medium text-red-600 mb-4 bg-red-50/50 p-3 rounded-2xl">{cameraError}</p>
-                  )}
-                  <motion.button
-                    type="button"
-                    onClick={requestCameraPermission}
-                    className="rounded-2xl bg-gradient-to-r from-blue-500 to-teal-500 px-6 py-3 text-white font-semibold hover:shadow-lg transition-shadow"
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                  >
-                    Enable Camera
-                  </motion.button>
-                </motion.div>
-              )}
-
-              {webcamReady && (
-                <motion.p
-                  className="text-center text-sm text-green-600 font-semibold"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                >
-                  ✅ Camera active - Detection running
-                </motion.p>
-              )}
-            </motion.section>
-          )}
-
-          {stopDetection && (
-            <motion.section
-              className="rounded-3xl border border-white/40 bg-white/20 backdrop-blur-xl p-8"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-            >
-              <div className="text-center">
-                <p className="text-sm font-semibold text-gray-700">📷 Camera Analysis Complete</p>
-                <p className="text-xs text-gray-500 mt-2">Camera stopped after analysis</p>
-              </div>
-            </motion.section>
-          )}
-
-          {/* Background Analysis Status */}
+          {/* Questionnaire Cage */}
           <motion.section
             className="rounded-3xl border border-white/40 bg-white/20 backdrop-blur-xl p-8 shadow-xl hover:shadow-2xl transition-shadow"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.4 }}
+            transition={{ duration: 0.6, delay: 0.5 }}
             viewport={{ once: true }}
           >
-            <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-3">
-              📊 Analysis Status
-            </h2>
+            <div className="mb-6">
+              <h2 className="text-2xl font-bold text-gray-900 mb-2 flex items-center gap-3">
+                📋 Pre-Consultation Questionnaire
+              </h2>
+              <p className="text-sm text-gray-600">Please complete all 4 parts for an accurate assessment</p>
+            </div>
 
-            {stopDetection && (
-              <motion.div
-                className="rounded-2xl border border-gray-300/50 bg-gray-100/50 p-5"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="h-3 w-3 rounded-full bg-gray-400"></div>
-                  <p className="text-sm font-medium text-gray-700">Analysis Complete</p>
+            {questionnaireSaved ? (
+              <div className="bg-emerald-50 text-emerald-700 p-6 rounded-2xl border border-emerald-200 text-center">
+                <p className="text-xl mb-2">✅</p>
+                <p className="font-bold text-lg">Questionnaire Responses Saved</p>
+                <p className="text-sm mt-1">Your responses have been recorded and will be submitted along with the assessment.</p>
+                <button type="button" onClick={() => { setQuestionnaireSaved(false); setCurrentStep(1); }} className="mt-4 text-emerald-600 underline text-sm">Edit Responses</button>
+              </div>
+            ) : (
+              <div className="bg-white/50 rounded-2xl p-6 border border-white/60">
+                {/* Step Navigation Bar */}
+                <div className="flex justify-between items-center mb-8 bg-gray-100 rounded-full p-1 relative">
+                  <div className="absolute top-0 left-0 h-full bg-blue-500 rounded-full transition-all duration-300" style={{ width: `${(currentStep / 4) * 100}%`, zIndex: 0 }}></div>
+                  {[1, 2, 3, 4].map(step => (
+                    <div key={step} className={`relative z-10 w-1/4 text-center py-2 text-sm font-bold rounded-full transition-colors ${currentStep >= step ? 'text-white' : 'text-gray-500'}`}>
+                      Part {step}
+                    </div>
+                  ))}
                 </div>
-              </motion.div>
-            )}
 
-            {!stopDetection && cameraActive && (
-              <motion.div
-                className="rounded-2xl border border-blue-300/50 bg-blue-100/50 p-5"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-              >
-                <div className="flex items-center gap-3 mb-2">
-                  <motion.div
-                    className="h-3 w-3 rounded-full bg-blue-500"
-                    animate={{ opacity: [0.5, 1] }}
-                    transition={{ duration: 1.5, repeat: Infinity }}
-                  ></motion.div>
-                  <p className="text-sm font-medium text-blue-700">Analysis Running</p>
-                </div>
-                <p className="text-xs text-blue-600">Complete the form while we analyze emotions</p>
-              </motion.div>
+                {currentStep === 1 && (
+                  <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
+                    <h3 className="text-xl font-bold text-gray-800 mb-4 text-blue-800">Part 1: GDA-15</h3>
+                    <div className="space-y-4">
+                      {gda15Questions.map((q, i) => (
+                        <div key={`gda-${i}`} className="bg-white p-4 rounded-xl border flex flex-col md:flex-row justify-between gap-4 shadow-sm">
+                          <label className="text-gray-700 flex-1">{i + 1}. {q}</label>
+                          <div className="flex gap-4 shrink-0">
+                            {['Yes', 'No'].map(opt => (
+                              <label key={opt} className="flex items-center gap-2 cursor-pointer bg-gray-50 px-3 py-1 rounded-lg hover:bg-blue-50">
+                                <input type="radio" name={`gda15-${i}`} value={opt} checked={gda15[i] === opt} onChange={(e) => setGda15({...gda15, [i]: e.target.value})} className="w-4 h-4 text-blue-600" />
+                                <span>{opt}</span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="mt-6 flex justify-end">
+                      <button type="button" onClick={() => setCurrentStep(2)} className="px-6 py-3 bg-blue-600 text-white font-bold rounded-xl shadow-md hover:bg-blue-700 transition-colors">Next Part →</button>
+                    </div>
+                  </motion.div>
+                )}
+
+                {currentStep === 2 && (
+                  <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
+                    <h3 className="text-xl font-bold text-gray-800 mb-4 text-teal-800">Part 2: GAD-7</h3>
+                    <div className="space-y-4">
+                      {gad7Questions.map((q, i) => (
+                        <div key={`gad-${i}`} className="bg-white p-4 rounded-xl border space-y-3 shadow-sm">
+                          <label className="text-gray-700 block font-medium">{i + 1}. {q}</label>
+                          <div className="flex flex-wrap gap-4">
+                            {gad7Options.map(opt => (
+                              <label key={opt} className={`flex items-center gap-2 cursor-pointer px-3 py-2 rounded-lg border transition-colors ${gad7[i] === opt ? 'bg-teal-50 border-teal-300' : 'bg-gray-50'}`}>
+                                <input type="radio" name={`gad7-${i}`} value={opt} checked={gad7[i] === opt} onChange={(e) => setGad7({...gad7, [i]: e.target.value})} className="w-4 h-4" />
+                                <span className="text-sm">{opt}</span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="mt-6 flex justify-between">
+                      <button type="button" onClick={() => setCurrentStep(1)} className="px-6 py-3 bg-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-300 transition-colors">← Back</button>
+                      <button type="button" onClick={() => setCurrentStep(3)} className="px-6 py-3 bg-teal-600 text-white font-bold rounded-xl shadow-md hover:bg-teal-700 transition-colors">Next Part →</button>
+                    </div>
+                  </motion.div>
+                )}
+
+                {currentStep === 3 && (
+                  <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
+                    <h3 className="text-xl font-bold text-gray-800 mb-4 text-amber-800">Part 3: MARS/MMAS</h3>
+                    <div className="space-y-4">
+                      {marsQuestions.map((q, i) => (
+                        <div key={`mars-${i}`} className="bg-white p-4 rounded-xl border flex flex-col md:flex-row justify-between gap-4 shadow-sm">
+                          <label className="text-gray-700 flex-1">{q}</label>
+                          <div className="flex gap-4 shrink-0">
+                            {['Yes', 'No'].map(opt => (
+                              <label key={opt} className="flex items-center gap-2 cursor-pointer bg-gray-50 px-3 py-1 rounded-lg hover:bg-amber-50">
+                                <input type="radio" name={`mars-${i}`} value={opt} checked={mars[i] === opt} onChange={(e) => setMars({...mars, [i]: e.target.value})} className="w-4 h-4 text-amber-600" />
+                                <span>{opt}</span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                      <div className="bg-white p-4 rounded-xl border space-y-3 shadow-sm">
+                        <label className="text-gray-700 block font-medium">{marsQ8}</label>
+                        <div className="flex flex-wrap gap-4">
+                          {marsQ8Options.map(opt => (
+                            <label key={opt} className={`flex items-center gap-2 cursor-pointer px-3 py-2 rounded-lg border transition-colors ${mars8 === opt ? 'bg-amber-50 border-amber-300' : 'bg-gray-50'}`}>
+                              <input type="radio" name="mars8" value={opt} checked={mars8 === opt} onChange={(e) => setMars8(e.target.value)} className="w-4 h-4 text-amber-600" />
+                              <span className="text-sm">{opt}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-6 flex justify-between">
+                      <button type="button" onClick={() => setCurrentStep(2)} className="px-6 py-3 bg-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-300 transition-colors">← Back</button>
+                      <button type="button" onClick={() => setCurrentStep(4)} className="px-6 py-3 bg-amber-600 text-white font-bold rounded-xl shadow-md hover:bg-amber-700 transition-colors">Next Part →</button>
+                    </div>
+                  </motion.div>
+                )}
+
+                {currentStep === 4 && (
+                  <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
+                    <h3 className="text-xl font-bold text-gray-800 mb-4 text-purple-800">Part 4: IADL</h3>
+                    <div className="space-y-4">
+                      {iadlQuestions.map((group, i) => (
+                        <div key={`iadl-${i}`} className="bg-white p-5 rounded-xl border space-y-4 shadow-sm">
+                          <label className="text-purple-900 block font-bold text-lg border-b pb-2">{group.title}</label>
+                          <div className="flex flex-col gap-3">
+                            {group.options.map((opt, optIndex) => (
+                              <label key={optIndex} className={`flex items-start gap-3 cursor-pointer p-2 rounded-lg transition-colors ${iadl[i] === opt ? 'bg-purple-50' : 'hover:bg-gray-50'}`}>
+                                <input type="radio" name={`iadl-${i}`} value={opt} checked={iadl[i] === opt} onChange={(e) => setIadl({...iadl, [i]: e.target.value})} className="w-5 h-5 mt-0.5 text-purple-600" />
+                                <span className="text-gray-700">{opt}</span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="mt-8 flex justify-between border-t border-gray-200 pt-6">
+                      <button type="button" onClick={() => setCurrentStep(3)} className="px-6 py-3 bg-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-300 transition-colors">← Back</button>
+                      <button type="button" onClick={() => setQuestionnaireSaved(true)} className="px-8 py-3 bg-green-600 text-white font-bold rounded-xl shadow-lg hover:bg-green-700 transform transition-transform hover:scale-105">
+                        💾 Save Response
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </div>
             )}
           </motion.section>
 
