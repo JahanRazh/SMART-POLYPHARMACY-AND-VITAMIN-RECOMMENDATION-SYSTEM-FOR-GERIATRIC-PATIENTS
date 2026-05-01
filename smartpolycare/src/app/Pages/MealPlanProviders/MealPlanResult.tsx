@@ -1,12 +1,76 @@
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { 
   ArrowLeft, Download, Printer, User, Heart, Zap, Info, ShieldAlert, 
   Calendar, Clock, CheckCircle, Lock, Save, Settings,
   Activity, Scale, Ruler, Pill, Loader2,
-  ChevronLeft, ChevronRight
+  ChevronLeft, ChevronRight, Mic, MicOff, Volume2
 } from 'lucide-react';
 import { useAuth } from '@/app/components/Contexts/AuthContext';
 import { useMealReminders } from '@/app/components/Hooks/useMealReminders';
+
+// ─── Voice Control Hook ────────────────────────────────────────────────────────
+function useVoiceControl(onCommand: (transcript: string) => void) {
+  const [isListening, setIsListening] = useState(false);
+  const [transcript, setTranscript] = useState('');
+  const [voiceStatus, setVoiceStatus] = useState<'idle' | 'listening' | 'processing' | 'success' | 'error'>('idle');
+  const recognitionRef = useRef<any>(null);
+
+  const supported = typeof window !== 'undefined' &&
+    ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window);
+
+  const startListening = useCallback(() => {
+    if (!supported) {
+      setVoiceStatus('error');
+      return;
+    }
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'en-US';
+    recognition.continuous = false;
+    recognition.interimResults = true;
+    recognition.maxAlternatives = 3;
+
+    recognition.onstart = () => {
+      setIsListening(true);
+      setVoiceStatus('listening');
+      setTranscript('');
+    };
+
+    recognition.onresult = (event: any) => {
+      const current = Array.from(event.results)
+        .map((r: any) => r[0].transcript)
+        .join(' ');
+      setTranscript(current);
+      if (event.results[event.results.length - 1].isFinal) {
+        setVoiceStatus('processing');
+        onCommand(current.toLowerCase().trim());
+        setTimeout(() => setVoiceStatus('idle'), 2000);
+      }
+    };
+
+    recognition.onerror = () => {
+      setIsListening(false);
+      setVoiceStatus('error');
+      setTimeout(() => setVoiceStatus('idle'), 3000);
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+      if (voiceStatus === 'listening') setVoiceStatus('idle');
+    };
+
+    recognitionRef.current = recognition;
+    recognition.start();
+  }, [supported, onCommand, voiceStatus]);
+
+  const stopListening = useCallback(() => {
+    recognitionRef.current?.stop();
+    setIsListening(false);
+    setVoiceStatus('idle');
+  }, []);
+
+  return { isListening, transcript, voiceStatus, supported, startListening, stopListening };
+}
 
 interface ParsedMeal {
   foodName: string;
@@ -51,6 +115,8 @@ const MealPlanResult: React.FC<MealPlanResultProps> = ({
   const [checkedMeals, setCheckedMeals] = useState<Record<string, boolean>>({});
   const [isSaving, setIsSaving] = useState(false);
   const [trackingError, setTrackingError] = useState("");
+  const [voiceMatch, setVoiceMatch] = useState<string | null>(null);
+  const [dayCompleteToast, setDayCompleteToast] = useState<string | null>(null);
 
   const selectedOption = useMemo(() => 
     result?.mealPlanOptions?.[selectedOptionIndex], 
@@ -126,29 +192,133 @@ const MealPlanResult: React.FC<MealPlanResultProps> = ({
   }, [checkDayCompletion, isSavedView]);
 
   useEffect(() => {
-    const saved = localStorage.getItem(`meal-progress-${result.id || result.databaseId || 'current'}`);
+    const planId = result.id || result.databaseId;
+    const storageKey = planId ? `meal-progress-${planId}` : `meal-progress-current`;
+    if (planId) {
+      localStorage.removeItem('meal-progress-current');
+    }
+
+    const saved = localStorage.getItem(storageKey);
     if (saved) {
       try {
         setCheckedMeals(JSON.parse(saved));
       } catch (e) {
         console.error("Failed to load progress", e);
       }
+    } else {
+      setCheckedMeals({});
     }
   }, [result.id, result.databaseId]);
+
+  const processMealUpdate = useCallback((newChecked: Record<string, boolean>, today: string) => {
+    setCheckedMeals(newChecked);
+    
+    // Only update state here. Persistence happens only when user explicitly clicks Save Daily Progress.
+    const todayMeals = selectedOption?.weeklyPlan?.[today]?.meals || [];
+    
+    // ── Auto-advance to next day when current day is 100% complete ──────────
+    const allComplete = todayMeals.length > 0 &&
+      todayMeals.every((_: any, i: number) => newChecked[`${today}-${i}`]);
+
+    if (allComplete) {
+      const currentDayNum = parseInt(today.replace('Day ', ''));
+      const nextDayName = `Day ${currentDayNum + 1}`;
+      const nextDayExists = !!selectedOption?.weeklyPlan?.[nextDayName];
+
+      if (nextDayExists) {
+        setDayCompleteToast(`🎉 ${today} complete! Unlocking ${nextDayName}...`);
+        setTimeout(() => {
+          setDayCompleteToast(null);
+          setSelectedDay(nextDayName);
+          const nextDayWeek = Math.ceil((currentDayNum + 1) / 7);
+          if (nextDayWeek > currentWeek) {
+            setCurrentWeek(nextDayWeek);
+          }
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }, 2000);
+      } else {
+        setDayCompleteToast('🏆 Plan Complete! Congratulations!');
+        setTimeout(() => setDayCompleteToast(null), 4000);
+      }
+    }
+  }, [selectedOption, currentWeek]);
+
+  // ── Voice Command Handler ──────────────────────
+  const handleVoiceCommand = useCallback((text: string) => {
+    if (!selectedOption?.weeklyPlan?.[selectedDay]) return;
+    const meals: string[] = selectedOption.weeklyPlan[selectedDay].meals || [];
+    const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9 ]/g, '').trim();
+    const words = normalize(text).split(/\s+/);
+
+    // ── Detect intent: UNMARK or MARK ──────────────────────────────────────
+    const textLower = text.toLowerCase().replace(/['']/g, '');
+    const isUnmark = /(?:unmark|deselect|remove|undo|didnt eat|did not eat|not eat|havent eaten|skip|cancel)/.test(textLower);
+
+    // ── Pattern 1: "[un]mark meal N" / "I [didn't] eat meal N" ─────────────
+    const mealNumMark   = text.match(/(?:mark\s+)?meal\s+(\d+)/i) ||
+                          text.match(/(?:ate|eat|eaten|log|logged)\s+meal\s+(\d+)/i);
+    const mealNumUnmark = text.match(/(?:unmark|deselect|remove|undo)\s+meal\s+(\d+)/i) ||
+                          textLower.match(/(?:didnt eat|did not eat|not eat|havent eaten|skip|cancel)\s+meal\s+(\d+)/);
+
+    const mealNumMatch = mealNumUnmark || (isUnmark ? null : mealNumMark);
+    const actionIsUnmark = !!mealNumUnmark || (isUnmark && !!mealNumMark);
+
+    if (mealNumMatch) {
+      const idx = parseInt(mealNumMatch[1]) - 1;
+      if (idx >= 0 && idx < meals.length) {
+        const key = `${selectedDay}-${idx}`;
+        const newVal = !actionIsUnmark;
+        const newChecked = { ...checkedMeals, [key]: newVal };
+        processMealUpdate(newChecked, selectedDay);
+        setVoiceMatch(newVal
+          ? `✅ Meal ${idx + 1} marked as eaten`
+          : `↩️ Meal ${idx + 1} unmarked`);
+        setTimeout(() => setVoiceMatch(null), 3500);
+        return;
+      }
+    }
+
+    // ── Pattern 2: food name fuzzy match ───────────────────────────────────
+    for (let idx = 0; idx < meals.length; idx++) {
+      const rawFood = meals[idx].replace(/^•\s*/, '').split(' - ')[0] || '';
+      const foodWords = normalize(rawFood).split(/\s+/);
+      const matchCount = foodWords.filter(fw => words.some(w => w.length > 2 && fw.includes(w))).length;
+      if (matchCount >= 1) {
+        const key = `${selectedDay}-${idx}`;
+        const newVal = !isUnmark;
+        const newChecked = { ...checkedMeals, [key]: newVal };
+        processMealUpdate(newChecked, selectedDay);
+        setVoiceMatch(newVal
+          ? `✅ "${rawFood}" marked as eaten`
+          : `↩️ "${rawFood}" unmarked`);
+        setTimeout(() => setVoiceMatch(null), 3500);
+        return;
+      }
+    }
+
+    setVoiceMatch(`❓ Could not match: "${text}"`);
+    setTimeout(() => setVoiceMatch(null), 3500);
+  }, [selectedOption, selectedDay, checkedMeals, processMealUpdate]);
+
+  const { isListening, transcript, voiceStatus, supported, startListening, stopListening } =
+    useVoiceControl(handleVoiceCommand);
+
+  // Calculate daily progress percentage whenever checks or day changes
+  useEffect(() => {
+    const todayMeals = selectedOption?.weeklyPlan?.[selectedDay]?.meals || [];
+    if (todayMeals.length === 0) {
+      setDailyProgress(0);
+      return;
+    }
+    const completedCount = todayMeals.filter((_: any, i: number) => checkedMeals[`${selectedDay}-${i}`]).length;
+    setDailyProgress((completedCount / todayMeals.length) * 100);
+  }, [checkedMeals, selectedDay, selectedOption, setDailyProgress]);
 
   const toggleMeal = (day: string, idx: number) => {
     if (isDayLocked(day) || !selectedOption) return;
     const key = `${day}-${idx}`;
     const newChecked = { ...checkedMeals, [key]: !checkedMeals[key] };
-    setCheckedMeals(newChecked);
-    localStorage.setItem(`meal-progress-${result.id || result.databaseId || 'current'}`, JSON.stringify(newChecked));
-    
-    // Update daily progress for HUD
-    const today = selectedDay;
-    const todayMeals = selectedOption?.weeklyPlan?.[today]?.meals || [];
-    const completedCount = todayMeals.filter((_: any, i: number) => newChecked[`${today}-${i}`]).length;
-    const progress = todayMeals.length > 0 ? (completedCount / todayMeals.length) * 100 : 0;
-    setDailyProgress(progress);
+    processMealUpdate(newChecked, day);
   };
 
   const saveToCloud = async (day: string) => {
@@ -200,6 +370,14 @@ const MealPlanResult: React.FC<MealPlanResultProps> = ({
 
   return (
     <div className="min-h-screen bg-slate-50/50 pb-24">
+
+      {/* Day Complete Toast Banner */}
+      {dayCompleteToast && (
+        <div className="fixed top-0 left-0 right-0 z-[100] flex items-center justify-center py-4 px-6 bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-2xl animate-pulse">
+          <p className="text-base font-black uppercase tracking-widest">{dayCompleteToast}</p>
+        </div>
+      )}
+
       {/* Top Navigation Bar */}
       <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-gray-100 px-6 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -608,6 +786,88 @@ const MealPlanResult: React.FC<MealPlanResultProps> = ({
                      <Settings className="w-5 h-5 text-gray-400" />
                      <h5 className="text-xs font-black text-gray-900 uppercase tracking-widest">Regimen Controls</h5>
                   </div>
+
+                  {/* ── Voice Control Panel ── */}
+                  <div className="mb-4 rounded-2xl overflow-hidden border border-gray-100">
+                    <div className="bg-gray-900 px-5 py-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <Volume2 className="w-4 h-4 text-emerald-400" />
+                          <span className="text-[10px] font-black text-emerald-400 uppercase tracking-[0.15em]">Voice Control</span>
+                        </div>
+                        <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${
+                          voiceStatus === 'listening' ? 'bg-red-500 text-white animate-pulse' :
+                          voiceStatus === 'processing' ? 'bg-amber-400 text-black' :
+                          voiceStatus === 'success' ? 'bg-emerald-500 text-white' :
+                          voiceStatus === 'error' ? 'bg-rose-500 text-white' :
+                          'bg-white/10 text-gray-400'
+                        }`}>
+                          {voiceStatus === 'listening' ? '● Live' :
+                           voiceStatus === 'processing' ? '⟳ Matching' :
+                           voiceStatus === 'success' ? '✓ Done' :
+                           voiceStatus === 'error' ? '✗ Error' : '○ Idle'}
+                        </span>
+                      </div>
+
+                      {/* Mic Button */}
+                      <button
+                        onClick={isListening ? stopListening : startListening}
+                        disabled={!supported}
+                        className={`w-full flex items-center justify-center gap-3 py-3 rounded-xl font-black text-sm uppercase tracking-widest transition-all ${
+                          !supported
+                            ? 'bg-white/5 text-gray-600 cursor-not-allowed'
+                            : isListening
+                            ? 'bg-red-500 text-white shadow-lg shadow-red-900/30 scale-[1.02]'
+                            : 'bg-emerald-500 hover:bg-emerald-400 text-white hover:scale-[1.02]'
+                        }`}
+                      >
+                        {isListening
+                          ? <><MicOff className="w-4 h-4" /> Stop Listening</>
+                          : <><Mic className="w-4 h-4" /> {supported ? 'Tap to Speak' : 'Not Supported'}</>
+                        }
+                      </button>
+
+                      {/* Live Transcript */}
+                      {(isListening || transcript) && (
+                        <div className="mt-3 px-3 py-2 bg-white/5 rounded-xl border border-white/10">
+                          <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">Hearing:</p>
+                          <p className="text-xs text-white font-medium italic truncate">
+                            {transcript || '...'}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Match Result Toast */}
+                      {voiceMatch && (
+                        <div className={`mt-3 px-3 py-2 rounded-xl text-xs font-bold ${
+                          voiceMatch.startsWith('✅')
+                            ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                            : voiceMatch.startsWith('↩️')
+                            ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30'
+                            : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                        }`}>
+                          {voiceMatch}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Voice Command Tips */}
+                    <div className="bg-gray-50 px-5 py-4 border-t border-gray-100">
+                      <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest mb-1.5">✅ Mark as eaten:</p>
+                      <div className="space-y-1 mb-3">
+                        {['"I ate oatmeal"', '"Mark meal 2"', '"Log meal 1"', '"Ate chicken"'].map(tip => (
+                          <p key={tip} className="text-[10px] text-gray-500 font-medium">• {tip}</p>
+                        ))}
+                      </div>
+                      <p className="text-[9px] font-black text-indigo-500 uppercase tracking-widest mb-1.5">↩️ Unmark / Deselect:</p>
+                      <div className="space-y-1">
+                        {['"Unmark meal 2"', '"Deselect oatmeal"', '"I didn\'t eat rice"', '"Remove meal 3"', '"Undo meal 1"', '"Skip meal 2"'].map(tip => (
+                          <p key={tip} className="text-[10px] text-indigo-400/80 font-medium">• {tip}</p>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
                   <div className="space-y-4">
                       <button 
                          onClick={() => saveToCloud(selectedDay)}
