@@ -142,7 +142,7 @@ def _calculate_risk_percentage(dosage_info: list) -> float:
     Calculate risk percentage based on dosage and duration heuristic.
     Base risk percentage starts at 45%.
     +1% for every 10mg over (qty * dosage) across all drugs.
-    +2.5% for every 1 week of duration across all drugs.
+    +2.0% for every 1 week of duration across all drugs.
     Maximum 100%.
 
     Args:
@@ -164,8 +164,8 @@ def _calculate_risk_percentage(dosage_info: list) -> float:
         effective_mg = quantity * dosage_mg
         # +1% for every 10mg
         risk += (effective_mg / 10.0) * 1.0
-        # +3.5% for every 1 week of duration 
-        risk += duration_weeks * 2.5
+        # +2% for every 1 week of duration 
+        risk += duration_weeks * 2.0
 
     return min(round(risk, 1), 100.0)
 
