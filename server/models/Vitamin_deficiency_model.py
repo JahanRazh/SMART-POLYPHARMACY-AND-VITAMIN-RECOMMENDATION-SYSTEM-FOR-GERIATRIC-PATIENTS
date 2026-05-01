@@ -142,11 +142,11 @@ def _calculate_risk_percentage(dosage_info: list) -> float:
     Calculate risk percentage based on dosage and duration heuristic.
     Base risk percentage starts at 45%.
     +1% for every 10mg over (qty * dosage) across all drugs.
-    +0.5% for every 1 day of duration across all drugs.
+    +2.5% for every 1 week of duration across all drugs.
     Maximum 100%.
 
     Args:
-        dosage_info: list of dicts [{"dosage_mg": float, "quantity": int, "duration_days": int}, ...]
+        dosage_info: list of dicts [{"dosage_mg": float, "quantity": int, "duration_weeks": int}, ...]
 
     Returns:
         float risk percentage (45.0 – 100.0)
@@ -157,15 +157,15 @@ def _calculate_risk_percentage(dosage_info: list) -> float:
         try:
             dosage_mg = float(info.get("dosage_mg", 0) or 0)
             quantity = int(info.get("quantity", 1) or 1)
-            duration_days = int(info.get("duration_days", 0) or 0)
+            duration_weeks = int(info.get("duration_weeks", 0) or 0)
         except (ValueError, TypeError):
             continue
 
         effective_mg = quantity * dosage_mg
         # +1% for every 10mg
         risk += (effective_mg / 10.0) * 1.0
-        # +0.5% for every 1 day of duration
-        risk += duration_days * 0.5
+        # +3.5% for every 1 week of duration 
+        risk += duration_weeks * 2.5
 
     return min(round(risk, 1), 100.0)
 
@@ -186,7 +186,7 @@ def predict_vitamin_deficiency(drugs: list, symptoms: list, dosage_info: list = 
         drugs: list of drug name strings (minimum 2)
         symptoms: list of symptom strings
         dosage_info: optional list of dicts per drug:
-                     [{"dosage_mg": float, "quantity": int, "duration_days": int}, ...]
+                     [{"dosage_mg": float, "quantity": int, "duration_weeks": int}, ...]
 
     Returns:
         dict with 'predictions', 'pair_details', 'drugs', 'symptoms', etc.
@@ -204,7 +204,7 @@ def predict_vitamin_deficiency(drugs: list, symptoms: list, dosage_info: list = 
         if i < len(dosage_info):
             aligned_dosage.append(dosage_info[i])
         else:
-            aligned_dosage.append({"dosage_mg": 0, "quantity": 1, "duration_days": 0})
+            aligned_dosage.append({"dosage_mg": 0, "quantity": 1, "duration_weeks": 0})
 
     # Calculate overall risk percentage for identified deficiencies
     risk_percentage = _calculate_risk_percentage(aligned_dosage)
@@ -225,8 +225,8 @@ def predict_vitamin_deficiency(drugs: list, symptoms: list, dosage_info: list = 
         if pair_vitamins:
             # Collect dosage info for this specific pair
             pair_dosage = [
-                drug_dosage_map.get(d1.strip().lower(), {"dosage_mg": 0, "quantity": 1, "duration_days": 0}),
-                drug_dosage_map.get(d2.strip().lower(), {"dosage_mg": 0, "quantity": 1, "duration_days": 0}),
+                drug_dosage_map.get(d1.strip().lower(), {"dosage_mg": 0, "quantity": 1, "duration_weeks": 0}),
+                drug_dosage_map.get(d2.strip().lower(), {"dosage_mg": 0, "quantity": 1, "duration_weeks": 0}),
             ]
             pair_details.append({
                 "drug1": d1.strip(),

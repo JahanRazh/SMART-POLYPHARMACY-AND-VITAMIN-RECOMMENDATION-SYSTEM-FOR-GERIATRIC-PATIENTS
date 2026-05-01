@@ -13,7 +13,7 @@ import * as XLSX from "xlsx";
 type DrugDosage = {
   dosage_mg: string;
   quantity: string;
-  duration_days: string;
+  duration_weeks: string;
 };
 
 type VitaminResult = {
@@ -53,7 +53,7 @@ export default function VitaminDeficiencyPage() {
   /* ---- state ---- */
   const [drugs, setDrugs] = useState<string[]>(["" , "", "", "", ""]);
   const [drugDosages, setDrugDosages] = useState<DrugDosage[]>(
-    Array(5).fill(null).map(() => ({ dosage_mg: "", quantity: "", duration_days: "" }))
+    Array(5).fill(null).map(() => ({ dosage_mg: "", quantity: "", duration_weeks: "" }))
   );
   const [drugSuggestions, setDrugSuggestions] = useState<Record<number, string[]>>({});
   const [activeDrugDrop, setActiveDrugDrop] = useState<number | null>(null);
@@ -141,7 +141,7 @@ export default function VitaminDeficiencyPage() {
 
   const addDrug = () => {
     setDrugs([...drugs, ""]);
-    setDrugDosages([...drugDosages, { dosage_mg: "", quantity: "", duration_days: "" }]);
+    setDrugDosages([...drugDosages, { dosage_mg: "", quantity: "", duration_weeks: "" }]);
   };
 
   const removeDrug = (index: number) => {
@@ -190,7 +190,7 @@ export default function VitaminDeficiencyPage() {
           dosageInfo: validDrugs.map((_, idx) => ({
             dosage_mg: parseFloat(drugDosages[idx]?.dosage_mg || "0") || 0,
             quantity: parseInt(drugDosages[idx]?.quantity || "1", 10) || 1,
-            duration_days: parseInt(drugDosages[idx]?.duration_days || "0", 10) || 0,
+            duration_weeks: parseInt(drugDosages[idx]?.duration_weeks || "0", 10) || 0,
           })),
         }),
       });
@@ -213,7 +213,7 @@ export default function VitaminDeficiencyPage() {
   /* ---- reset ---- */
   const handleReset = () => {
     setDrugs(["", "", "", "", ""]);
-    setDrugDosages(Array(5).fill(null).map(() => ({ dosage_mg: "", quantity: "", duration_days: "" })));
+    setDrugDosages(Array(5).fill(null).map(() => ({ dosage_mg: "", quantity: "", duration_weeks: "" })));
     setSelectedSymptoms([]);
     setResults(null);
     setError("");
@@ -464,14 +464,14 @@ export default function VitaminDeficiencyPage() {
                       />
                     </div>
                     <div className={styles.dosageField}>
-                      <label className={styles.inputLabel}>Duration (days)</label>
+                      <label className={styles.inputLabel}>Duration (weeks)</label>
                       <input
                         className={styles.textInput}
                         type="number"
                         min="0"
-                        placeholder="e.g. 30"
-                        value={drugDosages[i]?.duration_days ?? ""}
-                        onChange={(e) => updateDosage(i, "duration_days", e.target.value)}
+                        placeholder="e.g. 4"
+                        value={drugDosages[i]?.duration_weeks ?? ""}
+                        onChange={(e) => updateDosage(i, "duration_weeks", e.target.value)}
                       />
                     </div>
                   </div>
