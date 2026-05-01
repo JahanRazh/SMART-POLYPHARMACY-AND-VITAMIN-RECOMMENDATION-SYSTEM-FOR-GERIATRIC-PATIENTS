@@ -362,10 +362,77 @@ export default function PolypharmacyHomepage() {
               <p className="text-xs font-semibold uppercase tracking-wider text-indigo-400 mb-3">
                 Risk Score Formula
               </p>
-              <p className="font-mono text-sm text-gray-300 leading-relaxed">
+              <p className="font-mono text-base text-gray-200 leading-relaxed font-bold bg-indigo-500/10 p-4 rounded-lg border border-indigo-500/20 text-center mb-6">
                 Risk Score = min( (W₁ × S₁) + (W₂ × S₂) + (W₃ × S₃) + (W₄ × S₄) + (W₅ × S₅) , 100 )
               </p>
-              <div className="mt-4 grid gap-3 sm:grid-cols-4">
+              
+              <div className="mb-6 grid gap-6 sm:grid-cols-2 text-sm text-gray-300 bg-black/10 p-5 rounded-lg border border-indigo-500/10">
+                <div>
+                  <p className="font-semibold text-indigo-300 mb-2 border-b border-indigo-500/20 pb-1.5 flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a.75.75 0 000 1.5h.253a.25.25 0 01.244.304l-.459 2.066A1.75 1.75 0 0010.747 15H11a.75.75 0 000-1.5h-.253a.25.25 0 01-.244-.304l.459-2.066A1.75 1.75 0 009.253 9H9z" clipRule="evenodd" />
+                    </svg>
+                    Definitions
+                  </p>
+                  <ul className="space-y-2">
+                    <li className="flex items-start gap-2">
+                      <span className="text-indigo-400 font-mono font-bold w-4">W</span> 
+                      <span>= Polypharmacy Risk Weight Score</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-indigo-400 font-mono font-bold w-4">S</span> 
+                      <span>= Polypharmacy Risk Calculation Related Sub Factors</span>
+                    </li>
+                  </ul>
+                </div>
+                <div>
+                  <p className="font-semibold text-indigo-300 mb-2 border-b border-indigo-500/20 pb-1.5 flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                      <path fillRule="evenodd" d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6z" clipRule="evenodd" />
+                    </svg>
+                    Weight Distribution (Out of 100)
+                  </p>
+                  <ul className="space-y-1.5">
+                    <li className="flex items-center justify-between border-b border-white/5 pb-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-indigo-400 font-mono font-bold w-5">W₁</span> 
+                        <span>Medication Count Risk Weight</span>
+                      </div>
+                      <span className="font-mono text-indigo-300 font-semibold">= 25</span>
+                    </li>
+                    <li className="flex items-center justify-between border-b border-white/5 pb-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-indigo-400 font-mono font-bold w-5">W₂</span> 
+                        <span>Patient Age Risk Weight</span>
+                      </div>
+                      <span className="font-mono text-indigo-300 font-semibold">= 25</span>
+                    </li>
+                    <li className="flex items-center justify-between border-b border-white/5 pb-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-indigo-400 font-mono font-bold w-5">W₃</span> 
+                        <span>Drug Interactions Risk Weight</span>
+                      </div>
+                      <span className="font-mono text-indigo-300 font-semibold">= 30</span>
+                    </li>
+                    <li className="flex items-center justify-between border-b border-white/5 pb-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-indigo-400 font-mono font-bold w-5">W₄</span> 
+                        <span>Liver Function Risk Weight</span>
+                      </div>
+                      <span className="font-mono text-indigo-300 font-semibold">= 10</span>
+                    </li>
+                    <li className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-indigo-400 font-mono font-bold w-5">W₅</span> 
+                        <span>Kidney Function Risk Weight</span>
+                      </div>
+                      <span className="font-mono text-indigo-300 font-semibold">= 10</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+              
+              <div className="mt-2 grid gap-3 sm:grid-cols-4">
                 <RiskLevelBadge level="Low" range="0 – 29" color="emerald" />
                 <RiskLevelBadge level="Moderate" range="30 – 59" color="yellow" />
                 <RiskLevelBadge level="High" range="60 – 79" color="orange" />
