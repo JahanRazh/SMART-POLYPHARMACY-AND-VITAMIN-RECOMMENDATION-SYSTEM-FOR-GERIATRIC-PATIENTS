@@ -1189,10 +1189,60 @@ const DashboardPage = () => {
 
                         {sections.detailedCalculation && (
                             <div className="space-y-6">
+                                {/* Weights */}
+                                <div>
+                                    <h4 className="text-md font-medium text-gray-700 mb-3">
+                                        Polypharmacy Risk Factor Weights (W₁ - W₅)
+                                    </h4>
+
+
+                                    <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+                                        <div className="grid gap-3 md:grid-cols-5">
+                                            <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
+                                                <p className="text-xs text-blue-600">W1 (Drug Weight)</p>
+                                                <p className="text-lg font-bold text-blue-900">
+                                                    {analysis.riskCalculation.weights.drugWeight}
+                                                </p>
+                                            </div>
+                                            <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
+                                                <p className="text-xs text-blue-600">W2 (Age Weight)</p>
+                                                <p className="text-lg font-bold text-blue-900">
+                                                    {analysis.riskCalculation.weights.ageWeight}
+                                                </p>
+                                            </div>
+                                            <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
+                                                <p className="text-xs text-blue-600">W3 (DDI Weight)</p>
+                                                <p className="text-lg font-bold text-blue-900">
+                                                    {analysis.riskCalculation.weights.ddiWeight}
+                                                </p>
+                                            </div>
+                                            <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
+                                                <p className="text-xs text-blue-600">W4 (Liver Weight)</p>
+                                                <p className="text-lg font-bold text-blue-900">
+                                                    {analysis.riskCalculation.weights.liverWeight}
+                                                </p>
+                                            </div>
+                                            <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
+                                                <p className="text-xs text-blue-600">W5 (Kidney Weight)</p>
+                                                <p className="text-lg font-bold text-blue-900">
+                                                    {analysis.riskCalculation.weights.kidneyWeight}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <p className="mt-2 text-xs text-gray-500">
+                                            Total Weight:{" "}
+                                            {Object.values(analysis.riskCalculation.weights).reduce(
+                                                (a, b) => a + b,
+                                                0
+                                            )}
+                                        </p>
+                                    </div>
+
+                                </div>
                                 {/* Sub-scores */}
                                 <div>
                                     <h4 className="text-md font-medium text-gray-700 mb-3">
-                                        Sub-Scores (S1-S5)
+                                        Related Factor Calculate Sub-Scores (S₁ - S₅)
                                     </h4>
 
 
@@ -1260,58 +1310,6 @@ const DashboardPage = () => {
                                     </div>
 
                                 </div>
-
-                                {/* Weights */}
-                                <div>
-                                    <h4 className="text-md font-medium text-gray-700 mb-3">
-                                        Polypharmacy Risk Factor Weights(W)
-                                    </h4>
-
-
-                                    <div className="animate-in fade-in slide-in-from-top-2 duration-300">
-                                        <div className="grid gap-3 md:grid-cols-5">
-                                            <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
-                                                <p className="text-xs text-blue-600">W1 (Drug Weight)</p>
-                                                <p className="text-lg font-bold text-blue-900">
-                                                    {analysis.riskCalculation.weights.drugWeight}
-                                                </p>
-                                            </div>
-                                            <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
-                                                <p className="text-xs text-blue-600">W2 (Age Weight)</p>
-                                                <p className="text-lg font-bold text-blue-900">
-                                                    {analysis.riskCalculation.weights.ageWeight}
-                                                </p>
-                                            </div>
-                                            <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
-                                                <p className="text-xs text-blue-600">W3 (DDI Weight)</p>
-                                                <p className="text-lg font-bold text-blue-900">
-                                                    {analysis.riskCalculation.weights.ddiWeight}
-                                                </p>
-                                            </div>
-                                            <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
-                                                <p className="text-xs text-blue-600">W4 (Liver Weight)</p>
-                                                <p className="text-lg font-bold text-blue-900">
-                                                    {analysis.riskCalculation.weights.liverWeight}
-                                                </p>
-                                            </div>
-                                            <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
-                                                <p className="text-xs text-blue-600">W5 (Kidney Weight)</p>
-                                                <p className="text-lg font-bold text-blue-900">
-                                                    {analysis.riskCalculation.weights.kidneyWeight}
-                                                </p>
-                                            </div>
-                                        </div>
-                                        <p className="mt-2 text-xs text-gray-500">
-                                            Total Weight:{" "}
-                                            {Object.values(analysis.riskCalculation.weights).reduce(
-                                                (a, b) => a + b,
-                                                0
-                                            )}
-                                        </p>
-                                    </div>
-
-                                </div>
-
                                 {/* S1 Calculation Breakdown */}
                                 <div className="mb-6">
                                     <div
