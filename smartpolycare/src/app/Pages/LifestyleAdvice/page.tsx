@@ -567,7 +567,7 @@ export default function LifestyleAdvicePage() {
               className="text-3xl font-bold text-gray-900 mb-8 flex items-center gap-3"
             >
               <span className="text-4xl">📋</span>
-              Your Personalized Plan
+              Your latest Advices
             </motion.h2>
 
             {/* Main Advice Card */}
@@ -581,57 +581,7 @@ export default function LifestyleAdvicePage() {
               <div className="absolute inset-0 bg-white/80 backdrop-blur-sm" />
 
               <div className="relative p-8 lg:p-12">
-                {/* Header Row */}
-                <div className="flex items-start justify-between flex-wrap gap-4 mb-8 pb-8 border-b border-teal-100">
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.2 }}
-                  >
-                    <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                      Your 2-Week Health Journey
-                    </h3>
-                    <div className="flex flex-wrap gap-4 text-sm">
-                      <p className="flex items-center gap-2 text-teal-700 font-semibold">
-                        <span className="w-2 h-2 bg-teal-500 rounded-full"></span>
-                        Generated: {formatDate(recentAdvice.generated_date)}
-                      </p>
-                      <p className="flex items-center gap-2 text-amber-700 font-semibold">
-                        <span className="w-2 h-2 bg-amber-500 rounded-full"></span>
-                        Expires: {formatDate(recentAdvice.expires_date)}
-                      </p>
-                    </div>
-                  </motion.div>
 
-                  {/* View History Button */}
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: 0.3 }}
-                    whileHover={{ scale: 1.05 }}
-                  >
-                    <Link
-                      href={`/Pages/adviceHistory?email=${identifier ? encodeURIComponent(identifier) : ''}`}
-                      className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 px-6 py-3 text-white font-semibold shadow-lg hover:shadow-xl transform transition-all"
-                    >
-                      📚 View All History
-                      <span>→</span>
-                    </Link>
-                  </motion.div>
-                </div>
-
-                {/* ── Summary Cage ── */}
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.3 }}
-                  className="mb-6 rounded-2xl bg-gradient-to-br from-teal-50/80 to-blue-50/80 p-6 border border-teal-200"
-                >
-                  <h4 className="text-lg font-bold text-teal-900 mb-3 flex items-center gap-2">
-                    <span>✨</span> Plan Summary
-                  </h4>
-                  <p className="text-gray-700 leading-relaxed text-base">{recentAdvice.summary}</p>
-                </motion.div>
 
                 {/* ── Health Profile Cage ── */}
                 {recentAdvice.inputs && (
@@ -689,33 +639,7 @@ export default function LifestyleAdvicePage() {
                   </motion.div>
                 )}
 
-                {/* ── Vitamin Deficiencies Cage ── */}
-                {(() => {
-                  const vitamins = (recentAdvice.vitamin_deficiencies && recentAdvice.vitamin_deficiencies.length > 0) 
-                    ? recentAdvice.vitamin_deficiencies 
-                    : dynamicVitamins;
-                    
-                  if (vitamins.length === 0) return null;
-                  return (
-                    <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.4 }}
-                      className="mb-6 rounded-2xl bg-blue-50 border border-blue-200 p-6"
-                    >
-                      <h4 className="text-lg font-bold text-blue-900 mb-4 flex items-center gap-2">
-                        <span>🧪</span> Detected Vitamin Deficiencies
-                      </h4>
-                      <div className="flex flex-wrap gap-2">
-                        {vitamins.map((v, i) => (
-                          <span key={i} className="inline-flex items-center gap-1.5 rounded-full bg-blue-100 border border-blue-200 px-4 py-1.5 text-sm font-semibold text-blue-800">
-                            💊 {v}
-                          </span>
-                        ))}
-                      </div>
-                    </motion.div>
-                  );
-                })()}
+
 
                 {/* ── Recommended Lab Tests Cage ── */}
                 {(() => {
@@ -824,6 +748,58 @@ export default function LifestyleAdvicePage() {
                     </motion.div>
                   );
                 })()}
+
+                {/* Header Row (Moved from above) */}
+                <div className="flex items-start justify-between flex-wrap gap-4 mb-8 pb-8 border-b border-teal-100 mt-10">
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.2 }}
+                  >
+                    <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                      Your 2-Week Health Journey
+                    </h3>
+                    <div className="flex flex-wrap gap-4 text-sm">
+                      <p className="flex items-center gap-2 text-teal-700 font-semibold">
+                        <span className="w-2 h-2 bg-teal-500 rounded-full"></span>
+                        Generated: {formatDate(recentAdvice.generated_date)}
+                      </p>
+                      <p className="flex items-center gap-2 text-amber-700 font-semibold">
+                        <span className="w-2 h-2 bg-amber-500 rounded-full"></span>
+                        Expires: {formatDate(recentAdvice.expires_date)}
+                      </p>
+                    </div>
+                  </motion.div>
+
+                  {/* View History Button */}
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.3 }}
+                    whileHover={{ scale: 1.05 }}
+                  >
+                    <Link
+                      href={`/Pages/adviceHistory?email=${identifier ? encodeURIComponent(identifier) : ''}`}
+                      className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 px-6 py-3 text-white font-semibold shadow-lg hover:shadow-xl transform transition-all"
+                    >
+                      📚 View All History
+                      <span>→</span>
+                    </Link>
+                  </motion.div>
+                </div>
+
+                {/* ── Summary Cage (Moved from above) ── */}
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 }}
+                  className="mb-10 rounded-2xl bg-gradient-to-br from-teal-50/80 to-blue-50/80 p-6 border border-teal-200"
+                >
+                  <h4 className="text-lg font-bold text-teal-900 mb-3 flex items-center gap-2">
+                    <span>✨</span> Plan Summary
+                  </h4>
+                  <p className="text-gray-700 leading-relaxed text-base">{recentAdvice.summary}</p>
+                </motion.div>
 
                 {/* ── 2-Week Plan ── */}
                 <div className="grid gap-6 md:grid-cols-2 mb-8">
