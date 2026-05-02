@@ -40,6 +40,10 @@ def save_advice_history():
         "generated_date": data.get("generated_date"),
         "expires_date": data.get("expires_date"),
         "inputs": data.get("inputs", {}),
+        # Newly incorporated advice sections
+        "polypharmacy_advices": data.get("polypharmacy_advices", []),
+        "lab_tests": data.get("lab_tests", []),
+        "vitamin_deficiencies": data.get("vitamin_deficiencies", []),
         "saved_at": datetime.now().strftime('%Y-%m-%dT%H:%M:%S'),
     }
     
