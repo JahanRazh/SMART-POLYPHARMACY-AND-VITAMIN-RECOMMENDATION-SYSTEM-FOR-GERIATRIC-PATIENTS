@@ -238,8 +238,14 @@ export default function MentalHealthGraph({ email }: { email: string | null }) {
   const [normalized, setNormalized] = useState(true);
   const [error, setError] = useState('');
 
+  const isFetchingRef = useRef(false);
+
   const fetchHistory = useCallback(async () => {
-    if (!email) { setLoading(false); return; }
+    if (!email || isFetchingRef.current) { 
+      if (!email) setLoading(false);
+      return; 
+    }
+    isFetchingRef.current = true;
     setLoading(true); setError('');
     try {
       const res = await fetch(`/api/assessment_history?email=${encodeURIComponent(email)}`);
@@ -250,6 +256,7 @@ export default function MentalHealthGraph({ email }: { email: string | null }) {
       setError('Could not load assessment history.');
     } finally {
       setLoading(false);
+      isFetchingRef.current = false;
     }
   }, [email]);
 

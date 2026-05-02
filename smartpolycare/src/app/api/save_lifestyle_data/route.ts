@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
     // Store latest snapshot in lifestyle_results/{docId}
     await db.collection("lifestyle_results").doc(docId).set(record, { merge: false });
 
-    // Also append to advice_history sub-collection for full history
+    // Also append to history sub-collection for full history
     await db
       .collection("lifestyle_results")
       .doc(docId)

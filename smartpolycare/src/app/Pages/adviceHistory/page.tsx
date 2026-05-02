@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
-import MentalHealthGraph, { AssessmentEntry, getGDS15Severity, getGAD7Severity, getMMAS8Severity, getIADLSeverity, overallStatus } from '@/app/components/MentalHealthGraph';
+import MentalHealthGraph, { AssessmentEntry, overallStatus } from '@/app/components/MentalHealthGraph';
 
 type SavedAdvice = {
   id: string;
@@ -160,30 +160,24 @@ function AdviceHistoryContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [selectedAdvice, setSelectedAdvice] = useState<SavedAdvice | null>(null);
-  const [assessmentHistory, setAssessmentHistory] = useState<AssessmentEntry[]>([]);
+
+  const isFetchingRef = React.useRef(false);
 
   useEffect(() => {
     const fetchHistory = async () => {
-      if (!identifier || identifier === 'null' || identifier === 'undefined') {
-        setError('No valid patient identifier. Please complete the assessment form first.');
-        setLoading(false);
+      if (!identifier || identifier === 'null' || identifier === 'undefined' || isFetchingRef.current) {
+        if (!identifier || identifier === 'null' || identifier === 'undefined') {
+          setError('No valid patient identifier. Please complete the assessment form first.');
+          setLoading(false);
+        }
         return;
       }
+      isFetchingRef.current = true;
       try {
         const paramName = emailParam ? 'email' : 'patientId';
         const response = await api.get(`/patient-advice-history?${paramName}=${encodeURIComponent(identifier)}`);
         const data = response.data as { advice_history: SavedAdvice[] };
         setAdviceHistory(data.advice_history || []);
-
-        try {
-          const psychRes = await fetch(`/api/assessment_history?email=${encodeURIComponent(identifier)}`);
-          if (psychRes.ok) {
-            const psychData = await psychRes.json();
-            setAssessmentHistory(psychData.assessments || []);
-          }
-        } catch (e) {
-          console.warn("Failed to load assessment history:", e);
-        }
       } catch (err: any) {
         if (err.response?.status === 404) {
           setAdviceHistory([]);
@@ -192,6 +186,7 @@ function AdviceHistoryContent() {
         }
       } finally {
         setLoading(false);
+        isFetchingRef.current = false;
       }
     };
     fetchHistory();
@@ -276,86 +271,104 @@ function AdviceHistoryContent() {
           {/* ── Most Recent Summary ── */}
           {mostRecent && <MostRecentSummary advice={mostRecent} />}
 
-          {/* ── Older Entries Grid -> Replaced by Assessment History Grid ── */}
-          {assessmentHistory.length > 0 && (
-            <>
-              <h2 className="mt-12 text-lg font-bold text-gray-800">Previous Psychometric Assessments</h2>
-              <div className="mt-4 grid gap-6 lg:grid-cols-2">
-                {[...assessmentHistory].reverse().map((entry, idx) => {
-                  const gds = getGDS15Severity(entry.gds15_score);
-                  const gad = getGAD7Severity(entry.gad7_score);
-                  const mmas = getMMAS8Severity(entry.mmas8_score);
-                  const iadl = getIADLSeverity(entry.iadl_score);
-                  const overall = overallStatus(entry);
-
+          {/* ── Older Advice History Records ── */}
+          {adviceHistory.length > 1 && (
+            <div className="mt-16">
+              <h2 className="text-2xl font-bold text-gray-900 mb-8">Previous Advice Records</h2>
+              <div className="grid gap-8 md:grid-cols-2">
+                {adviceHistory.slice(1).map((advice, idx) => {
+                  const rc = riskColor(advice.inputs?.polypharmacy_risk || '');
                   return (
                     <motion.div
-                      key={entry.id || idx}
-                      initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: idx * 0.08 }}
-                      className="rounded-2xl border border-blue-100 bg-white p-6 shadow-sm hover:shadow-md transition-shadow"
+                      key={advice.id || idx}
+                      initial={{ opacity: 0, y: 12 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.4, delay: idx * 0.1 }}
+                      className="group relative rounded-3xl bg-white border border-gray-100 p-8 shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
                     >
-                      <div className="flex justify-between items-start border-b border-gray-100 pb-3 mb-4">
-                        <div>
-                          <p className="text-xs text-gray-400 uppercase tracking-wide">Assessed On</p>
-                          <p className="text-sm font-semibold text-gray-700">{formatDate(entry.timestamp)}</p>
-                        </div>
-                        <span className="px-3 py-1 rounded-full text-xs font-bold"
-                          style={{ background: overall.color + '22', color: overall.color }}>
-                          Overall: {overall.label}
+                      <div className="absolute top-0 right-0 p-6">
+                        <span className={`text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full ${rc.bg} ${rc.text} border ${rc.border}`}>
+                          {advice.inputs?.polypharmacy_risk} Risk
                         </span>
                       </div>
 
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <span className="text-lg">🧠</span>
-                            <span className="text-xs font-semibold text-gray-600">Emotional Health (GDS-15)</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-bold text-gray-900">{entry.gds15_score}<span className="text-[10px] text-gray-400 font-normal">/15</span></span>
-                            <span className="px-2 py-0.5 rounded text-[10px] font-bold" style={{ background: gds.color + '22', color: gds.color }}>{gds.label}</span>
-                          </div>
-                        </div>
+                      <div className="mb-6">
+                        <p className="text-xs text-gray-400 font-medium uppercase tracking-wider mb-1">Generated On</p>
+                        <h3 className="text-lg font-bold text-gray-900">{formatDate(advice.generated_date)}</h3>
+                      </div>
 
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <span className="text-lg">💭</span>
-                            <span className="text-xs font-semibold text-gray-600">Anxiety Control (GAD-7)</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-bold text-gray-900">{entry.gad7_score}<span className="text-[10px] text-gray-400 font-normal">/21</span></span>
-                            <span className="px-2 py-0.5 rounded text-[10px] font-bold" style={{ background: gad.color + '22', color: gad.color }}>{gad.label}</span>
-                          </div>
-                        </div>
+                      <div className="flex flex-wrap gap-2 mb-6">
+                        {advice.inputs?.emotion && (
+                          <span className="bg-blue-50 text-blue-700 px-3 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5">
+                            🎭 {advice.inputs.emotion}
+                          </span>
+                        )}
+                        {advice.inputs?.mental_health_level && (
+                          <span className="bg-purple-50 text-purple-700 px-3 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5">
+                            🧠 {advice.inputs.mental_health_level}
+                          </span>
+                        )}
+                      </div>
 
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <span className="text-lg">💊</span>
-                            <span className="text-xs font-semibold text-gray-600">Medication Adherence</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-bold text-gray-900">{entry.mmas8_score}<span className="text-[10px] text-gray-400 font-normal">/8</span></span>
-                            <span className="px-2 py-0.5 rounded text-[10px] font-bold" style={{ background: mmas.color + '22', color: mmas.color }}>{mmas.label}</span>
-                          </div>
-                        </div>
+                      <div className="bg-gray-50/50 rounded-2xl p-4 mb-6">
+                        <p className="text-sm text-gray-700 leading-relaxed italic">
+                          "{advice.summary}"
+                        </p>
+                      </div>
 
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <span className="text-lg">🚶</span>
-                            <span className="text-xs font-semibold text-gray-600">Functional Independence</span>
+                      {/* Highlights: Vitamins & Lab Tests */}
+                      <div className="space-y-4 mb-8">
+                        {advice.vitamin_deficiencies && advice.vitamin_deficiencies.length > 0 && (
+                          <div>
+                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">🧪 Deficiencies</p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {advice.vitamin_deficiencies.map((v, i) => (
+                                <span key={i} className="bg-blue-50 text-blue-700 px-2.5 py-1 rounded-md text-[10px] font-bold border border-blue-100">
+                                  {v}
+                                </span>
+                              ))}
+                            </div>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-bold text-gray-900">{entry.iadl_score}<span className="text-[10px] text-gray-400 font-normal">/8</span></span>
-                            <span className="px-2 py-0.5 rounded text-[10px] font-bold" style={{ background: iadl.color + '22', color: iadl.color }}>{iadl.label}</span>
+                        )}
+
+                        {advice.lab_tests && advice.lab_tests.length > 0 && (
+                          <div>
+                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">🔬 Recommended Tests</p>
+                            <div className="grid grid-cols-1 gap-2">
+                              {advice.lab_tests.slice(0, 2).map((lt, i) => (
+                                <div key={i} className="flex items-center gap-2 bg-cyan-50/50 border border-cyan-100 rounded-lg px-3 py-1.5">
+                                  <span className="text-xs">🧬</span>
+                                  <span className="text-[10px] font-bold text-cyan-800 truncate">{lt.name}: {lt.test}</span>
+                                </div>
+                              ))}
+                              {advice.lab_tests.length > 2 && (
+                                <p className="text-[10px] text-cyan-600 font-medium ml-1">+ {advice.lab_tests.length - 2} more tests</p>
+                              )}
+                            </div>
                           </div>
-                        </div>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={() => setSelectedAdvice(advice)}
+                          className="flex-1 rounded-xl bg-teal-600 py-3 text-sm font-bold text-white shadow-md shadow-teal-200 hover:bg-teal-700 transition-colors"
+                        >
+                          View Full Plan
+                        </button>
+                        <button
+                          onClick={() => handleDelete(advice.id)}
+                          className="px-4 py-3 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 transition-colors text-sm"
+                          title="Delete record"
+                        >
+                          🗑️
+                        </button>
                       </div>
                     </motion.div>
                   );
                 })}
               </div>
-            </>
+            </div>
           )}
 
           {/* ── Detail Modal ── */}

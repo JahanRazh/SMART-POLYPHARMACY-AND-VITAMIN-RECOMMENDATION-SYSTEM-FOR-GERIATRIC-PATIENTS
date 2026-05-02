@@ -98,9 +98,12 @@ function PatientAdviceContent() {
   const [advice, setAdvice]         = useState<TwoWeekAdvice | null>(null);
   const [loading, setLoading]       = useState<boolean>(true);
   const [error, setError]           = useState<string>('');
-  const [activeWeek, setActiveWeek] = useState<'week_1' | 'week_2'>('week_1');
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [vitaminAssessment, setVitaminAssessment] = useState<any>(null);
+
+  // Prevention for duplicate concurrent fetches
+  const isFetchingRef = React.useRef(false);
+  const [activeWeek, setActiveWeek] = useState<'week_1' | 'week_2'>('week_1');
 
   // ── fetchAdvice is stable thanks to useCallback ──────────────────────────
   const saveAdviceToHistory = useCallback(
@@ -147,12 +150,17 @@ function PatientAdviceContent() {
           vitamin_deficiencies: vitaminDeficiencies,
         };
 
+        if (isFetchingRef.current) return;
+        isFetchingRef.current = true;
+
         console.log('💾 Auto-saving advice to history...');
         await api.post('/save-advice', payload);
         console.log('✅ Advice auto-saved to history');
       } catch (err: any) {
         console.warn('⚠️ Failed to auto-save advice:', err);
         // Don't break the UI if saving fails
+      } finally {
+        isFetchingRef.current = false;
       }
     },
     [identifier]

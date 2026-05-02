@@ -26,9 +26,13 @@ def save_advice_history():
     
     db = get_db()
     email_lower = email.lower().strip()
+    doc_id = email_lower.replace("@", "_at_").replace(".", "_")
     
-    # Create unique advice ID
-    advice_id = str(uuid.uuid4())
+    import hashlib
+    # Create deterministic advice ID based on email and generated date to prevent duplicates
+    # Use generated_date if available, otherwise fallback to current date string
+    date_str = data.get("generated_date") or datetime.now().strftime('%Y-%m-%d')
+    advice_id = hashlib.md5(f"{email_lower}_{date_str}".encode()).hexdigest()
     
     # Prepare advice document
     advice_doc = {
@@ -48,10 +52,13 @@ def save_advice_history():
     }
     
     try:
-        # Save to advice_history collection
-        db.collection("advice_history").document(advice_id).set(advice_doc)
+        # Save latest snapshot to lifestyle_results/{doc_id}
+        db.collection("lifestyle_results").document(doc_id).set(advice_doc)
         
-        print(f"✅ Saved advice {advice_id} for {email_lower}")
+        # Also append to history sub-collection
+        db.collection("lifestyle_results").document(doc_id).collection("history").document(advice_id).set(advice_doc)
+        
+        print(f"✅ Saved advice {advice_id} to lifestyle_results history for {email_lower}")
         return jsonify({
             "message": "Advice saved successfully",
             "advice_id": advice_id
@@ -75,11 +82,11 @@ def get_advice_history():
     
     db = get_db()
     email_lower = email.lower().strip()
+    doc_id = email_lower.replace("@", "_at_").replace(".", "_")
     
     try:
-        # Query advice_history collection for this email
-        # Note: order_by with where may require composite index, so we'll sort in Python
-        query = db.collection("advice_history").where("email", "==", email_lower).get()
+        # Query lifestyle_results/{doc_id}/history sub-collection
+        query = db.collection("lifestyle_results").document(doc_id).collection("history").get()
         
         advice_list = []
         for doc in query:
@@ -88,7 +95,7 @@ def get_advice_history():
         # Sort by saved_at in descending order (most recent first)
         advice_list.sort(key=lambda x: x.get("saved_at", ""), reverse=True)
         
-        print(f"✅ Found {len(advice_list)} advice records for {email_lower}")
+        print(f"✅ Found {len(advice_list)} advice records in lifestyle_results history for {email_lower}")
         return jsonify({"advice_history": advice_list}), 200
     except Exception as e:
         print(f"❌ Error fetching advice history: {e}")
@@ -112,22 +119,20 @@ def delete_advice_history(advice_id):
     
     db = get_db()
     email_lower = email.lower().strip()
+    doc_id = email_lower.replace("@", "_at_").replace(".", "_")
     
     try:
-        # Verify the advice belongs to this user
-        doc = db.collection("advice_history").document(advice_id).get()
+        # Verify and delete from lifestyle_results/{doc_id}/history
+        doc_ref = db.collection("lifestyle_results").document(doc_id).collection("history").document(advice_id)
+        doc = doc_ref.get()
         
         if not doc.exists:
             return jsonify({"message": "Advice not found"}), 404
         
-        advice_data = doc.to_dict()
-        if advice_data.get("email") != email_lower:
-            return jsonify({"message": "Unauthorized"}), 403
+        # Delete the advice from history
+        doc_ref.delete()
         
-        # Delete the advice
-        db.collection("advice_history").document(advice_id).delete()
-        
-        print(f"✅ Deleted advice {advice_id} for {email_lower}")
+        print(f"✅ Deleted advice {advice_id} from lifestyle_results history for {email_lower}")
         return jsonify({"message": "Advice deleted successfully"}), 200
     except Exception as e:
         print(f"❌ Error deleting advice: {e}")
