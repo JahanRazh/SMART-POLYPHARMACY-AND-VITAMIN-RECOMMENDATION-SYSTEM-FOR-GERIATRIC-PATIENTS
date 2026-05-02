@@ -286,12 +286,8 @@ function PatientAdviceContent() {
           </span>
 
           <h1 className="mt-6 text-3xl font-bold leading-tight text-gray-900 sm:text-4xl md:text-5xl">
-            Your 2-Week Personalized Health Plan
+            Your Personalized Advices
           </h1>
-          <p className="mt-4 text-gray-600 md:text-lg leading-relaxed">
-            Based on your emotional state, mental health, medication profile, and lifestyle,
-            here are your personalized recommendations for the next two weeks.
-          </p>
 
           {/* Action buttons */}
           <div className="mt-6 flex flex-wrap gap-3">
@@ -348,36 +344,63 @@ function PatientAdviceContent() {
           {/* Advice content */}
           {advice && (
             <div className="mt-10">
-              {/* Summary card */}
+
+
+              {/* ── Patient Profile Overview Cage ── */}
               <motion.div
                 initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4 }}
-                className="rounded-2xl bg-white border border-teal-100 shadow-sm p-6 mb-8"
+                className="rounded-2xl bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-100 shadow-sm p-6 mb-8"
               >
-                <h2 className="text-lg font-bold text-gray-900">Plan Overview</h2>
-                <p className="mt-3 text-gray-700 leading-relaxed">{advice.summary}</p>
+                <div className="flex items-center gap-3 mb-5">
+                  <div className="flex items-center justify-center h-10 w-10 rounded-full bg-indigo-100 text-indigo-600 text-xl">
+                    👤
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold text-gray-900">Your Profile Overview</h2>
+                    <p className="text-sm text-gray-600">A snapshot of your current health inputs</p>
+                  </div>
+                </div>
 
-                <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Patient profile */}
-                  <div className="rounded-lg bg-teal-50 p-4">
-                    <h3 className="text-sm font-semibold text-teal-900">Your Profile</h3>
-                    <ul className="mt-2 space-y-1 text-sm text-teal-800">
-                      {advice.inputs?.emotion            && <li>• Emotion: {advice.inputs.emotion}</li>}
-                      {advice.inputs?.mental_health_level && <li>• Mental Health: {advice.inputs.mental_health_level}</li>}
-                      {advice.inputs?.polypharmacy_risk   && <li>• Medication Risk: {advice.inputs.polypharmacy_risk}</li>}
-
-                    </ul>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Emotion Card */}
+                  <div className="rounded-xl bg-white border border-indigo-50 p-4 flex gap-3 shadow-sm items-center">
+                    <span className="text-3xl">🎭</span>
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wider text-indigo-500 mb-0.5">Emotion</p>
+                      <p className="text-sm font-bold text-gray-900">{advice.inputs?.emotion || 'Not detected'}</p>
+                    </div>
                   </div>
 
-                  {/* Plan timeline — uses fixed formatDate */}
-                  <div className="rounded-lg bg-blue-50 p-4">
-                    <h3 className="text-sm font-semibold text-blue-900">Plan Timeline</h3>
-                    <ul className="mt-2 space-y-1 text-sm text-blue-800">
-                      <li>• Generated: {formatDate(advice.generated_date)}</li>
-                      <li>• Expires:&nbsp;&nbsp; {formatDate(advice.expires_date)}</li>
-                      <li>• Duration: 14 days</li>
-                    </ul>
+                  {/* Mental Health Card */}
+                  <div className="rounded-xl bg-white border border-indigo-50 p-4 flex gap-3 shadow-sm items-center">
+                    <span className="text-3xl">🧠</span>
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wider text-indigo-500 mb-0.5">Mental Health</p>
+                      <p className="text-sm font-bold text-gray-900">{advice.inputs?.mental_health_level || 'Not assessed'}</p>
+                    </div>
+                  </div>
+
+                  {/* Medication Risk Card */}
+                  <div className={`rounded-xl bg-white border p-4 flex gap-3 shadow-sm items-center ${
+                    (advice.inputs?.polypharmacy_risk || '').toLowerCase().includes('very high') ? 'border-red-200' :
+                    (advice.inputs?.polypharmacy_risk || '').toLowerCase().includes('high') ? 'border-orange-200' :
+                    'border-indigo-50'
+                  }`}>
+                    <span className="text-3xl">💊</span>
+                    <div>
+                      <p className={`text-xs font-semibold uppercase tracking-wider mb-0.5 ${
+                        (advice.inputs?.polypharmacy_risk || '').toLowerCase().includes('very high') ? 'text-red-500' :
+                        (advice.inputs?.polypharmacy_risk || '').toLowerCase().includes('high') ? 'text-orange-500' :
+                        'text-indigo-500'
+                      }`}>Medication Risk</p>
+                      <p className={`text-sm font-bold ${
+                        (advice.inputs?.polypharmacy_risk || '').toLowerCase().includes('very high') ? 'text-red-700' :
+                        (advice.inputs?.polypharmacy_risk || '').toLowerCase().includes('high') ? 'text-orange-700' :
+                        'text-gray-900'
+                      }`}>{advice.inputs?.polypharmacy_risk || 'Unknown'}</p>
+                    </div>
                   </div>
                 </div>
               </motion.div>
@@ -525,6 +548,39 @@ function PatientAdviceContent() {
                   </motion.div>
                 );
               })()}
+
+              <div className="pt-8 border-t border-gray-200 mt-10">
+                <h2 className="text-2xl font-bold leading-tight text-gray-900 sm:text-3xl">
+                  Your 2-Week Personalized Health Plan
+                </h2>
+                <p className="mt-4 mb-8 text-gray-600 md:text-lg leading-relaxed">
+                  Based on your emotional state, mental health, medication profile, and lifestyle,
+                  here are your personalized recommendations for the next two weeks.
+                </p>
+
+                {/* Summary card */}
+                <motion.div
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4 }}
+                  className="rounded-2xl bg-white border border-teal-100 shadow-sm p-6 mb-8"
+                >
+                  <h3 className="text-lg font-bold text-gray-900">Plan Overview</h3>
+                  <p className="mt-3 text-gray-700 leading-relaxed">{advice.summary}</p>
+
+                  <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Plan timeline — uses fixed formatDate */}
+                    <div className="rounded-lg bg-blue-50 p-4 md:col-span-2">
+                      <h4 className="text-sm font-semibold text-blue-900">Plan Timeline</h4>
+                      <ul className="mt-2 space-y-1 text-sm text-blue-800">
+                        <li>• Generated: {formatDate(advice.generated_date)}</li>
+                        <li>• Expires:&nbsp;&nbsp; {formatDate(advice.expires_date)}</li>
+                        <li>• Duration: 14 days</li>
+                      </ul>
+                    </div>
+                  </div>
+                </motion.div>
+              </div>
 
               {/* Week tabs */}
               <div className="flex gap-3 mb-8 flex-wrap">
