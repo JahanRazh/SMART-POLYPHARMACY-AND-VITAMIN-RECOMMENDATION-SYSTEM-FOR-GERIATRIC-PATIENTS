@@ -1242,7 +1242,7 @@ const DashboardPage = () => {
                                 {/* Sub-scores */}
                                 <div>
                                     <h4 className="text-md font-medium text-gray-700 mb-3">
-                                        Related Factor Calculate Sub-Scores (S₁ - S₅)
+                                        Related Factors Calculate Sub-Scores (S₁ - S₅)
                                     </h4>
 
 
