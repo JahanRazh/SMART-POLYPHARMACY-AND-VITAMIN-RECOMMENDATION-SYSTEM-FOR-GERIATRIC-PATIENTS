@@ -100,6 +100,16 @@ const PatientAssessmentForm = () => {
 
   // Questionnaire States
   const [currentStep, setCurrentStep] = useState(1);
+  const questionnaireTopRef = useRef<HTMLDivElement>(null);
+
+  const handleStepChange = (newStep: number) => {
+    setCurrentStep(newStep);
+    setTimeout(() => {
+      // Use block: 'start' with some offset logic if there's a sticky header, but start is usually fine.
+      questionnaireTopRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 100);
+  };
+
   const [gda15, setGda15] = useState<Record<number, string>>({});
   const [gad7, setGad7] = useState<Record<number, string>>({});
   const [mars, setMars] = useState<Record<number, string>>({});
@@ -484,6 +494,22 @@ const PatientAssessmentForm = () => {
 
       const saveJson = await saveRes.json();
       console.log("✅ Step 3 complete: Patient assessment saved with ID:", saveJson.id);
+
+      // Step 4: Save psychometric scores snapshot for time-series charting
+      console.log("📡 Step 4/4: Saving psychometric assessment snapshot...");
+      try {
+        await fetch("/api/assessment_history", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: userEmail,
+            questionnaire: { gda15, gad7, mars, mars8, iadl },
+          }),
+        });
+        console.log("✅ Step 4 complete: Psychometric snapshot saved");
+      } catch (snapErr) {
+        console.warn("⚠️ Could not save psychometric snapshot (non-critical):", snapErr);
+      }
 
       setSuccessMessage("Patient assessment completed successfully! Redirecting...");
 
@@ -875,7 +901,7 @@ const PatientAssessmentForm = () => {
             transition={{ duration: 0.6, delay: 0.5 }}
             viewport={{ once: true }}
           >
-            <div className="mb-6">
+            <div className="mb-6" ref={questionnaireTopRef}>
               <h2 className="text-2xl font-bold text-gray-900 mb-2 flex items-center gap-3">
                 📋 Pre-Consultation Questionnaire
               </h2>
@@ -887,7 +913,7 @@ const PatientAssessmentForm = () => {
                 <p className="text-xl mb-2">✅</p>
                 <p className="font-bold text-lg">Questionnaire Responses Saved</p>
                 <p className="text-sm mt-1">Your responses have been recorded and will be submitted along with the assessment.</p>
-                <button type="button" onClick={() => { setQuestionnaireSaved(false); setCurrentStep(1); }} className="mt-4 text-emerald-600 underline text-sm">Edit Responses</button>
+                <button type="button" onClick={() => { setQuestionnaireSaved(false); handleStepChange(1); }} className="mt-4 text-emerald-600 underline text-sm">Edit Responses</button>
               </div>
             ) : (
               <div className="bg-white/50 rounded-2xl p-6 border border-white/60">
@@ -920,7 +946,7 @@ const PatientAssessmentForm = () => {
                       ))}
                     </div>
                     <div className="mt-6 flex justify-end">
-                      <button type="button" onClick={() => setCurrentStep(2)} className="px-6 py-3 bg-blue-600 text-white font-bold rounded-xl shadow-md hover:bg-blue-700 transition-colors">Next Part →</button>
+                      <button type="button" onClick={() => handleStepChange(2)} className="px-6 py-3 bg-blue-600 text-white font-bold rounded-xl shadow-md hover:bg-blue-700 transition-colors">Next Part →</button>
                     </div>
                   </motion.div>
                 )}
@@ -944,8 +970,8 @@ const PatientAssessmentForm = () => {
                       ))}
                     </div>
                     <div className="mt-6 flex justify-between">
-                      <button type="button" onClick={() => setCurrentStep(1)} className="px-6 py-3 bg-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-300 transition-colors">← Back</button>
-                      <button type="button" onClick={() => setCurrentStep(3)} className="px-6 py-3 bg-teal-600 text-white font-bold rounded-xl shadow-md hover:bg-teal-700 transition-colors">Next Part →</button>
+                      <button type="button" onClick={() => handleStepChange(1)} className="px-6 py-3 bg-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-300 transition-colors">← Back</button>
+                      <button type="button" onClick={() => handleStepChange(3)} className="px-6 py-3 bg-teal-600 text-white font-bold rounded-xl shadow-md hover:bg-teal-700 transition-colors">Next Part →</button>
                     </div>
                   </motion.div>
                 )}
@@ -980,8 +1006,8 @@ const PatientAssessmentForm = () => {
                       </div>
                     </div>
                     <div className="mt-6 flex justify-between">
-                      <button type="button" onClick={() => setCurrentStep(2)} className="px-6 py-3 bg-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-300 transition-colors">← Back</button>
-                      <button type="button" onClick={() => setCurrentStep(4)} className="px-6 py-3 bg-amber-600 text-white font-bold rounded-xl shadow-md hover:bg-amber-700 transition-colors">Next Part →</button>
+                      <button type="button" onClick={() => handleStepChange(2)} className="px-6 py-3 bg-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-300 transition-colors">← Back</button>
+                      <button type="button" onClick={() => handleStepChange(4)} className="px-6 py-3 bg-amber-600 text-white font-bold rounded-xl shadow-md hover:bg-amber-700 transition-colors">Next Part →</button>
                     </div>
                   </motion.div>
                 )}
@@ -1005,7 +1031,7 @@ const PatientAssessmentForm = () => {
                       ))}
                     </div>
                     <div className="mt-8 flex justify-between border-t border-gray-200 pt-6">
-                      <button type="button" onClick={() => setCurrentStep(3)} className="px-6 py-3 bg-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-300 transition-colors">← Back</button>
+                      <button type="button" onClick={() => handleStepChange(3)} className="px-6 py-3 bg-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-300 transition-colors">← Back</button>
                       <button type="button" onClick={() => setQuestionnaireSaved(true)} className="px-8 py-3 bg-green-600 text-white font-bold rounded-xl shadow-lg hover:bg-green-700 transform transition-transform hover:scale-105">
                         💾 Save Response
                       </button>
