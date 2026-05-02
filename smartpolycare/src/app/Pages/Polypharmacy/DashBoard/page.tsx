@@ -683,9 +683,9 @@ const DashboardPage = () => {
 
                         {/* Overall Risk Score Card */}
                         <div className={`flex flex-col items-center justify-center p-6 rounded-3xl border-2 min-w-[220px] shadow-sm transform transition-all hover:scale-105 ${analysis.riskCalculation.riskLevel === 'Very High' ? 'bg-rose-50 border-rose-200 text-rose-700 shadow-rose-100' :
-                                analysis.riskCalculation.riskLevel === 'High' ? 'bg-orange-50 border-orange-200 text-orange-700 shadow-orange-100' :
-                                    analysis.riskCalculation.riskLevel === 'Moderate' ? 'bg-yellow-50 border-yellow-200 text-yellow-700 shadow-yellow-100' :
-                                        'bg-emerald-50 border-emerald-200 text-emerald-700 shadow-emerald-100'
+                            analysis.riskCalculation.riskLevel === 'High' ? 'bg-orange-50 border-orange-200 text-orange-700 shadow-orange-100' :
+                                analysis.riskCalculation.riskLevel === 'Moderate' ? 'bg-yellow-50 border-yellow-200 text-yellow-700 shadow-yellow-100' :
+                                    'bg-emerald-50 border-emerald-200 text-emerald-700 shadow-emerald-100'
                             }`}>
                             <p className="text-xs uppercase font-extrabold tracking-widest mb-2 opacity-80 text-center">
                                 Overall Risk Score
@@ -1214,7 +1214,7 @@ const DashboardPage = () => {
                                             )}
                                         </div>
                                         <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
-                                            <p className="text-xs text-gray-500">S2 (Age)</p>
+                                            <p className="text-xs text-gray-500">S2 (Patient Age)</p>
                                             <p className="text-xl font-bold text-gray-900">
                                                 {analysis.riskCalculation.scores.s2}
                                             </p>
@@ -1225,7 +1225,7 @@ const DashboardPage = () => {
                                             )}
                                         </div>
                                         <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
-                                            <p className="text-xs text-gray-500">S3 (DDI)</p>
+                                            <p className="text-xs text-gray-500">S3 (Drug-Drug Interactions)</p>
                                             <p className="text-xl font-bold text-gray-900">
                                                 {analysis.riskCalculation.scores.s3}
                                             </p>
@@ -1264,38 +1264,38 @@ const DashboardPage = () => {
                                 {/* Weights */}
                                 <div>
                                     <h4 className="text-md font-medium text-gray-700 mb-3">
-                                        Weights
+                                        Polypharmacy Risk Factor Weights(W)
                                     </h4>
 
 
                                     <div className="animate-in fade-in slide-in-from-top-2 duration-300">
                                         <div className="grid gap-3 md:grid-cols-5">
                                             <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
-                                                <p className="text-xs text-blue-600">Drug Weight</p>
+                                                <p className="text-xs text-blue-600">W1 (Drug Weight)</p>
                                                 <p className="text-lg font-bold text-blue-900">
                                                     {analysis.riskCalculation.weights.drugWeight}
                                                 </p>
                                             </div>
                                             <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
-                                                <p className="text-xs text-blue-600">Age Weight</p>
+                                                <p className="text-xs text-blue-600">W2 (Age Weight)</p>
                                                 <p className="text-lg font-bold text-blue-900">
                                                     {analysis.riskCalculation.weights.ageWeight}
                                                 </p>
                                             </div>
                                             <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
-                                                <p className="text-xs text-blue-600">DDI Weight</p>
+                                                <p className="text-xs text-blue-600">W3 (DDI Weight)</p>
                                                 <p className="text-lg font-bold text-blue-900">
                                                     {analysis.riskCalculation.weights.ddiWeight}
                                                 </p>
                                             </div>
                                             <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
-                                                <p className="text-xs text-blue-600">Liver Weight</p>
+                                                <p className="text-xs text-blue-600">W4 (Liver Weight)</p>
                                                 <p className="text-lg font-bold text-blue-900">
                                                     {analysis.riskCalculation.weights.liverWeight}
                                                 </p>
                                             </div>
                                             <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
-                                                <p className="text-xs text-blue-600">Kidney Weight</p>
+                                                <p className="text-xs text-blue-600">W5 (Kidney Weight)</p>
                                                 <p className="text-lg font-bold text-blue-900">
                                                     {analysis.riskCalculation.weights.kidneyWeight}
                                                 </p>
