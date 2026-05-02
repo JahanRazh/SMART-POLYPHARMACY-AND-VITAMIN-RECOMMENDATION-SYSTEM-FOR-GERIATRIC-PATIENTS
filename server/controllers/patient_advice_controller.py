@@ -2,7 +2,8 @@ from flask import jsonify, request
 import os
 import pandas as pd
 import difflib
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+import pytz
 
 from db import get_db
 from services.advice_generator import generate_two_week_advice
@@ -240,9 +241,18 @@ def patient_advice():
                 if generated_date:
                     try:
                         if isinstance(generated_date, str):
-                            generated_date = datetime.fromisoformat(generated_date)
-                        days_old = (datetime.now() - generated_date).days
-                        if days_old < 7:
+                            generated_date = datetime.fromisoformat(generated_date.replace("Z", "+00:00"))
+                        
+                        # Use timezone-aware datetime for comparison
+                        sl_tz = pytz.timezone('Asia/Colombo')
+                        now_sl = datetime.now(sl_tz)
+                        
+                        # Ensure generated_date is timezone aware before subtraction
+                        if generated_date.tzinfo is None:
+                            generated_date = sl_tz.localize(generated_date)
+                            
+                        days_old = (now_sl - generated_date).days
+                        if days_old < 14:
                             cached_advice = cached_data
                             print(f"✅ Using cached advice for {email} (generated {days_old} days ago)")
                     except Exception as e:
@@ -307,8 +317,9 @@ def patient_advice():
         }), 500
 
     # Store advice in Firestore
-    now = datetime.now()
-    expires = now + timedelta(days=7)
+    sl_tz = pytz.timezone('Asia/Colombo')
+    now = datetime.now(sl_tz)
+    expires = now + timedelta(days=14)
     
     advice_to_store = {
         "email": email,
@@ -317,8 +328,8 @@ def patient_advice():
         "week_1": week_1,
         "week_2": week_2,
         "summary": advice_result.get("summary", ""),
-        "advice_generated_date": now.strftime('%Y-%m-%dT%H:%M:%S'),
-        "advice_expires_date": expires.strftime('%Y-%m-%dT%H:%M:%S'),
+        "advice_generated_date": now.isoformat(timespec='seconds'),
+        "advice_expires_date": expires.isoformat(timespec='seconds'),
         "inputs": {
             "emotion": emotion,
             "mental_health_level": mental_health,
@@ -346,8 +357,8 @@ def patient_advice():
         "week_2": week_2,
         "summary": advice_result.get("summary", ""),
         "source": "gemini_api",
-        "generated_date": now.strftime('%Y-%m-%dT%H:%M:%S'),
-        "expires_date": expires.strftime('%Y-%m-%dT%H:%M:%S'),
+        "generated_date": now.isoformat(timespec='seconds'),
+        "expires_date": expires.isoformat(timespec='seconds'),
         "inputs": {
             "emotion": emotion,
             "mental_health_level": mental_health,
