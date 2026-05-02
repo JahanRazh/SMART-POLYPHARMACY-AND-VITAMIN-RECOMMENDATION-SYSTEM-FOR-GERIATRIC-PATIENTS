@@ -365,7 +365,7 @@ export default function PolypharmacyHomepage() {
               <p className="font-mono text-base text-gray-200 leading-relaxed font-bold bg-indigo-500/10 p-4 rounded-lg border border-indigo-500/20 text-center mb-6">
                 Risk Score = min( (W₁ × S₁) + (W₂ × S₂) + (W₃ × S₃) + (W₄ × S₄) + (W₅ × S₅) , 100 )
               </p>
-              
+
               <div className="mb-6 grid gap-6 sm:grid-cols-2 text-sm text-gray-300 bg-black/10 p-5 rounded-lg border border-indigo-500/10">
                 <div>
                   <p className="font-semibold text-indigo-300 mb-2 border-b border-indigo-500/20 pb-1.5 flex items-center gap-2">
@@ -376,11 +376,11 @@ export default function PolypharmacyHomepage() {
                   </p>
                   <ul className="space-y-2">
                     <li className="flex items-start gap-2">
-                      <span className="text-indigo-400 font-mono font-bold w-4">W</span> 
+                      <span className="text-indigo-400 font-mono font-bold w-4">W</span>
                       <span>= Polypharmacy Risk Weight Score</span>
                     </li>
                     <li className="flex items-start gap-2">
-                      <span className="text-indigo-400 font-mono font-bold w-4">S</span> 
+                      <span className="text-indigo-400 font-mono font-bold w-4">S</span>
                       <span>= Polypharmacy Risk Calculation Related Sub Factors</span>
                     </li>
                   </ul>
@@ -395,35 +395,35 @@ export default function PolypharmacyHomepage() {
                   <ul className="space-y-1.5">
                     <li className="flex items-center justify-between border-b border-white/5 pb-1">
                       <div className="flex items-center gap-2">
-                        <span className="text-indigo-400 font-mono font-bold w-5">W₁</span> 
+                        <span className="text-indigo-400 font-mono font-bold w-5">W₁</span>
                         <span>Medication Count Risk Weight</span>
                       </div>
                       <span className="font-mono text-indigo-300 font-semibold">= 25</span>
                     </li>
                     <li className="flex items-center justify-between border-b border-white/5 pb-1">
                       <div className="flex items-center gap-2">
-                        <span className="text-indigo-400 font-mono font-bold w-5">W₂</span> 
+                        <span className="text-indigo-400 font-mono font-bold w-5">W₂</span>
                         <span>Patient Age Risk Weight</span>
                       </div>
                       <span className="font-mono text-indigo-300 font-semibold">= 25</span>
                     </li>
                     <li className="flex items-center justify-between border-b border-white/5 pb-1">
                       <div className="flex items-center gap-2">
-                        <span className="text-indigo-400 font-mono font-bold w-5">W₃</span> 
+                        <span className="text-indigo-400 font-mono font-bold w-5">W₃</span>
                         <span>Drug Interactions Risk Weight</span>
                       </div>
                       <span className="font-mono text-indigo-300 font-semibold">= 30</span>
                     </li>
                     <li className="flex items-center justify-between border-b border-white/5 pb-1">
                       <div className="flex items-center gap-2">
-                        <span className="text-indigo-400 font-mono font-bold w-5">W₄</span> 
+                        <span className="text-indigo-400 font-mono font-bold w-5">W₄</span>
                         <span>Liver Function Risk Weight</span>
                       </div>
                       <span className="font-mono text-indigo-300 font-semibold">= 10</span>
                     </li>
                     <li className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <span className="text-indigo-400 font-mono font-bold w-5">W₅</span> 
+                        <span className="text-indigo-400 font-mono font-bold w-5">W₅</span>
                         <span>Kidney Function Risk Weight</span>
                       </div>
                       <span className="font-mono text-indigo-300 font-semibold">= 10</span>
@@ -431,7 +431,7 @@ export default function PolypharmacyHomepage() {
                   </ul>
                 </div>
               </div>
-              
+
               <div className="mt-2 grid gap-3 sm:grid-cols-4">
                 <RiskLevelBadge level="Low" range="0 – 29" color="emerald" />
                 <RiskLevelBadge level="Moderate" range="30 – 59" color="yellow" />
