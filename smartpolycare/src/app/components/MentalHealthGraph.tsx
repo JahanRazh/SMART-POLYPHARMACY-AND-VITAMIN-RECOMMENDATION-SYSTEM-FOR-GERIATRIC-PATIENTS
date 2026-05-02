@@ -172,7 +172,7 @@ function ClinicalInsights({ entry }: { entry: AssessmentEntry }) {
     <div className="rounded-2xl bg-white border border-gray-100 shadow-sm p-5 h-full">
       <div className="flex items-center gap-2 mb-4">
         <span className="text-lg">✨</span>
-        <h3 className="text-sm font-bold text-gray-800">AI Clinical Insights</h3>
+        <h3 className="text-sm font-bold text-gray-800">Clinical Insights</h3>
       </div>
       <div className="space-y-3">
         {insights.map((ins, i) => (
