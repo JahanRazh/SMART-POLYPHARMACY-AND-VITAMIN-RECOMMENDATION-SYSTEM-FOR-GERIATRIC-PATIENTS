@@ -129,7 +129,7 @@ const DashboardPage = () => {
 
     // State for collapsible sections
     const [sections, setSections] = useState({
-        detailedCalculation: true,
+        detailedCalculation: false,
         s1: false,
         s2: false,
         s3: false,
@@ -1182,7 +1182,7 @@ const DashboardPage = () => {
                             onClick={() => toggleSection('detailedCalculation')}
                         >
                             <h3 className="text-lg font-semibold text-gray-900">
-                                Detailed Calculation
+                                Detailed Risk Score Calculation
                             </h3>
                             {sections.detailedCalculation ? <ChevronUp /> : <ChevronDown />}
                         </div>
