@@ -7,6 +7,7 @@ import axios from 'axios';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/app/components/Contexts/AuthContext';
+import { useNotifications } from '@/app/components/Contexts/NotificationContext';
 import { generatePatientReport } from '@/app/utils/generateReport';
 
 // Dynamic import avoids SSR issues with Recharts canvas
@@ -94,6 +95,7 @@ function PatientAdviceContent() {
   const patientId = searchParams.get('patientId');
   const emailParam = searchParams.get('email');
   const { user } = useAuth();
+  const { addNotification } = useNotifications();
 
   // Prefer email, fall back to patientId
   const identifier = emailParam || patientId;
@@ -108,6 +110,7 @@ function PatientAdviceContent() {
 
   // Prevention for duplicate concurrent fetches
   const isFetchingRef = React.useRef(false);
+  const hasNotifiedRef = React.useRef(false);
   const [activeWeek, setActiveWeek] = useState<'week_1' | 'week_2'>('week_1');
 
   // ── fetchAdvice is stable thanks to useCallback ──────────────────────────
@@ -240,6 +243,28 @@ function PatientAdviceContent() {
 
           // Auto-save full snapshot (advice + polypharmacy + lab tests + vitamins) to history via Flask backend
           await saveAdviceToHistory(data, vitaminData);
+
+          // ── Push notifications to the bell (only once per page load) ──
+          if (!hasNotifiedRef.current) {
+            hasNotifiedRef.current = true;
+
+            addNotification({
+              title: 'Health Report Ready',
+              message: 'Your personalized 2-week advice, risk analysis, and lab test recommendations have been generated.',
+              type: 'success',
+            });
+
+            // Vitamin deficiency alert
+            const defCount = vitaminData?.predictions?.length || 0;
+            if (defCount > 0) {
+              const names = vitaminData.predictions.map((p: any) => p.name || `Vitamin ${p.vitamin}`).join(', ');
+              addNotification({
+                title: `${defCount} Vitamin Deficienc${defCount > 1 ? 'ies' : 'y'} Detected`,
+                message: `Recommended lab tests for: ${names}. Check your report for details.`,
+                type: 'info',
+              });
+            }
+          }
 
         } else {
           console.error('Invalid response structure:', data);

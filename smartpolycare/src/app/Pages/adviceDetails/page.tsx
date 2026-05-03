@@ -630,6 +630,17 @@ const PatientAssessmentForm = () => {
                     </button>
                   </div>
                   <p className="text-sm text-gray-600">Real-time emotion detection for your assessment or select manually</p>
+
+                  {/* Caregiver Note */}
+                  <div className="mt-3 rounded-xl border border-amber-200/70 bg-amber-50/60 backdrop-blur-sm px-4 py-3 flex items-start gap-3">
+                    <span className="text-lg mt-0.5 shrink-0">👥</span>
+                    <div>
+                      <p className="text-xs font-bold text-amber-800">For Caregivers</p>
+                      <p className="text-xs text-amber-700 leading-relaxed mt-0.5">
+                        If you are filling this form on behalf of a patient, please <strong>turn off the camera</strong> using the button above, then <strong>select the patient's current emotion</strong> from the emoji picker that appears below.
+                      </p>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Analysis Status Inside Cage */}
