@@ -13,6 +13,10 @@ def book_counsellor():
             return jsonify({"error": "patientId or email is required"}), 400
             
         counsellor_id = data.get('counsellor_id')
+        counsellor_name = data.get('counsellor_name', '')
+        counsellor_specialization = data.get('counsellor_specialization', '')
+        booking_date = data.get('booking_date', '')
+        booking_time = data.get('booking_time', '')
         questionnaire = data.get('questionnaire', {})
         
         db = get_db()
@@ -22,6 +26,10 @@ def book_counsellor():
             "id": booking_ref.id,
             "patientId": patient_id,
             "counsellor_id": counsellor_id,
+            "counsellor_name": counsellor_name,
+            "counsellor_specialization": counsellor_specialization,
+            "booking_date": booking_date,
+            "booking_time": booking_time,
             "questionnaire": questionnaire,
             "status": "pending",
             "booked_at": datetime.datetime.now().isoformat()
@@ -37,3 +45,4 @@ def book_counsellor():
     except Exception as e:
         print(f"Error booking counsellor: {e}")
         return jsonify({"error": str(e)}), 500
+

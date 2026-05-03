@@ -7,15 +7,18 @@ import axios from 'axios';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/app/components/Contexts/AuthContext';
+import { generatePatientReport } from '@/app/utils/generateReport';
 
 // Dynamic import avoids SSR issues with Recharts canvas
 const MentalHealthGraph = dynamic(
   () => import('@/app/components/MentalHealthGraph'),
-  { ssr: false, loading: () => (
-    <div className="rounded-2xl bg-white border border-gray-100 shadow-sm p-6 mb-8 flex items-center justify-center h-48">
-      <div className="h-8 w-8 animate-spin rounded-full border-4 border-indigo-200 border-t-indigo-600" />
-    </div>
-  )}
+  {
+    ssr: false, loading: () => (
+      <div className="rounded-2xl bg-white border border-gray-100 shadow-sm p-6 mb-8 flex items-center justify-center h-48">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-indigo-200 border-t-indigo-600" />
+      </div>
+    )
+  }
 );
 
 type DailyRecommendation = {
@@ -88,18 +91,20 @@ function formatDate(dateString?: string): string {
 // ─── Inner component (uses useSearchParams — must be inside Suspense) ─────────
 function PatientAdviceContent() {
   const searchParams = useSearchParams();
-  const patientId  = searchParams.get('patientId');
+  const patientId = searchParams.get('patientId');
   const emailParam = searchParams.get('email');
   const { user } = useAuth();
 
   // Prefer email, fall back to patientId
   const identifier = emailParam || patientId;
 
-  const [advice, setAdvice]         = useState<TwoWeekAdvice | null>(null);
-  const [loading, setLoading]       = useState<boolean>(true);
-  const [error, setError]           = useState<string>('');
+  const [advice, setAdvice] = useState<TwoWeekAdvice | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string>('');
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [vitaminAssessment, setVitaminAssessment] = useState<any>(null);
+  const [psychometricScores, setPsychometricScores] = useState<{ gds15: number; gad7: number; mmas8: number; iadl: number } | null>(null);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
 
   // Prevention for duplicate concurrent fetches
   const isFetchingRef = React.useRef(false);
@@ -112,7 +117,7 @@ function PatientAdviceContent() {
         // Build polypharmacy advices snapshot based on risk level
         const risk = (adviceData.inputs?.polypharmacy_risk || '').toLowerCase();
         const isVeryHigh = risk.includes('very high');
-        const isHigh     = !isVeryHigh && risk.includes('high');
+        const isHigh = !isVeryHigh && risk.includes('high');
         const highAdvices = [
           { icon: '🔄', title: 'Review medications regularly', detail: 'Schedule a doctor/pharmacist review to check necessity, duplication, and interactions.' },
           { icon: '🚫', title: 'Avoid self-medication', detail: 'Do not take over-the-counter drugs, herbal products, or supplements without approval.' },
@@ -180,9 +185,8 @@ function PatientAdviceContent() {
 
       try {
         const paramName = emailParam ? 'email' : 'patientId';
-        const endpoint  = `/patient-advice?${paramName}=${encodeURIComponent(identifier)}${
-          forceRegenerate ? '&force_regenerate=true' : ''
-        }`;
+        const endpoint = `/patient-advice?${paramName}=${encodeURIComponent(identifier)}${forceRegenerate ? '&force_regenerate=true' : ''
+          }`;
 
         console.log(`📡 Fetching advice: ${endpoint}`);
         const response = await api.get(endpoint);
@@ -216,9 +220,27 @@ function PatientAdviceContent() {
             console.warn("⚠️ No Firebase UID available — skipping vitamin assessment fetch");
           }
 
+          // Fetch psychometric scores for PDF report
+          try {
+            const psyRes = await fetch(`/api/assessment_history?email=${encodeURIComponent(identifier)}`);
+            if (psyRes.ok) {
+              const psyData = await psyRes.json();
+              const assessments = psyData.assessments || [];
+              if (assessments.length > 0) {
+                const latest = assessments[assessments.length - 1];
+                setPsychometricScores({
+                  gds15: latest.gds15_score ?? 0,
+                  gad7: latest.gad7_score ?? 0,
+                  mmas8: latest.mmas8_score ?? 0,
+                  iadl: latest.iadl_score ?? 0,
+                });
+              }
+            }
+          } catch { /* non-critical */ }
+
           // Auto-save full snapshot (advice + polypharmacy + lab tests + vitamins) to history via Flask backend
           await saveAdviceToHistory(data, vitaminData);
-          
+
         } else {
           console.error('Invalid response structure:', data);
           setError(
@@ -229,10 +251,10 @@ function PatientAdviceContent() {
         }
       } catch (err: any) {
         console.error('Error fetching advice:', err);
-        const debugInfo     = err.response?.data?.debug;
-        const errorMessage  =
+        const debugInfo = err.response?.data?.debug;
+        const errorMessage =
           err.response?.data?.message ||
-          err.response?.data?.error    ||
+          err.response?.data?.error ||
           'Failed to fetch personalized advice. Please try again later.';
 
         setError(
@@ -259,6 +281,18 @@ function PatientAdviceContent() {
     setRefreshing(false);
   };
 
+  const handleDownloadReport = async () => {
+    if (!advice) return;
+    setDownloadingPdf(true);
+    try {
+      generatePatientReport(advice, vitaminAssessment, psychometricScores, identifier || undefined);
+    } catch (err) {
+      console.error('PDF generation failed:', err);
+    } finally {
+      setDownloadingPdf(false);
+    }
+  };
+
   const currentWeekData = advice?.[activeWeek] ?? [];
 
   // ── Full-screen loading state ─────────────────────────────────────────────
@@ -272,7 +306,10 @@ function PatientAdviceContent() {
         >
           <div className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-teal-600 border-r-transparent" />
           <p className="mt-4 text-lg text-gray-600">
-            Generating your personalized 2-week plan…
+            Preparing your personalized advice report…
+          </p>
+          <p className="mt-2 text-sm text-gray-400">
+            Advice, risk analysis, lab tests & more
           </p>
         </motion.div>
       </div>
@@ -319,6 +356,19 @@ function PatientAdviceContent() {
               >
                 📋 View History
               </Link>
+            )}
+            {advice && (
+              <button
+                onClick={handleDownloadReport}
+                disabled={downloadingPdf}
+                className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 px-5 py-3 text-sm font-semibold text-white transition-all duration-200 hover:shadow-lg hover:shadow-indigo-200 disabled:opacity-50"
+              >
+                {downloadingPdf ? (
+                  <><span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" /> Generating…</>
+                ) : (
+                  <><span>📥</span> Download Report</>
+                )}
+              </button>
             )}
           </div>
 
@@ -391,23 +441,20 @@ function PatientAdviceContent() {
                   </div>
 
                   {/* Medication Risk Card */}
-                  <div className={`rounded-xl bg-white border p-4 flex gap-3 shadow-sm items-center ${
-                    (advice.inputs?.polypharmacy_risk || '').toLowerCase().includes('very high') ? 'border-red-200' :
-                    (advice.inputs?.polypharmacy_risk || '').toLowerCase().includes('high') ? 'border-orange-200' :
-                    'border-indigo-50'
-                  }`}>
+                  <div className={`rounded-xl bg-white border p-4 flex gap-3 shadow-sm items-center ${(advice.inputs?.polypharmacy_risk || '').toLowerCase().includes('very high') ? 'border-red-200' :
+                      (advice.inputs?.polypharmacy_risk || '').toLowerCase().includes('high') ? 'border-orange-200' :
+                        'border-indigo-50'
+                    }`}>
                     <span className="text-3xl">💊</span>
                     <div>
-                      <p className={`text-xs font-semibold uppercase tracking-wider mb-0.5 ${
-                        (advice.inputs?.polypharmacy_risk || '').toLowerCase().includes('very high') ? 'text-red-500' :
-                        (advice.inputs?.polypharmacy_risk || '').toLowerCase().includes('high') ? 'text-orange-500' :
-                        'text-indigo-500'
-                      }`}>Medication Risk</p>
-                      <p className={`text-sm font-bold ${
-                        (advice.inputs?.polypharmacy_risk || '').toLowerCase().includes('very high') ? 'text-red-700' :
-                        (advice.inputs?.polypharmacy_risk || '').toLowerCase().includes('high') ? 'text-orange-700' :
-                        'text-gray-900'
-                      }`}>{advice.inputs?.polypharmacy_risk || 'Unknown'}</p>
+                      <p className={`text-xs font-semibold uppercase tracking-wider mb-0.5 ${(advice.inputs?.polypharmacy_risk || '').toLowerCase().includes('very high') ? 'text-red-500' :
+                          (advice.inputs?.polypharmacy_risk || '').toLowerCase().includes('high') ? 'text-orange-500' :
+                            'text-indigo-500'
+                        }`}>Medication Risk</p>
+                      <p className={`text-sm font-bold ${(advice.inputs?.polypharmacy_risk || '').toLowerCase().includes('very high') ? 'text-red-700' :
+                          (advice.inputs?.polypharmacy_risk || '').toLowerCase().includes('high') ? 'text-orange-700' :
+                            'text-gray-900'
+                        }`}>{advice.inputs?.polypharmacy_risk || 'Unknown'}</p>
                     </div>
                   </div>
                 </div>
@@ -448,13 +495,13 @@ function PatientAdviceContent() {
                             <span className="text-xl">{pred.icon || "💊"}</span>
                             <h3 className="font-bold text-blue-900">{pred.name || `Vitamin ${pred.vitamin}`} Deficiency</h3>
                           </div>
-                          
+
                           <div className="bg-blue-50/50 rounded-lg p-3 border border-blue-100/50">
                             <p className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-1">Recommended Test</p>
                             <p className="text-sm font-medium text-gray-900">{labTestInfo.test}</p>
                             {labTestInfo.why && <p className="text-xs text-gray-600 mt-1 italic">Why: {labTestInfo.why}</p>}
                           </div>
-                          
+
                           <div className="mt-1">
                             <p className="text-xs text-blue-800"><strong>Linked to:</strong> {labTestInfo.description}</p>
                           </div>
@@ -463,7 +510,7 @@ function PatientAdviceContent() {
                     })}
                   </div>
                 )}
-                
+
                 <p className="mt-4 text-xs text-gray-500 italic">
                   * Please present these recommendations to your physician before undergoing any laboratory tests.
                 </p>
@@ -472,7 +519,7 @@ function PatientAdviceContent() {
               {/* ── Polypharmacy Risk Advice Cage ── */}
               {(() => {
                 const risk = (advice.inputs?.polypharmacy_risk || '').toLowerCase();
-                const isHigh     = risk.includes('very high') ? false : risk.includes('high');
+                const isHigh = risk.includes('very high') ? false : risk.includes('high');
                 const isVeryHigh = risk.includes('very high');
 
                 if (!isHigh && !isVeryHigh) return null;
@@ -493,18 +540,18 @@ function PatientAdviceContent() {
                   { icon: '🆘', title: 'Be alert for serious warning signs', detail: 'Seek medical help if experiencing confusion, severe weakness, reduced urine, or yellowing of eyes/skin.' },
                 ];
 
-                const advices   = isVeryHigh ? veryHighAdvices : highAdvices;
-                const badgeBg   = isVeryHigh ? 'bg-red-100'    : 'bg-orange-100';
-                const badgeText = isVeryHigh ? 'text-red-700'  : 'text-orange-700';
-                const borderCol = isVeryHigh ? 'border-red-200'   : 'border-orange-200';
-                const cageBg    = isVeryHigh ? 'bg-red-50'     : 'bg-orange-50';
-                const iconBg    = isVeryHigh ? 'bg-red-100'    : 'bg-orange-100';
-                const iconText  = isVeryHigh ? 'text-red-600'  : 'text-orange-600';
+                const advices = isVeryHigh ? veryHighAdvices : highAdvices;
+                const badgeBg = isVeryHigh ? 'bg-red-100' : 'bg-orange-100';
+                const badgeText = isVeryHigh ? 'text-red-700' : 'text-orange-700';
+                const borderCol = isVeryHigh ? 'border-red-200' : 'border-orange-200';
+                const cageBg = isVeryHigh ? 'bg-red-50' : 'bg-orange-50';
+                const iconBg = isVeryHigh ? 'bg-red-100' : 'bg-orange-100';
+                const iconText = isVeryHigh ? 'text-red-600' : 'text-orange-600';
                 const cardBorder = isVeryHigh ? 'border-red-100' : 'border-orange-100';
-                const titleText  = isVeryHigh ? 'text-red-900'  : 'text-orange-900';
-                const detailText = isVeryHigh ? 'text-red-700'  : 'text-orange-700';
-                const label     = isVeryHigh ? 'Very High' : 'High';
-                const emoji     = isVeryHigh ? '⛔' : '⚠️';
+                const titleText = isVeryHigh ? 'text-red-900' : 'text-orange-900';
+                const detailText = isVeryHigh ? 'text-red-700' : 'text-orange-700';
+                const label = isVeryHigh ? 'Very High' : 'High';
+                const emoji = isVeryHigh ? '⛔' : '⚠️';
 
                 return (
                   <motion.div
@@ -596,16 +643,15 @@ function PatientAdviceContent() {
                   <button
                     key={week}
                     onClick={() => setActiveWeek(week)}
-                    className={`rounded-full px-6 py-3 font-semibold transition-all duration-200 ${
-                      activeWeek === week
+                    className={`rounded-full px-6 py-3 font-semibold transition-all duration-200 ${activeWeek === week
                         ? 'bg-teal-600 text-white'
                         : 'bg-white text-teal-700 border-2 border-teal-200 hover:border-teal-400'
-                    }`}
+                      }`}
                   >
                     {i === 0 ? 'Week 1 (Days 1–7)' : 'Week 2 (Days 8–14)'}
                   </button>
                 ))}
-                
+
                 {/* Premium 1-Month Button */}
                 <Link
                   href={`/Pages/premium?${emailParam ? 'email' : 'patientId'}=${encodeURIComponent(identifier)}`}
