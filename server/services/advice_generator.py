@@ -25,7 +25,7 @@ def generate_two_week_advice(
     emotion: str,
     mental_health_level: str,
     polypharmacy_risk: str,
-    occupation: str,
+
     medications: Optional[list] = None,
     patient_name: Optional[str] = None,
     age: Optional[int] = None,
@@ -37,7 +37,7 @@ def generate_two_week_advice(
         emotion: Detected emotion (e.g., "Happy", "Sad", "Neutral", "Anxious")
         mental_health_level: Mental health assessment level (e.g., "Low", "Moderate", "High")
         polypharmacy_risk: Polypharmacy risk level (e.g., "Low", "Medium", "High", "Critical")
-        occupation: Current or past occupation (e.g., "Engineer", "Teacher", "Retired")
+
         medications: List of medication names (optional)
         patient_name: Patient's name (optional)
         age: Patient's age (optional)
@@ -117,7 +117,7 @@ def generate_two_week_advice(
             f"Detected Emotion: {emotion}",
             f"Mental Health Level: {mental_health_level}",
             f"Polypharmacy Risk: {polypharmacy_risk}",
-            f"Occupation: {occupation}"
+
         ])
         if medications:
             context_parts.append(f"Current Medications: {', '.join(medications)}")
@@ -133,7 +133,7 @@ PATIENT CONTEXT:
 Your task: Generate a personalized 2-week (14-day) health and wellness plan. The advice should be:
 1. Non-medical (focused on lifestyle, not medications)
 2. Safe for elderly patients with potential polypharmacy
-3. Contextual to the patient's emotional state and occupation
+3. Contextual to the patient's emotional state
 4. Practical and actionable
 5. Emphasizing prevention, mental wellness, and quality of life
 
@@ -164,7 +164,7 @@ Important:
 - Each day should have 1-2 actionable recommendations
 - Consider the patient's emotional state (e.g., sadness → focus on positive activities)
 - Factor in polypharmacy risk (e.g., high risk → emphasize safe activities, hydration, monitoring)
-- Make advice relevant to their occupation/lifestyle
+
 - Balance physical activity, mental wellness, nutrition, sleep, and social connection
 - Week 2 should build on Week 1 themes with progression/advancement"""
 

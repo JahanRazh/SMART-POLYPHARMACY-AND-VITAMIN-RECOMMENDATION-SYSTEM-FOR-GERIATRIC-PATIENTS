@@ -2,7 +2,8 @@ from flask import jsonify, request
 import os
 import pandas as pd
 import difflib
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+import pytz
 
 from db import get_db
 from services.advice_generator import generate_two_week_advice
@@ -27,7 +28,7 @@ def patient_advice():
     Fetch or generate personalized 2-week health advice for a patient.
     
     Flow:
-    1. Fetch patient data (emotion, mental health, polypharmacy risk, occupation)
+    1. Fetch patient data (emotion, mental health, polypharmacy risk)
     2. Check Firestore for cached advice (< 7 days old)
     3. If not fresh → Generate new advice using Google Gemini API
     4. Store/update in Firestore
@@ -185,7 +186,7 @@ def patient_advice():
     # Extract patient input features
     emotion = _safe_get(patient_data, ["detectedEmotion", "detected_emotion", "emotion", "most_emotion"]) or ""
     mental_health = _safe_get(patient_data, ["mental_health_level", "mentalHealthLevel", "mental_health_Risk", "mental_health"]) or ""
-    occupation = _safe_get(patient_data, ["occupation", "Past_Occupation", "past_occupation"]) or ""
+
 
     risk_calc = poly_data.get("riskCalculation") if isinstance(poly_data, dict) else None
     poly_risk = ""
@@ -197,14 +198,14 @@ def patient_advice():
     emotion = (emotion or "").strip()
     mental_health = (mental_health or "").strip()
     poly_risk = (poly_risk or "").strip()
-    occupation = (occupation or "").strip()
+
 
     # Log extracted data for debugging
     print(f"\n📊 Extracted patient inputs for {email}:")
     print(f"  - Emotion: '{emotion}'")
     print(f"  - Mental Health: '{mental_health}'")
     print(f"  - Polypharmacy Risk: '{poly_risk}'")
-    print(f"  - Occupation: '{occupation}'")
+
 
     # Use defaults for missing data instead of rejecting
     # This allows advice generation even if some fields are empty
@@ -217,9 +218,7 @@ def patient_advice():
     if not poly_risk:
         poly_risk = "Unknown"
         print(f"  ⚠️ No polypharmacy risk data, using default: '{poly_risk}'")
-    if not occupation:
-        occupation = "Not specified"
-        print(f"  ⚠️ No occupation data, using default: '{occupation}'")
+
     
     # Now at least check if we found patient data at all
     if not patient_data or (not patient_name and not patient_age):
@@ -242,9 +241,18 @@ def patient_advice():
                 if generated_date:
                     try:
                         if isinstance(generated_date, str):
-                            generated_date = datetime.fromisoformat(generated_date)
-                        days_old = (datetime.now() - generated_date).days
-                        if days_old < 7:
+                            generated_date = datetime.fromisoformat(generated_date.replace("Z", "+00:00"))
+                        
+                        # Use timezone-aware datetime for comparison
+                        sl_tz = pytz.timezone('Asia/Colombo')
+                        now_sl = datetime.now(sl_tz)
+                        
+                        # Ensure generated_date is timezone aware before subtraction
+                        if generated_date.tzinfo is None:
+                            generated_date = sl_tz.localize(generated_date)
+                            
+                        days_old = (now_sl - generated_date).days
+                        if days_old < 14:
                             cached_advice = cached_data
                             print(f"✅ Using cached advice for {email} (generated {days_old} days ago)")
                     except Exception as e:
@@ -265,7 +273,7 @@ def patient_advice():
                 "emotion": emotion,
                 "mental_health_level": mental_health,
                 "polypharmacy_risk": poly_risk,
-                "occupation": occupation,
+
             }
         }), 200
 
@@ -275,7 +283,7 @@ def patient_advice():
         emotion=emotion,
         mental_health_level=mental_health,
         polypharmacy_risk=poly_risk,
-        occupation=occupation,
+
         medications=medications,
         patient_name=patient_name,
         age=patient_age
@@ -309,8 +317,9 @@ def patient_advice():
         }), 500
 
     # Store advice in Firestore
-    now = datetime.now()
-    expires = now + timedelta(days=7)
+    sl_tz = pytz.timezone('Asia/Colombo')
+    now = datetime.now(sl_tz)
+    expires = now + timedelta(days=14)
     
     advice_to_store = {
         "email": email,
@@ -319,13 +328,13 @@ def patient_advice():
         "week_1": week_1,
         "week_2": week_2,
         "summary": advice_result.get("summary", ""),
-        "advice_generated_date": now.strftime('%Y-%m-%dT%H:%M:%S'),
-        "advice_expires_date": expires.strftime('%Y-%m-%dT%H:%M:%S'),
+        "advice_generated_date": now.isoformat(timespec='seconds'),
+        "advice_expires_date": expires.isoformat(timespec='seconds'),
         "inputs": {
             "emotion": emotion,
             "mental_health_level": mental_health,
             "polypharmacy_risk": poly_risk,
-            "occupation": occupation,
+
         },
         "source": "gemini_api",
         "medications": medications,
@@ -348,13 +357,13 @@ def patient_advice():
         "week_2": week_2,
         "summary": advice_result.get("summary", ""),
         "source": "gemini_api",
-        "generated_date": now.strftime('%Y-%m-%dT%H:%M:%S'),
-        "expires_date": expires.strftime('%Y-%m-%dT%H:%M:%S'),
+        "generated_date": now.isoformat(timespec='seconds'),
+        "expires_date": expires.isoformat(timespec='seconds'),
         "inputs": {
             "emotion": emotion,
             "mental_health_level": mental_health,
             "polypharmacy_risk": poly_risk,
-            "occupation": occupation,
+
         }
     }), 200
 

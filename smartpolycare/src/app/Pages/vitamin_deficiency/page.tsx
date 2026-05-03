@@ -10,6 +10,12 @@ import * as XLSX from "xlsx";
 
 /* ================= TYPES ================= */
 
+type DrugDosage = {
+  dosage_mg: string;
+  quantity: string;
+  duration_weeks: string;
+};
+
 type VitaminResult = {
   vitamin: string;
   name: string;
@@ -17,6 +23,7 @@ type VitaminResult = {
   foods: string[];
   icon: string;
   contributing_pairs: string[];
+  risk_percentage: number;
 };
 
 type PairDetail = {
@@ -32,6 +39,8 @@ type PredictionResponse = {
   predicted_vitamins: string[];
   pair_details: PairDetail[];
   total_pairs_analyzed: number;
+  overall_risk_percentage: number;
+  dosage_info: DrugDosage[];
 };
 
 /* ================= API BASE ================= */
@@ -42,7 +51,10 @@ const API = "http://localhost:5000/api/vitamin-deficiency";
 export default function VitaminDeficiencyPage() {
   const { user, userProfile } = useAuth();
   /* ---- state ---- */
-  const [drugs, setDrugs] = useState<string[]>(["", "", "", "", ""]);
+  const [drugs, setDrugs] = useState<string[]>(["" , "", "", "", ""]);
+  const [drugDosages, setDrugDosages] = useState<DrugDosage[]>(
+    Array(5).fill(null).map(() => ({ dosage_mg: "", quantity: "", duration_weeks: "" }))
+  );
   const [drugSuggestions, setDrugSuggestions] = useState<Record<number, string[]>>({});
   const [activeDrugDrop, setActiveDrugDrop] = useState<number | null>(null);
 
@@ -71,8 +83,35 @@ export default function VitaminDeficiencyPage() {
       .then((r) => r.ok ? r.json() : null)
       .then((data) => {
         if (data && data.inputDrugs) {
-          setDrugs(data.inputDrugs);
+          // Restore input drugs
+          const restoredDrugs = [...data.inputDrugs];
+          // Ensure we have at least 5 empty slots if less than 5 drugs were saved
+          while (restoredDrugs.length < 5) restoredDrugs.push("");
+          setDrugs(restoredDrugs);
+
           setSelectedSymptoms(data.inputSymptoms || []);
+
+          if (data.dosageInfo && data.dosageInfo.length > 0) {
+            const restoredDosages = [...data.dosageInfo];
+            while (restoredDosages.length < 5) {
+              restoredDosages.push({ dosage_mg: "", quantity: "", duration_weeks: "" });
+            }
+            setDrugDosages(restoredDosages);
+          }
+
+          if (data.predictions) {
+            const validCount = data.inputDrugs.length;
+            setResults({
+              predictions: data.predictions,
+              drugs: data.inputDrugs,
+              symptoms: data.inputSymptoms || [],
+              predicted_vitamins: [],
+              pair_details: data.pairDetails || [],
+              total_pairs_analyzed: validCount >= 2 ? (validCount * (validCount - 1)) / 2 : 0,
+              overall_risk_percentage: data.overallRiskPercentage || 0,
+              dosage_info: data.dosageInfo || []
+            });
+          }
         }
       })
       .catch(() => { });
@@ -119,13 +158,23 @@ export default function VitaminDeficiencyPage() {
     setDrugs(updated);
   };
 
+  const updateDosage = (index: number, field: keyof DrugDosage, value: string) => {
+    setDrugDosages((prev) => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], [field]: value };
+      return updated;
+    });
+  };
+
   const addDrug = () => {
     setDrugs([...drugs, ""]);
+    setDrugDosages([...drugDosages, { dosage_mg: "", quantity: "", duration_weeks: "" }]);
   };
 
   const removeDrug = (index: number) => {
     if (drugs.length <= 5) return; // minimum 5 fields always open
     setDrugs(drugs.filter((_, i) => i !== index));
+    setDrugDosages(drugDosages.filter((_, i) => i !== index));
     setDrugSuggestions({});
     setActiveDrugDrop(null);
   };
@@ -165,6 +214,11 @@ export default function VitaminDeficiencyPage() {
           userId: user?.uid,
           drugs: validDrugs,
           symptoms: selectedSymptoms,
+          dosageInfo: validDrugs.map((_, idx) => ({
+            dosage_mg: parseFloat(drugDosages[idx]?.dosage_mg || "0") || 0,
+            quantity: parseInt(drugDosages[idx]?.quantity || "1", 10) || 1,
+            duration_weeks: parseInt(drugDosages[idx]?.duration_weeks || "0", 10) || 0,
+          })),
         }),
       });
 
@@ -184,12 +238,24 @@ export default function VitaminDeficiencyPage() {
   };
 
   /* ---- reset ---- */
-  const handleReset = () => {
+  const handleReset = async () => {
     setDrugs(["", "", "", "", ""]);
+    setDrugDosages(Array(5).fill(null).map(() => ({ dosage_mg: "", quantity: "", duration_weeks: "" })));
     setSelectedSymptoms([]);
     setResults(null);
     setError("");
     setDrugSuggestions({});
+
+    // Delete saved assessment from DB
+    if (user) {
+      try {
+        await fetch(`${API}/assessment?userId=${user.uid}`, {
+          method: "DELETE",
+        });
+      } catch (err) {
+        console.error("Failed to delete assessment", err);
+      }
+    }
   };
 
   /* ---- handle exports ---- */
@@ -225,17 +291,18 @@ export default function VitaminDeficiencyPage() {
       v.name,
       v.description,
       v.contributing_pairs.join(", "),
+      `${v.risk_percentage}%`,
       v.foods.join(", ")
     ]);
 
     autoTable(doc, {
       startY: finalY + 20,
-      head: [["Vitamin", "Risk Description", "Causing Drug Pair", "Dietary Sources Needed"]],
-      body: vulnerabilityData.length > 0 ? vulnerabilityData : [["None", "No specific vulnerabilities detected", "-", "-"]],
+      head: [["Vitamin", "Risk Description", "Causing Drug Pair", "Risk %", "Dietary Sources Needed"]],
+      body: vulnerabilityData.length > 0 ? vulnerabilityData : [["None", "No specific vulnerabilities detected", "-", "-", "-"]],
       theme: "grid",
       headStyles: { fillColor: [16, 185, 129] },
       styles: { cellPadding: 4, fontSize: 10 },
-      columnStyles: { 0: { cellWidth: 30 }, 2: { cellWidth: 40 } }
+      columnStyles: { 0: { cellWidth: 28 }, 2: { cellWidth: 38 }, 3: { cellWidth: 18 } }
     });
 
     doc.save("vitamin_assessment_report.pdf");
@@ -260,6 +327,7 @@ export default function VitaminDeficiencyPage() {
       "Target Vitamin": v.name,
       "Vitamin Key": v.vitamin,
       "Description": v.description,
+      "Risk Percentage": `${v.risk_percentage}%`,
       "Reactions Causes By": v.contributing_pairs.join(" | "),
       "Suggested Dietary Replacements": v.foods.join(", ")
     }));
@@ -375,38 +443,76 @@ export default function VitaminDeficiencyPage() {
           <div className={styles.drugList}>
             {drugs.map((drug, i) => (
               <div key={i} className={styles.drugInputRow}>
-                <div className={styles.drugInputWrapper} style={{ flex: 1 }}>
-                  <label className={styles.inputLabel}>Medication {i + 1}</label>
-                  <input
-                    className={styles.textInput}
-                    placeholder="Type drug name..."
-                    value={drug}
-                    onChange={(e) => {
-                      updateDrug(i, e.target.value);
-                      searchDrugs(e.target.value, i);
-                      setActiveDrugDrop(i);
-                    }}
-                    onFocus={() => {
-                      if (drugSuggestions[i] && drugSuggestions[i].length > 0)
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  <div className={styles.drugInputWrapper} style={{ flex: 1 }}>
+                    <label className={styles.inputLabel}>Medication {i + 1}</label>
+                    <input
+                      className={styles.textInput}
+                      placeholder="Type drug name..."
+                      value={drug}
+                      onChange={(e) => {
+                        updateDrug(i, e.target.value);
+                        searchDrugs(e.target.value, i);
                         setActiveDrugDrop(i);
-                    }}
-                  />
-                  {activeDrugDrop === i && drugSuggestions[i] && drugSuggestions[i].length > 0 && (
-                    <ul className={styles.suggestionsList}>
-                      {drugSuggestions[i].map((d) => (
-                        <li
-                          key={d}
-                          className={styles.suggestionItem}
-                          onClick={() => {
-                            updateDrug(i, d);
-                            setActiveDrugDrop(null);
-                          }}
-                        >
-                          {d}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
+                      }}
+                      onFocus={() => {
+                        if (drugSuggestions[i] && drugSuggestions[i].length > 0)
+                          setActiveDrugDrop(i);
+                      }}
+                    />
+                    {activeDrugDrop === i && drugSuggestions[i] && drugSuggestions[i].length > 0 && (
+                      <ul className={styles.suggestionsList}>
+                        {drugSuggestions[i].map((d) => (
+                          <li
+                            key={d}
+                            className={styles.suggestionItem}
+                            onClick={() => {
+                              updateDrug(i, d);
+                              setActiveDrugDrop(null);
+                            }}
+                          >
+                            {d}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                  {/* Dosage / Quantity / Duration row */}
+                  <div className={styles.dosageRow}>
+                    <div className={styles.dosageField}>
+                      <label className={styles.inputLabel}>Dosage (mg)</label>
+                      <input
+                        className={styles.textInput}
+                        type="number"
+                        min="0"
+                        placeholder="e.g. 500"
+                        value={drugDosages[i]?.dosage_mg ?? ""}
+                        onChange={(e) => updateDosage(i, "dosage_mg", e.target.value)}
+                      />
+                    </div>
+                    <div className={styles.dosageField}>
+                      <label className={styles.inputLabel}>Quantity</label>
+                      <input
+                        className={styles.textInput}
+                        type="number"
+                        min="1"
+                        placeholder="e.g. 2"
+                        value={drugDosages[i]?.quantity ?? ""}
+                        onChange={(e) => updateDosage(i, "quantity", e.target.value)}
+                      />
+                    </div>
+                    <div className={styles.dosageField}>
+                      <label className={styles.inputLabel}>Duration (weeks)</label>
+                      <input
+                        className={styles.textInput}
+                        type="number"
+                        min="0"
+                        placeholder="e.g. 4"
+                        value={drugDosages[i]?.duration_weeks ?? ""}
+                        onChange={(e) => updateDosage(i, "duration_weeks", e.target.value)}
+                      />
+                    </div>
+                  </div>
                 </div>
                 {drugs.length > 5 && (
                   <button
@@ -583,6 +689,35 @@ export default function VitaminDeficiencyPage() {
                 </div>
 
                 <p className={styles.vitaminDesc}>{v.description}</p>
+
+                {/* ── Risk Percentage Bar ── */}
+                <div className={styles.riskSection}>
+                  <div className={styles.riskLabelRow}>
+                    <span className={styles.riskLabel}>Deficiency Risk</span>
+                    <span className={styles.riskValue}>{v.risk_percentage}%</span>
+                  </div>
+                  <div className={styles.riskBarTrack}>
+                    <div
+                      className={styles.riskBarFill}
+                      style={{
+                        width: `${v.risk_percentage}%`,
+                        background:
+                          v.risk_percentage >= 80
+                            ? "linear-gradient(90deg,#ef4444,#b91c1c)"
+                            : v.risk_percentage >= 60
+                            ? "linear-gradient(90deg,#f97316,#ea580c)"
+                            : "linear-gradient(90deg,#eab308,#ca8a04)",
+                      }}
+                    />
+                  </div>
+                  <p className={styles.riskNote}>
+                    {v.risk_percentage >= 80
+                      ? "⚠️ High risk — immediate medical consultation recommended"
+                      : v.risk_percentage >= 60
+                      ? "🔶 Moderate risk — monitor closely"
+                      : "🟡 Elevated risk — dietary adjustment advised"}
+                  </p>
+                </div>
 
                 {v.contributing_pairs && v.contributing_pairs.length > 0 && (
                   <div className={styles.dataSection}>

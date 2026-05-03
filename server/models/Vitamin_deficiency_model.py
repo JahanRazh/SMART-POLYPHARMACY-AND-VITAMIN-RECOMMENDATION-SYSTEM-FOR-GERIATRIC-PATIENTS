@@ -137,7 +137,40 @@ def _predict_pair(drug1: str, drug2: str, symptoms_clean: list) -> list:
     return list(pair_vitamins)
 
 
-def predict_vitamin_deficiency(drugs: list, symptoms: list) -> dict:
+def _calculate_risk_percentage(dosage_info: list) -> float:
+    """
+    Calculate risk percentage based on dosage and duration heuristic.
+    Base risk percentage starts at 45%.
+    +1% for every 10mg over (qty * dosage) across all drugs.
+    +2.0% for every 1 week of duration across all drugs.
+    Maximum 100%.
+
+    Args:
+        dosage_info: list of dicts [{"dosage_mg": float, "quantity": int, "duration_weeks": int}, ...]
+
+    Returns:
+        float risk percentage (45.0 – 100.0)
+    """
+    risk = 45.0
+
+    for info in dosage_info:
+        try:
+            dosage_mg = float(info.get("dosage_mg", 0) or 0)
+            quantity = int(info.get("quantity", 1) or 1)
+            duration_weeks = int(info.get("duration_weeks", 0) or 0)
+        except (ValueError, TypeError):
+            continue
+
+        effective_mg = quantity * dosage_mg
+        # +1% for every 10mg
+        risk += (effective_mg / 10.0) * 1.0
+        # +2% for every 1 week of duration 
+        risk += duration_weeks * 2.0
+
+    return min(round(risk, 1), 100.0)
+
+
+def predict_vitamin_deficiency(drugs: list, symptoms: list, dosage_info: list = None) -> dict:
     """
     Predict vitamin deficiencies from multiple drugs and a list of symptoms.
 
@@ -145,9 +178,15 @@ def predict_vitamin_deficiency(drugs: list, symptoms: list) -> dict:
     pairwise combinations from the drug list, predicts for each pair, and
     aggregates the unique vitamin deficiency results.
 
+    For identified vitamin deficiencies only, a risk percentage is calculated
+    based on the provided dosage, quantity, and duration inputs.
+    Other records are stored normally without a percentage.
+
     Args:
         drugs: list of drug name strings (minimum 2)
         symptoms: list of symptom strings
+        dosage_info: optional list of dicts per drug:
+                     [{"dosage_mg": float, "quantity": int, "duration_weeks": int}, ...]
 
     Returns:
         dict with 'predictions', 'pair_details', 'drugs', 'symptoms', etc.
@@ -155,6 +194,26 @@ def predict_vitamin_deficiency(drugs: list, symptoms: list) -> dict:
     _load_artifacts()
 
     symptoms_clean = [s.strip().lower().replace(" ", "") for s in symptoms if s.strip()]
+
+    # Normalise dosage_info — align with drugs list
+    if dosage_info is None:
+        dosage_info = []
+    # Pad / trim to match drug count
+    aligned_dosage = []
+    for i in range(len(drugs)):
+        if i < len(dosage_info):
+            aligned_dosage.append(dosage_info[i])
+        else:
+            aligned_dosage.append({"dosage_mg": 0, "quantity": 1, "duration_weeks": 0})
+
+    # Calculate overall risk percentage for identified deficiencies
+    risk_percentage = _calculate_risk_percentage(aligned_dosage)
+
+    # Build drug-name → dosage-index lookup (case-insensitive, space-stripped)
+    drug_dosage_map = {
+        d.strip().lower(): aligned_dosage[i]
+        for i, d in enumerate(drugs)
+    }
 
     # Generate all pairwise combinations and predict
     all_vitamins = set()
@@ -164,10 +223,16 @@ def predict_vitamin_deficiency(drugs: list, symptoms: list) -> dict:
         pair_vitamins = _predict_pair(d1, d2, symptoms_clean)
         all_vitamins.update(pair_vitamins)
         if pair_vitamins:
+            # Collect dosage info for this specific pair
+            pair_dosage = [
+                drug_dosage_map.get(d1.strip().lower(), {"dosage_mg": 0, "quantity": 1, "duration_weeks": 0}),
+                drug_dosage_map.get(d2.strip().lower(), {"dosage_mg": 0, "quantity": 1, "duration_weeks": 0}),
+            ]
             pair_details.append({
                 "drug1": d1.strip(),
                 "drug2": d2.strip(),
                 "vitamins": [v.strip() for v in pair_vitamins],
+                "pair_dosage": pair_dosage,
             })
 
     # Build rich result with vitamin metadata
@@ -180,25 +245,43 @@ def predict_vitamin_deficiency(drugs: list, symptoms: list) -> dict:
             "foods": [],
             "icon": "💊",
         })
-        # Find which drug pairs contributed this deficiency
+
+        # Find which drug pairs contributed this specific deficiency
         contributing_pairs = [
             f"{p['drug1']} + {p['drug2']}"
             for p in pair_details
             if v_stripped in p["vitamins"]
         ]
+
+        # Calculate risk % using ONLY the dosages of contributing pairs for this vitamin
+        vitamin_dosage_entries = []
+        for p in pair_details:
+            if v_stripped in p["vitamins"]:
+                vitamin_dosage_entries.extend(p["pair_dosage"])
+
+        vitamin_risk = _calculate_risk_percentage(vitamin_dosage_entries) if vitamin_dosage_entries else 45.0
+
         results.append({
             "vitamin": v_stripped,
             **info,
             "contributing_pairs": contributing_pairs,
+            "risk_percentage": vitamin_risk,
         })
+
+    overall_risk = _calculate_risk_percentage(aligned_dosage)
 
     return {
         "predictions": results,
         "drugs": [d.strip() for d in drugs],
         "symptoms": symptoms_clean,
         "predicted_vitamins": sorted([v.strip() for v in all_vitamins]),
-        "pair_details": pair_details,
+        "pair_details": [
+            {"drug1": p["drug1"], "drug2": p["drug2"], "vitamins": p["vitamins"]}
+            for p in pair_details
+        ],
         "total_pairs_analyzed": len(list(combinations(drugs, 2))),
+        "overall_risk_percentage": overall_risk,
+        "dosage_info": aligned_dosage,
     }
 
 
@@ -246,7 +329,9 @@ def save_vitamin_assessment(
     drugs: list,
     symptoms: list,
     predictions: list,
-    pair_details: list
+    pair_details: list,
+    dosage_info: list = None,
+    overall_risk_percentage: float = None,
 ) -> dict:
     """Persist the latest vitamin deficiency assessment for the user."""
     db = get_db()
@@ -274,6 +359,8 @@ def save_vitamin_assessment(
         "inputSymptoms": symptoms,
         "predictions": predictions,
         "pairDetails": pair_details,
+        "dosageInfo": dosage_info or [],
+        "overallRiskPercentage": overall_risk_percentage,
         "updatedAt": timestamp,
     }
     
@@ -289,6 +376,19 @@ def save_vitamin_assessment(
         
     doc_ref.set(payload)
     
+    # Add to history records collection to match the removed frontend logic
+    try:
+        db.collection("vitamin_deficiency_records").add({
+            "userEmail": user_profile.get("email", "unknown"),
+            "userId": user_id,
+            "inputDrugs": drugs,
+            "inputSymptoms": symptoms,
+            "predictionResults": payload,
+            "timestamp": datetime.utcnow()
+        })
+    except Exception as e:
+        print(f"Failed to append to history records: {e}")
+    
     payload["id"] = doc_ref.id
     return payload
 
@@ -303,3 +403,13 @@ def get_vitamin_assessment(user_id: str) -> dict:
     data = doc.to_dict()
     data["id"] = doc.id
     return data
+
+def delete_vitamin_assessment(user_id: str) -> bool:
+    """Delete the latest vitamin deficiency assessment for a user."""
+    db = get_db()
+    doc_ref = db.collection(VITAMIN_COLLECTION).document(user_id)
+    doc = doc_ref.get()
+    if doc.exists:
+        doc_ref.delete()
+        return True
+    return False

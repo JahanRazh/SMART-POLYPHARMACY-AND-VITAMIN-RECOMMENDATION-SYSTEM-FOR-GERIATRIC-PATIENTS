@@ -1,10 +1,25 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, Suspense } from 'react';
+import dynamic from 'next/dynamic';
 import { motion } from 'framer-motion';
 import axios from 'axios';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
+import { useAuth } from '@/app/components/Contexts/AuthContext';
+import { generatePatientReport } from '@/app/utils/generateReport';
+
+// Dynamic import avoids SSR issues with Recharts canvas
+const MentalHealthGraph = dynamic(
+  () => import('@/app/components/MentalHealthGraph'),
+  {
+    ssr: false, loading: () => (
+      <div className="rounded-2xl bg-white border border-gray-100 shadow-sm p-6 mb-8 flex items-center justify-center h-48">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-indigo-200 border-t-indigo-600" />
+      </div>
+    )
+  }
+);
 
 type DailyRecommendation = {
   day: number;
@@ -22,8 +37,24 @@ type TwoWeekAdvice = {
     emotion: string;
     mental_health_level: string;
     polypharmacy_risk: string;
-    occupation: string;
   };
+  // Snapshot fields saved to history
+  polypharmacy_advices?: { icon: string; title: string; detail: string }[];
+  lab_tests?: { vitamin: string; name: string; test: string }[];
+  vitamin_deficiencies?: string[];
+};
+
+const VITAMIN_LAB_TESTS: Record<string, { test: string, description: string, why?: string }> = {
+  "D": { test: "25-Hydroxy Vitamin D (25(OH)D)", description: "Bone pain, weakness, fatigue", why: "Best indicator of overall Vitamin D status" },
+  "B12": { test: "Serum Vitamin B12", description: "Nerve problems, anemia, memory issues", why: "More accurate (if borderline): Methylmalonic Acid (MMA), Homocysteine" },
+  "Folate": { test: "Serum Folate (or RBC Folate for long-term status)", description: "Anemia, fatigue" },
+  "B1": { test: "Whole blood Thiamine or Thiamine Pyrophosphate", description: "Nerve and heart issues (common in alcohol use)" },
+  "B6": { test: "Plasma Pyridoxal-5-Phosphate (PLP)", description: "Skin issues, anemia, confusion" },
+  "B7": { test: "Serum Biotin (rare)", description: "Hair loss, dermatitis" },
+  "A": { test: "Serum Retinol", description: "Night blindness, dry eyes" },
+  "E": { test: "Serum Alpha-Tocopherol", description: "Nerve and muscle damage (rare)" },
+  "K": { test: "Prothrombin Time (PT/INR) (indirect test)", description: "Bleeding problems" },
+  "C": { test: "Plasma/Serum Ascorbic Acid", description: "Measures level of ascorbic acid in blood" }
 };
 
 // ─── Stable axios instance outside component to avoid re-creation ────────────
@@ -60,22 +91,57 @@ function formatDate(dateString?: string): string {
 // ─── Inner component (uses useSearchParams — must be inside Suspense) ─────────
 function PatientAdviceContent() {
   const searchParams = useSearchParams();
-  const patientId  = searchParams.get('patientId');
+  const patientId = searchParams.get('patientId');
   const emailParam = searchParams.get('email');
+  const { user } = useAuth();
 
   // Prefer email, fall back to patientId
   const identifier = emailParam || patientId;
 
-  const [advice, setAdvice]         = useState<TwoWeekAdvice | null>(null);
-  const [loading, setLoading]       = useState<boolean>(true);
-  const [error, setError]           = useState<string>('');
-  const [activeWeek, setActiveWeek] = useState<'week_1' | 'week_2'>('week_1');
+  const [advice, setAdvice] = useState<TwoWeekAdvice | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string>('');
   const [refreshing, setRefreshing] = useState<boolean>(false);
+  const [vitaminAssessment, setVitaminAssessment] = useState<any>(null);
+  const [psychometricScores, setPsychometricScores] = useState<{ gds15: number; gad7: number; mmas8: number; iadl: number } | null>(null);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
+
+  // Prevention for duplicate concurrent fetches
+  const isFetchingRef = React.useRef(false);
+  const [activeWeek, setActiveWeek] = useState<'week_1' | 'week_2'>('week_1');
 
   // ── fetchAdvice is stable thanks to useCallback ──────────────────────────
   const saveAdviceToHistory = useCallback(
-    async (adviceData: TwoWeekAdvice) => {
+    async (adviceData: TwoWeekAdvice, vitaminData?: any) => {
       try {
+        // Build polypharmacy advices snapshot based on risk level
+        const risk = (adviceData.inputs?.polypharmacy_risk || '').toLowerCase();
+        const isVeryHigh = risk.includes('very high');
+        const isHigh = !isVeryHigh && risk.includes('high');
+        const highAdvices = [
+          { icon: '🔄', title: 'Review medications regularly', detail: 'Schedule a doctor/pharmacist review to check necessity, duplication, and interactions.' },
+          { icon: '🚫', title: 'Avoid self-medication', detail: 'Do not take over-the-counter drugs, herbal products, or supplements without approval.' },
+          { icon: '🩺', title: 'Monitor your health routinely', detail: 'Check liver, kidney, blood pressure, and blood sugar every 3–6 months.' },
+          { icon: '⚠️', title: 'Watch for side effects early', detail: 'Report symptoms like dizziness, fatigue, nausea, or confusion immediately.' },
+          { icon: '🥗', title: 'Maintain a healthy lifestyle', detail: 'Stay hydrated, limit salt and alcohol, and follow a balanced diet to protect organs.' },
+        ];
+        const veryHighAdvices = [
+          { icon: '🚨', title: 'Urgent comprehensive medication review', detail: 'Immediate evaluation by a doctor to reduce unnecessary drugs (deprescribing).' },
+          { icon: '⛔', title: 'Strictly avoid all non-prescribed substances', detail: 'No OTC drugs, supplements, or herbal remedies unless medically approved.' },
+          { icon: '🔬', title: 'Close and frequent monitoring', detail: 'Perform lab tests (liver, kidney, electrolytes) and clinical follow-ups regularly.' },
+          { icon: '💊', title: 'Simplify medication regimen', detail: 'Use the lowest effective doses and reduce complexity to prevent errors.' },
+          { icon: '🆘', title: 'Be alert for serious warning signs', detail: 'Seek medical help if experiencing confusion, severe weakness, reduced urine, or yellowing of eyes/skin.' },
+        ];
+        const polypharmacyAdvices = isVeryHigh ? veryHighAdvices : isHigh ? highAdvices : [];
+
+        // Build lab tests snapshot from vitamin predictions
+        const labTests = (vitaminData?.predictions || []).map((pred: any) => {
+          const info = VITAMIN_LAB_TESTS[pred.vitamin];
+          return info ? { vitamin: pred.vitamin, name: pred.name || `Vitamin ${pred.vitamin}`, test: info.test } : null;
+        }).filter(Boolean);
+
+        const vitaminDeficiencies = (vitaminData?.predictions || []).map((p: any) => p.name || p.vitamin);
+
         const payload = {
           email: identifier,
           week_1: adviceData.week_1,
@@ -84,7 +150,13 @@ function PatientAdviceContent() {
           generated_date: adviceData.generated_date,
           expires_date: adviceData.expires_date,
           inputs: adviceData.inputs,
+          polypharmacy_advices: polypharmacyAdvices,
+          lab_tests: labTests,
+          vitamin_deficiencies: vitaminDeficiencies,
         };
+
+        if (isFetchingRef.current) return;
+        isFetchingRef.current = true;
 
         console.log('💾 Auto-saving advice to history...');
         await api.post('/save-advice', payload);
@@ -92,6 +164,8 @@ function PatientAdviceContent() {
       } catch (err: any) {
         console.warn('⚠️ Failed to auto-save advice:', err);
         // Don't break the UI if saving fails
+      } finally {
+        isFetchingRef.current = false;
       }
     },
     [identifier]
@@ -111,9 +185,8 @@ function PatientAdviceContent() {
 
       try {
         const paramName = emailParam ? 'email' : 'patientId';
-        const endpoint  = `/patient-advice?${paramName}=${encodeURIComponent(identifier)}${
-          forceRegenerate ? '&force_regenerate=true' : ''
-        }`;
+        const endpoint = `/patient-advice?${paramName}=${encodeURIComponent(identifier)}${forceRegenerate ? '&force_regenerate=true' : ''
+          }`;
 
         console.log(`📡 Fetching advice: ${endpoint}`);
         const response = await api.get(endpoint);
@@ -126,8 +199,48 @@ function PatientAdviceContent() {
           Array.isArray(data.week_1) && Array.isArray(data.week_2)
         ) {
           setAdvice(data);
-          // Auto-save to history
-          await saveAdviceToHistory(data);
+
+          // Fetch vitamin assessment first, then save everything to history together
+          let vitaminData: any = null;
+          const uid = user?.uid;
+          if (uid) {
+            try {
+              const vitEndpoint = `/vitamin-deficiency/assessment?userId=${encodeURIComponent(uid)}`;
+              console.log(`📡 Fetching vitamin assessment by UID: ${vitEndpoint}`);
+              const vitResponse = await api.get(vitEndpoint);
+              if (vitResponse.data && vitResponse.data.predictions) {
+                vitaminData = vitResponse.data;
+                setVitaminAssessment(vitResponse.data);
+                console.log('✅ Vitamin assessment loaded:', vitResponse.data.predictions.length, 'deficiencies');
+              }
+            } catch (vitErr) {
+              console.warn("No vitamin deficiency assessment found or error:", vitErr);
+            }
+          } else {
+            console.warn("⚠️ No Firebase UID available — skipping vitamin assessment fetch");
+          }
+
+          // Fetch psychometric scores for PDF report
+          try {
+            const psyRes = await fetch(`/api/assessment_history?email=${encodeURIComponent(identifier)}`);
+            if (psyRes.ok) {
+              const psyData = await psyRes.json();
+              const assessments = psyData.assessments || [];
+              if (assessments.length > 0) {
+                const latest = assessments[assessments.length - 1];
+                setPsychometricScores({
+                  gds15: latest.gds15_score ?? 0,
+                  gad7: latest.gad7_score ?? 0,
+                  mmas8: latest.mmas8_score ?? 0,
+                  iadl: latest.iadl_score ?? 0,
+                });
+              }
+            }
+          } catch { /* non-critical */ }
+
+          // Auto-save full snapshot (advice + polypharmacy + lab tests + vitamins) to history via Flask backend
+          await saveAdviceToHistory(data, vitaminData);
+
         } else {
           console.error('Invalid response structure:', data);
           setError(
@@ -138,10 +251,10 @@ function PatientAdviceContent() {
         }
       } catch (err: any) {
         console.error('Error fetching advice:', err);
-        const debugInfo     = err.response?.data?.debug;
-        const errorMessage  =
+        const debugInfo = err.response?.data?.debug;
+        const errorMessage =
           err.response?.data?.message ||
-          err.response?.data?.error    ||
+          err.response?.data?.error ||
           'Failed to fetch personalized advice. Please try again later.';
 
         setError(
@@ -153,8 +266,8 @@ function PatientAdviceContent() {
         setLoading(false);
       }
     },
-    // emailParam changes whenever the URL changes, so include it
-    [identifier, emailParam, saveAdviceToHistory]
+    // emailParam and user change whenever the URL / auth state changes, so include them
+    [identifier, emailParam, saveAdviceToHistory, user]
   );
 
   // Run once on mount (and whenever identifier changes)
@@ -166,6 +279,18 @@ function PatientAdviceContent() {
     setRefreshing(true);
     await fetchAdvice(true);
     setRefreshing(false);
+  };
+
+  const handleDownloadReport = async () => {
+    if (!advice) return;
+    setDownloadingPdf(true);
+    try {
+      generatePatientReport(advice, vitaminAssessment, psychometricScores, identifier || undefined);
+    } catch (err) {
+      console.error('PDF generation failed:', err);
+    } finally {
+      setDownloadingPdf(false);
+    }
   };
 
   const currentWeekData = advice?.[activeWeek] ?? [];
@@ -181,7 +306,10 @@ function PatientAdviceContent() {
         >
           <div className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-teal-600 border-r-transparent" />
           <p className="mt-4 text-lg text-gray-600">
-            Generating your personalized 2-week plan…
+            Preparing your personalized advice report…
+          </p>
+          <p className="mt-2 text-sm text-gray-400">
+            Advice, risk analysis, lab tests & more
           </p>
         </motion.div>
       </div>
@@ -203,12 +331,8 @@ function PatientAdviceContent() {
           </span>
 
           <h1 className="mt-6 text-3xl font-bold leading-tight text-gray-900 sm:text-4xl md:text-5xl">
-            Your 2-Week Personalized Health Plan
+            Your Personalized Advices
           </h1>
-          <p className="mt-4 text-gray-600 md:text-lg leading-relaxed">
-            Based on your emotional state, mental health, medication profile, and lifestyle,
-            here are your personalized recommendations for the next two weeks.
-          </p>
 
           {/* Action buttons */}
           <div className="mt-6 flex flex-wrap gap-3">
@@ -232,6 +356,19 @@ function PatientAdviceContent() {
               >
                 📋 View History
               </Link>
+            )}
+            {advice && (
+              <button
+                onClick={handleDownloadReport}
+                disabled={downloadingPdf}
+                className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 px-5 py-3 text-sm font-semibold text-white transition-all duration-200 hover:shadow-lg hover:shadow-indigo-200 disabled:opacity-50"
+              >
+                {downloadingPdf ? (
+                  <><span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" /> Generating…</>
+                ) : (
+                  <><span>📥</span> Download Report</>
+                )}
+              </button>
             )}
           </div>
 
@@ -265,39 +402,240 @@ function PatientAdviceContent() {
           {/* Advice content */}
           {advice && (
             <div className="mt-10">
-              {/* Summary card */}
+
+
+              {/* ── Patient Profile Overview Cage ── */}
               <motion.div
                 initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4 }}
-                className="rounded-2xl bg-white border border-teal-100 shadow-sm p-6 mb-8"
+                className="rounded-2xl bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-100 shadow-sm p-6 mb-8"
               >
-                <h2 className="text-lg font-bold text-gray-900">Plan Overview</h2>
-                <p className="mt-3 text-gray-700 leading-relaxed">{advice.summary}</p>
+                <div className="flex items-center gap-3 mb-5">
+                  <div className="flex items-center justify-center h-10 w-10 rounded-full bg-indigo-100 text-indigo-600 text-xl">
+                    👤
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold text-gray-900">Your Profile Overview</h2>
+                    <p className="text-sm text-gray-600">A snapshot of your current health inputs</p>
+                  </div>
+                </div>
 
-                <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Patient profile */}
-                  <div className="rounded-lg bg-teal-50 p-4">
-                    <h3 className="text-sm font-semibold text-teal-900">Your Profile</h3>
-                    <ul className="mt-2 space-y-1 text-sm text-teal-800">
-                      {advice.inputs?.emotion            && <li>• Emotion: {advice.inputs.emotion}</li>}
-                      {advice.inputs?.mental_health_level && <li>• Mental Health: {advice.inputs.mental_health_level}</li>}
-                      {advice.inputs?.polypharmacy_risk   && <li>• Medication Risk: {advice.inputs.polypharmacy_risk}</li>}
-                      {advice.inputs?.occupation          && <li>• Occupation: {advice.inputs.occupation}</li>}
-                    </ul>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Emotion Card */}
+                  <div className="rounded-xl bg-white border border-indigo-50 p-4 flex gap-3 shadow-sm items-center">
+                    <span className="text-3xl">🎭</span>
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wider text-indigo-500 mb-0.5">Emotion</p>
+                      <p className="text-sm font-bold text-gray-900">{advice.inputs?.emotion || 'Not detected'}</p>
+                    </div>
                   </div>
 
-                  {/* Plan timeline — uses fixed formatDate */}
-                  <div className="rounded-lg bg-blue-50 p-4">
-                    <h3 className="text-sm font-semibold text-blue-900">Plan Timeline</h3>
-                    <ul className="mt-2 space-y-1 text-sm text-blue-800">
-                      <li>• Generated: {formatDate(advice.generated_date)}</li>
-                      <li>• Expires:&nbsp;&nbsp; {formatDate(advice.expires_date)}</li>
-                      <li>• Duration: 14 days</li>
-                    </ul>
+                  {/* Mental Health Card */}
+                  <div className="rounded-xl bg-white border border-indigo-50 p-4 flex gap-3 shadow-sm items-center">
+                    <span className="text-3xl">🧠</span>
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wider text-indigo-500 mb-0.5">Mental Health</p>
+                      <p className="text-sm font-bold text-gray-900">{advice.inputs?.mental_health_level || 'Not assessed'}</p>
+                    </div>
+                  </div>
+
+                  {/* Medication Risk Card */}
+                  <div className={`rounded-xl bg-white border p-4 flex gap-3 shadow-sm items-center ${(advice.inputs?.polypharmacy_risk || '').toLowerCase().includes('very high') ? 'border-red-200' :
+                      (advice.inputs?.polypharmacy_risk || '').toLowerCase().includes('high') ? 'border-orange-200' :
+                        'border-indigo-50'
+                    }`}>
+                    <span className="text-3xl">💊</span>
+                    <div>
+                      <p className={`text-xs font-semibold uppercase tracking-wider mb-0.5 ${(advice.inputs?.polypharmacy_risk || '').toLowerCase().includes('very high') ? 'text-red-500' :
+                          (advice.inputs?.polypharmacy_risk || '').toLowerCase().includes('high') ? 'text-orange-500' :
+                            'text-indigo-500'
+                        }`}>Medication Risk</p>
+                      <p className={`text-sm font-bold ${(advice.inputs?.polypharmacy_risk || '').toLowerCase().includes('very high') ? 'text-red-700' :
+                          (advice.inputs?.polypharmacy_risk || '').toLowerCase().includes('high') ? 'text-orange-700' :
+                            'text-gray-900'
+                        }`}>{advice.inputs?.polypharmacy_risk || 'Unknown'}</p>
+                    </div>
                   </div>
                 </div>
               </motion.div>
+
+              {/* ── Mental Health & Functional Assessment Line Graph ── */}
+              <MentalHealthGraph email={emailParam || identifier} />
+
+              {/* Recommended Lab Tests Cage (Vitamin Deficiencies) */}
+              <motion.div
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: 0.2 }}
+                className="rounded-2xl bg-blue-50 border border-blue-200 shadow-sm p-6 mb-8"
+              >
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="flex items-center justify-center h-10 w-10 rounded-full bg-blue-100 text-blue-600 text-xl">
+                    🧪
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold text-gray-900">Recommended Lab Tests</h2>
+                    <p className="text-sm text-gray-600">Based on your analyzed vitamin deficiencies</p>
+                  </div>
+                </div>
+
+                {!vitaminAssessment || !vitaminAssessment.predictions || vitaminAssessment.predictions.length === 0 ? (
+                  <div className="text-center p-6 bg-white rounded-xl border border-blue-100">
+                    <p className="text-gray-600 font-medium">No specific vitamin deficiencies detected requiring lab testing.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {vitaminAssessment.predictions.map((pred: any, idx: number) => {
+                      const labTestInfo = VITAMIN_LAB_TESTS[pred.vitamin];
+                      if (!labTestInfo) return null;
+                      return (
+                        <div key={idx} className="rounded-xl border border-blue-100 bg-white p-4 flex flex-col gap-2 shadow-sm">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-xl">{pred.icon || "💊"}</span>
+                            <h3 className="font-bold text-blue-900">{pred.name || `Vitamin ${pred.vitamin}`} Deficiency</h3>
+                          </div>
+
+                          <div className="bg-blue-50/50 rounded-lg p-3 border border-blue-100/50">
+                            <p className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-1">Recommended Test</p>
+                            <p className="text-sm font-medium text-gray-900">{labTestInfo.test}</p>
+                            {labTestInfo.why && <p className="text-xs text-gray-600 mt-1 italic">Why: {labTestInfo.why}</p>}
+                          </div>
+
+                          <div className="mt-1">
+                            <p className="text-xs text-blue-800"><strong>Linked to:</strong> {labTestInfo.description}</p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                <p className="mt-4 text-xs text-gray-500 italic">
+                  * Please present these recommendations to your physician before undergoing any laboratory tests.
+                </p>
+              </motion.div>
+
+              {/* ── Polypharmacy Risk Advice Cage ── */}
+              {(() => {
+                const risk = (advice.inputs?.polypharmacy_risk || '').toLowerCase();
+                const isHigh = risk.includes('very high') ? false : risk.includes('high');
+                const isVeryHigh = risk.includes('very high');
+
+                if (!isHigh && !isVeryHigh) return null;
+
+                const highAdvices = [
+                  { icon: '🔄', title: 'Review medications regularly', detail: 'Schedule a doctor/pharmacist review to check necessity, duplication, and interactions.' },
+                  { icon: '🚫', title: 'Avoid self-medication', detail: 'Do not take over-the-counter drugs, herbal products, or supplements without approval.' },
+                  { icon: '🩺', title: 'Monitor your health routinely', detail: 'Check liver, kidney, blood pressure, and blood sugar every 3–6 months.' },
+                  { icon: '⚠️', title: 'Watch for side effects early', detail: 'Report symptoms like dizziness, fatigue, nausea, or confusion immediately.' },
+                  { icon: '🥗', title: 'Maintain a healthy lifestyle', detail: 'Stay hydrated, limit salt and alcohol, and follow a balanced diet to protect organs.' },
+                ];
+
+                const veryHighAdvices = [
+                  { icon: '🚨', title: 'Urgent comprehensive medication review', detail: 'Immediate evaluation by a doctor to reduce unnecessary drugs (deprescribing).' },
+                  { icon: '⛔', title: 'Strictly avoid all non-prescribed substances', detail: 'No OTC drugs, supplements, or herbal remedies unless medically approved.' },
+                  { icon: '🔬', title: 'Close and frequent monitoring', detail: 'Perform lab tests (liver, kidney, electrolytes) and clinical follow-ups regularly.' },
+                  { icon: '💊', title: 'Simplify medication regimen', detail: 'Use the lowest effective doses and reduce complexity to prevent errors.' },
+                  { icon: '🆘', title: 'Be alert for serious warning signs', detail: 'Seek medical help if experiencing confusion, severe weakness, reduced urine, or yellowing of eyes/skin.' },
+                ];
+
+                const advices = isVeryHigh ? veryHighAdvices : highAdvices;
+                const badgeBg = isVeryHigh ? 'bg-red-100' : 'bg-orange-100';
+                const badgeText = isVeryHigh ? 'text-red-700' : 'text-orange-700';
+                const borderCol = isVeryHigh ? 'border-red-200' : 'border-orange-200';
+                const cageBg = isVeryHigh ? 'bg-red-50' : 'bg-orange-50';
+                const iconBg = isVeryHigh ? 'bg-red-100' : 'bg-orange-100';
+                const iconText = isVeryHigh ? 'text-red-600' : 'text-orange-600';
+                const cardBorder = isVeryHigh ? 'border-red-100' : 'border-orange-100';
+                const titleText = isVeryHigh ? 'text-red-900' : 'text-orange-900';
+                const detailText = isVeryHigh ? 'text-red-700' : 'text-orange-700';
+                const label = isVeryHigh ? 'Very High' : 'High';
+                const emoji = isVeryHigh ? '⛔' : '⚠️';
+
+                return (
+                  <motion.div
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.4, delay: 0.3 }}
+                    className={`rounded-2xl ${cageBg} border ${borderCol} shadow-sm p-6 mb-8`}
+                  >
+                    {/* Cage header */}
+                    <div className="flex items-center gap-3 mb-5">
+                      <div className={`flex items-center justify-center h-10 w-10 rounded-full ${iconBg} ${iconText} text-xl`}>
+                        {emoji}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h2 className="text-lg font-bold text-gray-900">Polypharmacy Safety Advice</h2>
+                          <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${badgeBg} ${badgeText}`}>
+                            {label} Risk
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-600">
+                          {isVeryHigh
+                            ? 'Your medication risk is very high — please follow these urgent guidelines carefully.'
+                            : 'Your medication risk is elevated — follow these guidelines to stay safe.'}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Advice cards grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {advices.map((adv, idx) => (
+                        <div
+                          key={idx}
+                          className={`rounded-xl bg-white border ${cardBorder} p-4 flex gap-3 shadow-sm`}
+                        >
+                          <span className="text-2xl shrink-0 mt-0.5">{adv.icon}</span>
+                          <div>
+                            <p className={`text-sm font-bold ${titleText} mb-1`}>{adv.title}</p>
+                            <p className={`text-xs leading-relaxed ${detailText}`}>{adv.detail}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <p className="mt-4 text-xs text-gray-500 italic">
+                      * These recommendations are based on your assessed polypharmacy risk level.
+                      Always follow your prescribing physician's guidance.
+                    </p>
+                  </motion.div>
+                );
+              })()}
+
+              <div className="pt-8 border-t border-gray-200 mt-10">
+                <h2 className="text-2xl font-bold leading-tight text-gray-900 sm:text-3xl">
+                  Your 2-Week Personalized Health Plan
+                </h2>
+                <p className="mt-4 mb-8 text-gray-600 md:text-lg leading-relaxed">
+                  Based on your emotional state, mental health, medication profile, and lifestyle,
+                  here are your personalized recommendations for the next two weeks.
+                </p>
+
+                {/* Summary card */}
+                <motion.div
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4 }}
+                  className="rounded-2xl bg-white border border-teal-100 shadow-sm p-6 mb-8"
+                >
+                  <h3 className="text-lg font-bold text-gray-900">Plan Overview</h3>
+                  <p className="mt-3 text-gray-700 leading-relaxed">{advice.summary}</p>
+
+                  <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Plan timeline — uses fixed formatDate */}
+                    <div className="rounded-lg bg-blue-50 p-4 md:col-span-2">
+                      <h4 className="text-sm font-semibold text-blue-900">Plan Timeline</h4>
+                      <ul className="mt-2 space-y-1 text-sm text-blue-800">
+                        <li>• Generated: {formatDate(advice.generated_date)}</li>
+                        <li>• Expires:&nbsp;&nbsp; {formatDate(advice.expires_date)}</li>
+                        <li>• Duration: 14 days</li>
+                      </ul>
+                    </div>
+                  </div>
+                </motion.div>
+              </div>
 
               {/* Week tabs */}
               <div className="flex gap-3 mb-8 flex-wrap">
@@ -305,16 +643,15 @@ function PatientAdviceContent() {
                   <button
                     key={week}
                     onClick={() => setActiveWeek(week)}
-                    className={`rounded-full px-6 py-3 font-semibold transition-all duration-200 ${
-                      activeWeek === week
+                    className={`rounded-full px-6 py-3 font-semibold transition-all duration-200 ${activeWeek === week
                         ? 'bg-teal-600 text-white'
                         : 'bg-white text-teal-700 border-2 border-teal-200 hover:border-teal-400'
-                    }`}
+                      }`}
                   >
                     {i === 0 ? 'Week 1 (Days 1–7)' : 'Week 2 (Days 8–14)'}
                   </button>
                 ))}
-                
+
                 {/* Premium 1-Month Button */}
                 <Link
                   href={`/Pages/premium?${emailParam ? 'email' : 'patientId'}=${encodeURIComponent(identifier)}`}
