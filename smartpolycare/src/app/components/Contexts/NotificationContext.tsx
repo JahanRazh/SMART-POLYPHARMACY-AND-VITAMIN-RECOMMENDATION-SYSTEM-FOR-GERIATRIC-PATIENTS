@@ -53,7 +53,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const addNotification = useCallback((n: Omit<Notification, "id" | "timestamp" | "read">) => {
     const newNotification: Notification = {
       ...n,
-      id: Date.now().toString(),
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       timestamp: new Date().toISOString(),
       read: false,
     };
