@@ -234,7 +234,7 @@ function AdviceHistoryContent() {
 
           {/* Navigation */}
           <div className="mt-6 flex flex-wrap gap-3">
-            <Link href="/Pages/patientAdvice"
+            <Link href={`/Pages/patientAdvice?${emailParam ? 'email' : 'patientId'}=${encodeURIComponent(identifier || '')}`}
               className="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-5 py-3 text-sm font-semibold text-white transition-colors duration-200 hover:bg-teal-700">
               ← Back to Current Advice
             </Link>
@@ -254,7 +254,7 @@ function AdviceHistoryContent() {
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
               className="mt-8 rounded-lg border border-blue-300 bg-blue-50 p-8 text-center">
               <p className="text-gray-600">No saved advice yet.</p>
-              <Link href="/Pages/patientAdvice"
+              <Link href={`/Pages/patientAdvice?${emailParam ? 'email' : 'patientId'}=${encodeURIComponent(identifier || '')}`}
                 className="mt-4 inline-block rounded-lg bg-teal-600 px-5 py-3 text-sm font-semibold text-white hover:bg-teal-700">
                 Generate Your First Advice
               </Link>
