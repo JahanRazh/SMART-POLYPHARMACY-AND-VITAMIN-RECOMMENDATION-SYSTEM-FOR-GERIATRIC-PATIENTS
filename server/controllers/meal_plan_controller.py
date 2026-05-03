@@ -1,497 +1,578 @@
-from flask import request, jsonify
-from datetime import datetime
-import uuid
-import json
 import os
 import csv
 import random
+import joblib
+import traceback
+from datetime import datetime
+from flask import request, jsonify
 
-from db import get_db
-from models.meal_plan_model import (
-    save_meal_plan_assessment,
-    save_generated_meal_plan,
-    fetch_latest_meal_plan_assessment,
-    fetch_saved_meal_plan,
-    save_meal_tracking,
-    delete_meal_plan_for_user
-)
-from models.polyphamacy_risk_model import get_user_profile, get_polypharmacy_assessment
+BASE_DIR    = os.path.dirname(__file__)
+FOOD_CSV    = os.path.join(BASE_DIR, "../models/MealPlan/food.csv")
+MODEL_PATH  = os.path.join(BASE_DIR, "../models/MealPlan/meal_model.pkl")
+SCALER_PATH = os.path.join(BASE_DIR, "../models/MealPlan/scaler.pkl")
+COLS_PATH   = os.path.join(BASE_DIR, "../models/MealPlan/feature_cols.pkl")
 
+# ── Global cache (loaded once per process) ───────────────────────────────────
+_model     = None
+_scaler    = None
+_feat_cols = None
+_ALL_FOODS = None   # list of dicts, loaded from CSV
 
-# ==================================================
-# PATHS
-# ==================================================
-
-FOOD_CSV_PATH = os.path.join(
-    os.path.dirname(__file__),
-    "../models/MealPlan/food.csv"
-)
-
-
-# ==================================================
-# BMI HELPERS
-# ==================================================
-
-def _get_bmi_category(bmi: float) -> str:
-    if bmi < 18.5:
-        return "Underweight"
-    elif bmi < 25.0:
-        return "Normal weight"
-    elif bmi < 30.0:
-        return "Overweight"
-    else:
-        return "Obese"
+# ── Keyword lists ─────────────────────────────────────────────────────────────
+MEAT_KW = [
+    "meat","beef","pork","chicken","turkey","lamb","fish","shrimp","crab",
+    "lobster","seafood","bacon","ham","steak","fillet","mussel","oyster",
+    "scallop","squid","octopus","salmon","tuna","venison","duck","veal",
+    "sardine","anchovy","tilapia","liver","kidney","tongue","gelatin","lard",
+]
+DAIRY_EGG_KW = [
+    "milk","cheese","cream","yogurt","butter","egg","honey","whey",
+    "casein","lard","gelatin","kefir","ghee",
+]
+NUT_KW = [
+    "nut","peanut","almond","walnut","cashew","pistachio","pecan",
+    "hazelnut","brazil nut","macadamia","pine nut",
+]
 
 
-def _get_daily_calorie_range(bmi: float, activity_level: str = "") -> str:
-    activity = (activity_level or "").lower()
-    if bmi < 18.5:
-        base = (2200, 2800)
-    elif bmi < 25.0:
-        base = (1800, 2200)
-    elif bmi < 30.0:
-        base = (1500, 1900)
-    else:
-        base = (1200, 1600)
-
-    if "moderate" in activity:
-        base = (base[0] + 200, base[1] + 200)
-    elif "active" in activity or "high" in activity:
-        base = (base[0] + 400, base[1] + 400)
-
-    return f"{base[0]}\u2013{base[1]} kcal"
+# =============================================================================
+# LOADERS
+# =============================================================================
+def get_ml_model():
+    global _model, _scaler, _feat_cols
+    if _model is None:
+        if os.path.exists(MODEL_PATH) and os.path.exists(SCALER_PATH):
+            _model     = joblib.load(MODEL_PATH)
+            _scaler    = joblib.load(SCALER_PATH)
+            _feat_cols = joblib.load(COLS_PATH) if os.path.exists(COLS_PATH) else None
+            print("✅ ML model loaded")
+        else:
+            print("⚠️  ML model not found — run train_meal_model.py first")
+    return _model, _scaler, _feat_cols
 
 
-def _get_bmi_advice(bmi_category: str) -> str:
-    advice = {
-        "Underweight":   "Your BMI is below normal. Focus on nutrient-dense, high-calorie foods to reach a healthy weight.",
-        "Normal weight": "Your BMI is within the healthy range. Maintain a balanced diet rich in vegetables, lean protein, and whole grains.",
-        "Overweight":    "Your BMI is slightly high. Focus on low-calorie, high-fiber foods to support healthy weight loss.",
-        "Obese":         "Your BMI indicates obesity. A calorie-controlled, high-fiber diet with lean proteins is recommended. Consult your doctor.",
-    }
-    return advice.get(bmi_category, "Maintain a balanced and nutritious diet.")
-
-
-# ==================================================
-# LOAD AND FILTER FOOD CSV
-# ==================================================
-
-def _load_foods(conditions: list, bmi_category: str, dietary_restrictions: dict) -> list:
-    """
-    Load food.csv and return a filtered list of suitable foods.
-    Each food is a dict with: description, calories_per_100g.
-    """
-    exclude_dairy  = dietary_restrictions.get("dairyFree")  or dietary_restrictions.get("Dairy Free")
-    exclude_gluten = dietary_restrictions.get("glutenFree") or dietary_restrictions.get("Gluten Free")
-    exclude_nuts   = dietary_restrictions.get("nutFree")    or dietary_restrictions.get("Nut Allergy Safe")
-    vegetarian     = dietary_restrictions.get("vegetarian") or dietary_restrictions.get("Vegetarian")
-    vegan          = dietary_restrictions.get("vegan")      or dietary_restrictions.get("Vegan")
-
-    # Calorie cap per 100g based on BMI
-    max_cal = 250 if bmi_category in ("Overweight", "Obese") else 999
-
-    # Medical condition filters
-    low_sodium_conditions = {"hypertension", "heart disease", "kidney disease", "high blood pressure"}
-    need_low_sodium = any(c.lower() in low_sodium_conditions for c in conditions)
-
-    low_sugar_conditions = {"diabetes", "type 2 diabetes", "prediabetes"}
-    need_low_sugar = any(c.lower() in low_sugar_conditions for c in conditions)
-
+def load_foods_from_csv():
     foods = []
+    if not os.path.exists(FOOD_CSV):
+        print("❌ food.csv NOT FOUND:", FOOD_CSV)
+        return foods
+
+    def fv(row, col):
+        return float(row.get(col, 0) or 0)
+
     try:
-        with open(FOOD_CSV_PATH, newline='', encoding='utf-8') as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                try:
-                    carb    = float(row.get("Data.Carbohydrate",         0) or 0)
-                    protein = float(row.get("Data.Protein",               0) or 0)
-                    fat     = float(row.get("Data.Fat.Total Lipid",       0) or 0)
-                    sodium  = float(row.get("Data.Major Minerals.Sodium", 0) or 0)
-                    sugar   = float(row.get("Data.Sugar Total",           0) or 0)
-                    cal     = round(4 * carb + 4 * protein + 9 * fat, 1)
+        if not os.path.exists(FOOD_CSV):
+            print(f"❌ CRITICAL: food.csv NOT FOUND at {FOOD_CSV}")
+            return foods
 
-                    if cal > max_cal:
-                        continue
+        with open(FOOD_CSV, newline='', encoding='utf-8') as f:
+            data = list(csv.DictReader(f))
+            print(f"📊 CSV raw rows read: {len(data)}")
 
-                    if exclude_dairy  and row.get("Dairy Free",      "").strip().lower() != "yes":
-                        continue
-                    if exclude_gluten and row.get("Gluten Free",     "").strip().lower() != "yes":
-                        continue
-                    if exclude_nuts   and row.get("Nut Allergy Safe","").strip().lower() != "yes":
-                        continue
-                    if vegan      and row.get("Vegan",      "").strip().lower() != "yes":
-                        continue
-                    if vegetarian and row.get("Vegetarian", "").strip().lower() != "yes":
-                        continue
+        for i, row in enumerate(data):
+            try:
+                name     = row.get("Description", "Unknown")
+                category = row.get("Category", "Unknown")
+                txt      = f"{name} {category}".lower()
 
-                    if need_low_sodium and sodium > 400:
-                        continue
-                    if need_low_sugar  and sugar  > 10:
-                        continue
+                # Robust parsing for dietary flags
+                def is_true(col):
+                    val = str(row.get(col, "0")).strip()
+                    return val == "1" or val.lower() == "true"
 
-                    foods.append({
-                        "description":       row.get("Description", "Unknown Food").strip(),
-                        "calories_per_100g": cal,
-                    })
-                except (ValueError, KeyError):
-                    continue
+                is_veg  = is_true("Vegetarian") and not any(k in txt for k in MEAT_KW)
+                is_vegan= is_true("Vegan") and is_veg and not any(k in txt for k in DAIRY_EGG_KW)
+                is_gf   = is_true("Gluten Free")
+                is_df   = is_true("Dairy Free") and not any(k in txt for k in DAIRY_EGG_KW)
+                is_nut  = is_true("Nut Allergy Safe") and not any(k in txt for k in NUT_KW)
+
+                carbs   = fv(row, "Data.Carbohydrate")
+                protein = fv(row, "Data.Protein")
+                fat     = fv(row, "Data.Fat.Total Lipid")
+
+                foods.append({
+                    "name":       name,
+                    "category":   category,
+                    "vegetarian": int(is_veg),
+                    "vegan":      int(is_vegan),
+                    "glutenFree": int(is_gf),
+                    "dairyFree":  int(is_df),
+                    "nutAllergy": int(is_nut),
+                    "carbs":      carbs,
+                    "protein":    protein,
+                    "fat":        fat,
+                    "sugar":      fv(row, "Data.Sugar Total"),
+                    "fiber":      fv(row, "Data.Fiber"),
+                    "sodium":     fv(row, "Data.Major Minerals.Sodium"),
+                    "cholesterol":fv(row, "Data.Cholesterol"),
+                    "water":      fv(row, "Data.Water"),
+                    "vitA":       fv(row, "Data.Vitamins.Vitamin A - RAE"),
+                    "vitB12":     fv(row, "Data.Vitamins.Vitamin B12"),
+                    "vitB6":      fv(row, "Data.Vitamins.Vitamin B6"),
+                    "vitC":       fv(row, "Data.Vitamins.Vitamin C"),
+                    "vitE":       fv(row, "Data.Vitamins.Vitamin E"),
+                    "vitK":       fv(row, "Data.Vitamins.Vitamin K"),
+                    "calcium":    fv(row, "Data.Major Minerals.Calcium"),
+                    "iron":       fv(row, "Data.Major Minerals.Iron"),
+                    "magnesium":  fv(row, "Data.Major Minerals.Magnesium"),
+                    "phosphorus": fv(row, "Data.Major Minerals.Phosphorus"),
+                    "potassium":  fv(row, "Data.Major Minerals.Potassium"),
+                    "zinc":       fv(row, "Data.Major Minerals.Zinc"),
+                    "calories":   round(carbs * 4 + protein * 4 + fat * 9),
+                    "score":      50.0,
+                })
+            except Exception as e:
+                if i < 5: print(f"⚠️ Row {i} error: {e}")
+                continue
+
+        print(f"✅ Successfully processed {len(foods)} foods")
     except Exception as e:
-        print(f"⚠️  Could not load food CSV: {e}")
+        print("🔥 load_foods_from_csv CRITICAL ERROR:", e)
+        traceback.print_exc()
 
     return foods
 
 
-# ==================================================
-# BUILD WEEKLY MEAL PLAN
-# ==================================================
+def get_foods():
+    """Return cached food list, loading from CSV on first call."""
+    global _ALL_FOODS
+    if _ALL_FOODS is None:
+        print("📦 Caching food dataset...")
+        _ALL_FOODS = load_foods_from_csv()
+    return _ALL_FOODS
 
-def _build_weekly_plan(foods: list, seed: int = 0) -> dict:
-    """
-    Build a 7-day meal plan with 7 food items per day at 300g each.
-    Returns { "Day 1": { "meals": [...], "total_calories": int }, ... }
-    """
-    rng = random.Random(seed)
-    pool = foods[:]
-    rng.shuffle(pool)
-    pool_size = len(pool)
 
-    weekly = {}
-    for day_num in range(1, 8):
-        offset    = ((day_num - 1) * 7) % max(pool_size, 1)
-        day_slice = (pool + pool)[offset: offset + 7]
-        meals     = []
-        total     = 0
-        for food in day_slice:
-            grams = 300
-            cal   = round(food["calories_per_100g"] * grams / 100)
-            meals.append(f"\u2022 {food['description']} - {grams}g (~{cal} kcal)")
-            total += cal
-        weekly[f"Day {day_num}"] = {"meals": meals, "total_calories": total}
+# =============================================================================
+# BMI HELPERS
+# =============================================================================
+def calculate_bmi(weight, height):
+    h = height / 100.0
+    return round(weight / (h * h), 1)
+
+
+def get_bmi_category(bmi):
+    if bmi < 18.5: return "Underweight"
+    elif bmi < 25: return "Normal"
+    elif bmi < 30: return "Overweight"
+    return "Obese"
+
+
+def get_daily_calorie_target(gender, age, activity, bmi_cat):
+    """
+    Calculate daily calorie needs for seniors (65+) based on clinical standards.
+    Women: 1600 (Sedentary) - 2200 (Active)
+    Men: 2000 (Sedentary) - 2600 (Active)
+    """
+    targets = {
+        "male": {
+            "sedentary": 2000,
+            "light": 2100,
+            "moderate": 2200,
+            "active": 2400,
+            "very active": 2500
+        },
+        "female": {
+            "sedentary": 1600,
+            "light": 1700,
+            "moderate": 1800,
+            "active": 2000,
+            "very active": 2100
+        }
+    }
+    
+    # Normalize inputs
+    g = str(gender).lower() if gender else "female"
+    if g not in ["male", "female"]: g = "female"
+    
+    act = str(activity).lower()
+    if "very active" in act: a = "very active"
+    elif "active" in act: a = "active"
+    elif "moderate" in act: a = "moderate"
+    elif "light" in act: a = "light"
+    else: a = "sedentary"
+    
+    base_target = targets[g][a]
+    
+    # Geriatric Weight Management (Weight loss deficit or Gain surplus)
+    if bmi_cat == "Obese":
+        base_target -= 450  # Targets ~0.5kg/week loss
+    elif bmi_cat == "Overweight":
+        base_target -= 250
+    elif bmi_cat == "Underweight":
+        base_target += 300  # High nutrient density surplus
+        
+    # Safety Floor Constraints for Seniors
+    if g == "female":
+        return max(1200, base_target)
+    else:
+        return max(1500, base_target)
+
+
+def get_portion(bmi_cat, activity):
+    # This legacy function is kept for backward compatibility if needed elsewhere
+    base = 300
+    if bmi_cat == "Underweight": base = 380
+    elif bmi_cat == "Obese":     base = 240
+    elif bmi_cat == "Overweight":base = 270
+    activity_map = {"sedentary": 0, "light": 30, "moderate": 60, "active": 100, "very active": 130}
+    base += activity_map.get(activity.lower(), 0)
+    return base
+
+
+# =============================================================================
+# ML SCORING  (uses all 40 features matching training)
+# =============================================================================
+def score_foods_with_ml(foods, payload):
+    """
+    Score every food using the trained model.
+    Falls back to rule-based scoring if model unavailable.
+    """
+    model, scaler, feat_cols = get_ml_model()
+
+    basic      = payload.get("basicProfile", {})
+    conditions = payload.get("medicalConditions", {})
+    diet       = payload.get("dietaryRestrictions", {})
+    vitamins   = payload.get("vitaminDeficiencies", [])
+    preferences= payload.get("foodPreferences", {})
+
+    # ── Parse user features ───────────────────────────────────────
+    try:    age = float(basic.get("age", 60))
+    except: age = 60.0
+
+    gender   = 1 if str(basic.get("gender","")).lower() == "male" else 0
+    bmi      = calculate_bmi(float(basic.get("weight", 65)), float(basic.get("height", 165)))
+    act_map  = {"sedentary": 0, "light": 1, "moderate": 2, "active": 3, "very active": 3}
+    activity = act_map.get(str(basic.get("activityLevel","sedentary")).lower(), 0)
+
+    diabetes       = 1 if conditions.get("diabetes")     else 0
+    hypertension   = 1 if conditions.get("hypertension") else 0
+    heart_disease  = 1 if conditions.get("heartDisease") else 0
+
+    veg  = 1 if diet.get("vegetarian") else 0
+    vegan= 1 if diet.get("vegan")      else 0
+    gf   = 1 if diet.get("glutenFree") else 0
+    df   = 1 if diet.get("dairyFree")  else 0
+    nut  = 1 if diet.get("nutAllergy") else 0
+
+    # Vitamin deficiency flags
+    vit_list = [str(v).lower() for v in vitamins]
+    def has_vit(*keys): return int(any(k in v for k in keys for v in vit_list))
+    def_vitA    = has_vit("vitamin a", "vita")
+    def_vitB12  = has_vit("b12", "vitamin b12")
+    def_vitC    = has_vit("vitamin c", "vitc")
+    def_iron    = has_vit("iron")
+    def_calcium = has_vit("calcium")
+    def_zinc    = has_vit("zinc")
+
+    # Food preferences
+    liked    = [str(x).lower().strip() for x in preferences.get("liked",    [])] if preferences else []
+    disliked = [str(x).lower().strip() for x in preferences.get("disliked", [])] if preferences else []
+
+    if model and scaler:
+        try:
+            batch = []
+            for food in foods:
+                nl = food["name"].lower()
+                liked_flag    = int(any(kw in nl for kw in liked))
+                disliked_flag = int(any(kw in nl for kw in disliked))
+
+                batch.append([
+                    # user (18)
+                    age, gender, bmi, activity,
+                    diabetes, hypertension, heart_disease,
+                    veg, vegan, gf, df, nut,
+                    def_vitA, def_vitB12, def_vitC,
+                    def_iron, def_calcium, def_zinc,
+                    # preferences (2)
+                    liked_flag, disliked_flag,
+                    # food nutrients (20)
+                    food["carbs"],    food["protein"],   food["fat"],
+                    food["sugar"],    food["fiber"],     food["sodium"],
+                    food["cholesterol"], food["water"],
+                    food["vitA"],     food["vitB12"],    food["vitB6"],
+                    food["vitC"],     food["vitE"],      food["vitK"],
+                    food["calcium"],  food["iron"],
+                    food["magnesium"],food["phosphorus"],
+                    food["potassium"],food["zinc"],
+                ])
+
+            scores = model.predict(scaler.transform(batch))
+            for i, food in enumerate(foods):
+                food["score"] = float(scores[i])
+
+            # Hard penalty: disliked foods go to bottom
+            for food in foods:
+                nl = food["name"].lower()
+                if any(kw in nl for kw in disliked):
+                    food["score"] = max(0.0, food["score"] - 30)
+
+            print("✅ ML scoring applied")
+            return
+
+        except Exception as e:
+            print(f"⚠️  ML scoring failed ({e}), using fallback")
+            traceback.print_exc()
+
+    # ── Fallback rule-based scoring ───────────────────────────────
+    for food in foods:
+        s = 55.0
+        nl = food["name"].lower()
+        if any(kw in nl for kw in liked):    s += 15
+        if any(kw in nl for kw in disliked): s -= 25
+        if diabetes:
+            s -= food["sugar"] * 0.8
+            s += food["fiber"] * 2.0
+        if hypertension:
+            s -= max(0, food["sodium"] - 200) * 0.04
+        if heart_disease:
+            s -= food["fat"] * 0.6
+        if bmi > 30:
+            s -= food["calories"] * 0.02
+            s += food["fiber"] * 1.5
+        elif bmi < 18.5:
+            s += food["protein"] * 0.5
+        if def_vitA:    s += food["vitA"]   * 0.1
+        if def_vitB12:  s += food["vitB12"] * 2.0
+        if def_vitC:    s += food["vitC"]   * 0.2
+        if def_iron:    s += food["iron"]   * 1.5
+        if def_calcium: s += food["calcium"]* 0.05
+        if def_zinc:    s += food["zinc"]   * 1.0
+        food["score"] = float(max(0.0, min(100.0, s)))
+
+
+# =============================================================================
+# DIETARY FILTER
+# =============================================================================
+def filter_foods(all_foods, diet):
+    filtered = []
+    for food in all_foods:
+        nl   = food["name"].lower()
+        safe = True
+        if diet.get("vegetarian") and (not food["vegetarian"] or any(k in nl for k in MEAT_KW)):
+            safe = False
+        if diet.get("vegan") and (not food["vegan"] or any(k in nl for k in MEAT_KW + DAIRY_EGG_KW)):
+            safe = False
+        if diet.get("glutenFree") and not food["glutenFree"]:
+            safe = False
+        if diet.get("dairyFree") and (not food["dairyFree"] or any(k in nl for k in DAIRY_EGG_KW)):
+            safe = False
+        if diet.get("nutAllergy") and (not food["nutAllergy"] or any(k in nl for k in NUT_KW)):
+            safe = False
+        if safe:
+            filtered.append(food)
+
+    # Fallback if nothing passes
+    if not filtered:
+        print("⚠️ No foods matched restrictions — using safe fallback")
+        fallback = [f for f in all_foods if any(
+            kw in f["name"].lower() for kw in ["apple","rice","banana","water","oat","vegetable"]
+        )]
+        filtered = fallback if fallback else all_foods[:200]
+
+    return filtered
+
+
+# =============================================================================
+# PLAN BUILDER  (balanced by category)
+# =============================================================================
+def build_plan(foods, daily_goal, days=28, meals_per_day=5):
+    if not foods:
+        return {"Day 1": {"meals": ["No foods available"], "total_calories": 0}}
+
+    # Target calories per meal
+    cpm = daily_goal / meals_per_day
+
+    # Group by category
+    by_cat = {}
+    for f in foods:
+        c = f.get("category", "Other")
+        by_cat.setdefault(c, []).append(f)
+
+    # Sort each category by score descending
+    for c in by_cat:
+        by_cat[c].sort(key=lambda x: x.get("score", 0), reverse=True)
+
+    cat_names    = list(by_cat.keys())
+    food_indices = {c: 0 for c in cat_names}
+    weekly       = {}
+
+    for d in range(1, days + 1):
+        meals = []
+        total = 0
+        for m in range(meals_per_day):
+            cat   = cat_names[(d * meals_per_day + m) % len(cat_names)]
+            pool  = by_cat[cat]
+            food  = pool[food_indices[cat] % len(pool)]
+            food_indices[cat] += 1
+
+            # Calories per 100g
+            cal_100 = food.get("calories", 200)
+            if cal_100 <= 0: cal_100 = 50 # safety fallback
+            
+            # Calculate grams needed to reach cpm
+            # cpm = (cal_100 * grams) / 100  => grams = (cpm * 100) / cal_100
+            grams = round((cpm * 100) / cal_100)
+            
+            # Sanity limits for senior portions: cap at 300g
+            grams = max(50, min(300, grams))
+            actual_cal = round((cal_100 * grams) / 100)
+            
+            meals.append(f"• {food['name']} ({cat}) - {grams}g (~{actual_cal} kcal)")
+            total += actual_cal
+
+        weekly[f"Day {d}"] = {
+            "meals":         meals,
+            "total_calories": total,
+        }
 
     return weekly
 
 
-# ==================================================
-# GENERATE MEAL PLAN (CSV + RULES)
-# ==================================================
+# =============================================================================
+# MAIN GENERATOR
+# =============================================================================
+def generate_meal_plan(payload):
+    basic    = payload.get("basicProfile", {})
+    weight   = float(basic.get("weight", 65))
+    height   = float(basic.get("height", 165))
+    activity = str(basic.get("activityLevel", "sedentary"))
 
-def generate_full_meal_plan(payload):
+    bmi     = calculate_bmi(weight, height)
+    bmi_cat = get_bmi_category(bmi)
+    
+    # Calculate target calories based on Geriatric Standards
+    gender = basic.get("gender", "female")
+    age = float(basic.get("age", 65))
+    daily_goal = get_daily_calorie_target(gender, age, activity, bmi_cat)
+    
+    # Legacy portion for reference or fallback
+    portion = get_portion(bmi_cat, activity)
 
-    basic          = payload.get("basicProfile", {})
-    weight         = float(basic.get("weight", 70)   or 70)
-    height         = float(basic.get("height", 165)  or 165)
-    bmi_raw        = basic.get("bmi", None)
-    activity_level = str(basic.get("activityLevel",  "") or "")
+    # Load (cached) food list
+    all_foods = get_foods()
+    if not all_foods:
+        raise ValueError("Food dataset is empty or not accessible.")
 
-    # Calculate BMI if not provided or invalid
-    if bmi_raw is None or str(bmi_raw).strip() in ("", "N/A"):
-        height_m = height / 100.0
-        bmi = round(weight / (height_m ** 2), 1) if height_m > 0 else 25.0
-    else:
-        try:
-            bmi = float(bmi_raw)
-        except (TypeError, ValueError):
-            height_m = height / 100.0
-            bmi = round(weight / (height_m ** 2), 1) if height_m > 0 else 25.0
+    # Score every food with ML
+    score_foods_with_ml(all_foods, payload)
 
-    bmi_category        = _get_bmi_category(bmi)
-    bmi_advice          = _get_bmi_advice(bmi_category)
-    daily_calorie_range = _get_daily_calorie_range(bmi, activity_level)
+    # Dietary filter
+    diet     = payload.get("dietaryRestrictions", {})
+    filtered = filter_foods(all_foods, diet)
 
-    # Parse medical conditions
-    med_cond_raw = payload.get("medicalConditions", {})
-    conditions   = [k for k, v in med_cond_raw.items() if v and k != "other"]
-    if med_cond_raw.get("other"):
-        conditions.append(str(med_cond_raw["other"]))
+    # Take top foods per category for variety
+    by_cat = {}
+    for f in filtered:
+        by_cat.setdefault(f.get("category","Other"), []).append(f)
 
-    # Parse dietary restrictions
-    diet_restrictions = payload.get("dietaryRestrictions", {})
+    top_pool = []
+    for c, foods_in_cat in by_cat.items():
+        top = sorted(foods_in_cat, key=lambda x: x.get("score", 0), reverse=True)[:25]
+        top_pool.extend(top)
 
-    # Load filtered foods
-    foods = _load_foods(conditions, bmi_category, diet_restrictions)
+    if not top_pool:
+        raise ValueError("No suitable foods found after filtering.")
 
-    # Fallback if strict filters yield nothing
-    if not foods:
-        print("⚠️  No foods after strict filter — relaxing medical filters...")
-        foods = _load_foods([], bmi_category, diet_restrictions)
+    # Generate plan options
+    # Set days to 28 (1 month) and meals per day to a random value between 7 and 10
+    total_days = 28
+    meals_count = random.randint(7, 10)
+    print(f"🚀 Generating plan for {total_days} days with {meals_count} meals per day")
 
-    if not foods:
-        print("⚠️  No foods after diet filter — loading all foods...")
-        foods = _load_foods([], "Normal weight", {})
-
-    if not foods:
-        raise RuntimeError(
-            "No foods available to build a meal plan. "
-            "Please check the food database at: " + FOOD_CSV_PATH
-        )
-
-    # Generate 3 diverse meal plan options
     options = []
     for i in range(3):
-        weekly_plan = _build_weekly_plan(foods, seed=i * 42)
+        random.shuffle(top_pool)
         options.append({
             "optionId":   i + 1,
-            "name":       f"Plan {i + 1} - Optimized for {bmi_category}",
-            "weeklyPlan": weekly_plan,
+            "name":       f"AI Meal Plan {i + 1}",
+            "weeklyPlan": build_plan(top_pool, daily_goal, days=total_days, meals_per_day=meals_count),
         })
 
     return {
-        "generatedAt":          datetime.utcnow().isoformat(),
-        "bmi":                  bmi,
-        "bmi_category":         bmi_category,
-        "bmi_advice":           bmi_advice,
-        "daily_calorie_range":  daily_calorie_range,
-        "mealPlanOptions":      options,
-        "aiGenerated":          True,
-        "suitable_foods_count": len(foods),
+        "userId":          payload.get("userId"),
+        "patient_name":    basic.get("name", "Patient"),
+        "bmi":             bmi,
+        "bmi_category":    bmi_cat,
+        "portion_grams":   portion,
+        "daily_calorie_range": int(daily_goal),
+        "mealPlanOptions": options,
+        "plan_duration":   f"{total_days} Days",
+        "meals_per_day":   meals_count,
+        "generatedAt":     datetime.utcnow().isoformat(),
+        "aiGenerated":     True,
     }
 
 
-# ==================================================
-# CREATE MEAL PLAN
-# ==================================================
-
+# =============================================================================
+# FLASK CONTROLLERS
+# =============================================================================
 def create_meal_plan():
-
-    payload = request.get_json(silent=True) or {}
-
-    user_id = payload.get("userId") or payload.get("email")
-    if user_id:
-        payload["userId"] = user_id
-
-    if "basicProfile" not in payload:
-        return jsonify({"error": "basicProfile is required"}), 400
-
-    basic = payload.get("basicProfile", {})
-    bmi   = basic.get("bmi")
-
-    if bmi is None:
-        return jsonify({"error": "BMI is required"}), 400
-
+    from models.meal_plan_model import save_meal_plan_assessment, save_generated_meal_plan
+    payload = request.get_json()
+    if not payload:
+        return jsonify({"error": "No JSON payload received"}), 400
     try:
-        float(bmi)
-    except (TypeError, ValueError):
-        return jsonify({"error": "BMI must be a number"}), 400
-
-
-    # ---------------- USER PROFILE ----------------
-
-    user_id = payload.get("userId")
-
-    if user_id:
-
-        user_profile = get_user_profile(user_id)
-
-        if user_profile:
-            payload["user"] = {
-                "userId":      user_id,
-                "displayName": user_profile.get("displayName", ""),
-                "email":       user_profile.get("email", ""),
-                "firstName":   user_profile.get("firstName", ""),
-                "lastName":    user_profile.get("lastName", ""),
-                "photoURL":    user_profile.get("photoURL", ""),
-            }
-
-        poly_assessment = get_polypharmacy_assessment(user_id)
-
-        if poly_assessment and "riskCalculation" in poly_assessment:
-            payload["polypharmacyRisk"] = poly_assessment["riskCalculation"].get("riskLevel", "N/A")
-        else:
-            payload["polypharmacyRisk"] = "N/A"
-
-
-    # ---------------- SAVE FORM DATA ----------------
-
-    saved_form_id = None
-    db_error_msg  = None
-
-    try:
-        saved_data    = save_meal_plan_assessment(payload)
-        saved_form_id = saved_data["id"]
-        print(f"✅ Saved form data with ID: {saved_form_id}")
-    except Exception as db_error:
-        db_error_msg = str(db_error)
-        print(f"⚠️  Form save failed: {db_error}")
-
-
-    # ---------------- GENERATE MEAL PLAN ----------------
-
-    try:
-        result = generate_full_meal_plan(payload)
-
-        result["databaseId"]     = saved_form_id
-        result["id"]             = saved_form_id
-        result["originalPlanId"] = saved_form_id
-        result["formDataSaved"]  = bool(saved_form_id)
-        result["db_error"]       = db_error_msg
-
-        if "user" in payload:
-            result["user"] = payload["user"]
-
-        if "polypharmacyRisk" in payload:
-            result["polypharmacyRisk"] = payload["polypharmacyRisk"]
-
-        result["basicProfile"] = payload.get("basicProfile", {})
-
-        med_conditions = payload.get("medicalConditions", {})
-        result["conditions"] = [k for k, v in med_conditions.items() if v and k != "other"]
-        if med_conditions.get("other"):
-            result["conditions"].append(med_conditions["other"])
-
-        diet_restrictions = payload.get("dietaryRestrictions", {})
-        result["dietary_restrictions"] = [k for k, v in diet_restrictions.items() if v and k != "other"]
-        if diet_restrictions.get("other"):
-            result["dietary_restrictions"].append(diet_restrictions["other"])
-
-        result["vitamin_deficiencies"] = payload.get("vitaminDeficiencies", [])
-        result["medicalConditions"]    = payload.get("medicalConditions", {})
-        result["dietaryRestrictions"]  = payload.get("dietaryRestrictions", {})
-        result["userId"]               = payload.get("userId") or payload.get("email")
-
-        for option in result.get("mealPlanOptions", []):
-            option["databaseId"]     = saved_form_id
-            option["id"]             = saved_form_id
-            option["originalPlanId"] = saved_form_id
-
-        try:
-            save_generated_meal_plan(result, saved_form_id)
-        except Exception as save_err:
-            print(f"⚠️  Result save failed: {save_err}")
-
+        result = generate_meal_plan(payload)
+        save_meal_plan_assessment(payload)
+        save_generated_meal_plan(result, payload.get("userId"))
         return jsonify(result), 200
-
-    except RuntimeError as model_err:
-        print(f"❌ Model error: {model_err}")
-        return jsonify({"error": str(model_err)}), 503
-
     except Exception as e:
-        print(f"❌ Controller error: {e}")
+        print("🔥 CREATE ERROR:", str(e))
+        traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
-
-# ==================================================
-# GET LATEST ASSESSMENT
-# ==================================================
 
 def get_latest_assessment():
-
+    from models.meal_plan_model import fetch_latest_meal_plan_assessment
     user_id = request.args.get("userId")
-
     if not user_id:
-        return jsonify({"error": "userId is required"}), 400
-
+        return jsonify({"error": "userId required"}), 400
     try:
-        assessment = fetch_latest_meal_plan_assessment(user_id)
-
-        if not assessment:
-            return jsonify({"message": "No previous assessment found"}), 404
-
-        return jsonify(assessment), 200
-
+        return jsonify(fetch_latest_meal_plan_assessment(user_id)), 200
     except Exception as e:
-        print(f"❌ Error fetching latest assessment: {e}")
         return jsonify({"error": str(e)}), 500
 
-
-# ==================================================
-# GET ACTIVE MEAL PLAN
-# ==================================================
 
 def get_active_meal_plan():
-
+    from models.meal_plan_model import fetch_saved_meal_plan
     user_id = request.args.get("userId")
-
     if not user_id:
-        return jsonify({"error": "userId is required"}), 400
-
+        return jsonify({"error": "userId required"}), 400
     try:
-        plan = fetch_saved_meal_plan(user_id)
-
-        if not plan:
-            return jsonify({"message": "No active meal plan found"}), 404
-
-        return jsonify(plan), 200
-
+        data = fetch_saved_meal_plan(user_id)
+        if not data:
+            return jsonify({"message": "No active plan"}), 404
+        return jsonify(data), 200
     except Exception as e:
-        print(f"❌ Error fetching active plan: {e}")
         return jsonify({"error": str(e)}), 500
 
-
-# ==================================================
-# TRACK MEAL CONSUMPTION
-# ==================================================
 
 def track_meal_consumption():
-
+    from models.meal_plan_model import save_meal_tracking
     try:
-        data = request.get_json()
-
-        if not data:
-            return jsonify({"error": "No data provided"}), 400
-
-        required = ["userId", "planId", "day", "consumedMeals"]
-
-        for field in required:
-            if field not in data:
-                return jsonify({"error": f"Missing required field: {field}"}), 400
-
-        result = save_meal_tracking(data)
-
-        return jsonify({
-            "status":  "success",
-            "message": "Meal tracking progress saved",
-            "id":      result.get("id")
-        }), 201
-
+        return jsonify(save_meal_tracking(request.get_json())), 201
     except Exception as e:
-        print(f"❌ Error in track_meal_consumption: {e}")
         return jsonify({"error": str(e)}), 500
 
-
-# ==================================================
-# DELETE MEAL PLAN
-# ==================================================
-
-def delete_meal_plan():
-
-    user_id = request.args.get("userId")
-
-    if not user_id:
-        return jsonify({"error": "userId is required"}), 400
-
-    try:
-        result = delete_meal_plan_for_user(user_id)
-
-        return jsonify({
-            "status":  "success",
-            "message": "Meal plan deleted successfully",
-            "details": result
-        }), 200
-
-    except Exception as e:
-        print(f"❌ Error in delete_meal_plan: {e}")
-        return jsonify({"error": str(e)}), 500
-
-
-# ==================================================
-# GET MEAL TRACKING FOR PLAN
-# ==================================================
 
 def get_meal_tracking_for_plan():
-
-    user_id = request.args.get("userId")
-    plan_id = request.args.get("planId")
-
-    if not user_id or not plan_id:
-        return jsonify({"error": "userId and planId are required"}), 400
-
+    from models.meal_plan_model import fetch_meal_tracking
+    u = request.args.get("userId")
+    p = request.args.get("planId")
+    if not u or not p:
+        return jsonify({"error": "userId and planId required"}), 400
     try:
-        from models.meal_plan_model import fetch_meal_tracking
-
-        logs = fetch_meal_tracking(user_id, plan_id)
-
-        return jsonify(logs), 200
-
+        return jsonify(fetch_meal_tracking(u, p)), 200
     except Exception as e:
-        print(f"❌ Error in get_meal_tracking_for_plan: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+def delete_meal_plan():
+    from models.meal_plan_model import delete_meal_plan_for_user
+    user_id = request.args.get("userId")
+    if not user_id:
+        return jsonify({"error": "userId required"}), 400
+    try:
+        return jsonify(delete_meal_plan_for_user(user_id)), 200
+    except Exception as e:
         return jsonify({"error": str(e)}), 500
