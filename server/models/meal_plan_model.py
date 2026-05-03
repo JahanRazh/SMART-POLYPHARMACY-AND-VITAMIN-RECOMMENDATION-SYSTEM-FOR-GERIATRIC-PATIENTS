@@ -1,9 +1,12 @@
 from typing import Dict, Any
 from datetime import datetime
 import uuid
+import traceback
 
 from db import get_db
 
+# Top-level DB variable for safety
+db = None
 
 MEAL_PLAN_COLLECTION = "meal_plans"
 
@@ -12,6 +15,7 @@ def delete_meal_plan_for_user(user_id: str) -> Dict:
     Delete the meal plan and assessment for a user from BOTH Firestore collections.
     Returns a dict with status info.
     """
+    global db
     db = get_db()
     results = {}
 
@@ -49,6 +53,7 @@ def save_meal_plan_assessment(meal_data: Dict) -> Dict:
     Persist meal plan assessment in Firestore (full form data)
     Upserts a single assessment per user.
     """
+    global db
     db = get_db()
     user_id = meal_data.get("userId")
     if not user_id:
@@ -80,16 +85,27 @@ def save_meal_plan_assessment(meal_data: Dict) -> Dict:
 
 def fetch_meal_tracking(user_id: str, plan_id: str) -> list:
     """
-    Retrieve all tracking logs for a specific plan and user.
+    Retrieve all tracking logs for a specific user from their unified document.
     """
+    global db
     db = get_db()
     try:
-        docs = db.collection("meal_tracking_logs") \
-                 .where("userId", "==", user_id) \
-                 .where("planId", "==", plan_id) \
-                 .stream()
+        doc = db.collection("meal_tracking").document(user_id).get()
+        if not doc.exists:
+            return []
+            
+        data = doc.to_dict()
+        progress = data.get("progress", {})
         
-        return [doc.to_dict() for doc in docs]
+        # Flatten the progress map into a list of day logs for the frontend
+        logs = []
+        for day_key, day_data in progress.items():
+            logs.append({
+                "day": day_data.get("dayLabel", day_key.replace('_', ' ')),
+                "consumedMeals": day_data.get("consumedMeals", []),
+                "updatedAt": day_data.get("updatedAt")
+            })
+        return logs
     except Exception as e:
         print(f"❌ Error fetching meal tracking: {e}")
         return []
@@ -100,6 +116,7 @@ def save_generated_meal_plan(result: Dict[str, Any], form_id: str) -> bool:
     Upserts a single saved plan per user.
     """
     try:
+        global db
         db = get_db()
         user_id = result.get("userId")
         if not user_id:
@@ -144,7 +161,6 @@ def save_generated_meal_plan(result: Dict[str, Any], form_id: str) -> bool:
         }
         
         # Prepare the full basicProfile for mirroring
-        # We favor result['basicProfile'] but supplement with AI-calculated fields if available
         src_profile = result.get("basicProfile", {})
         
         basic_profile = {
@@ -188,6 +204,7 @@ def save_generated_meal_plan(result: Dict[str, Any], form_id: str) -> bool:
         return False
 
 def fetch_meal_plan(meal_plan_id: str) -> Dict:
+    global db
     db = get_db()
     doc = db.collection(MEAL_PLAN_COLLECTION).document(meal_plan_id).get()
 
@@ -199,6 +216,7 @@ def fetch_meal_plan(meal_plan_id: str) -> Dict:
     return data
 
 def update_meal_plan_data(meal_plan_id: str, updates: Dict) -> Dict:
+    global db
     db = get_db()
     doc_ref = db.collection(MEAL_PLAN_COLLECTION).document(meal_plan_id)
 
@@ -213,6 +231,7 @@ def update_meal_plan_data(meal_plan_id: str, updates: Dict) -> Dict:
     return data
 
 def delete_meal_plan_data(meal_plan_id: str) -> bool:
+    global db
     db = get_db()
     doc_ref = db.collection(MEAL_PLAN_COLLECTION).document(meal_plan_id)
 
@@ -226,6 +245,7 @@ def fetch_latest_meal_plan_assessment(user_id: str) -> Dict:
     """
     Fetch the most recent meal plan assessment for a given user.
     """
+    global db
     db = get_db()
     doc = db.collection(MEAL_PLAN_COLLECTION).document(user_id).get()
 
@@ -240,6 +260,7 @@ def fetch_saved_meal_plan(user_id: str) -> Dict:
     """
     Fetch the active saved meal plan for a given user.
     """
+    global db
     db = get_db()
     doc = db.collection("saved_meal_plans").document(user_id).get()
 
@@ -252,21 +273,63 @@ def fetch_saved_meal_plan(user_id: str) -> Dict:
 
 def save_meal_tracking(tracking_data: Dict) -> Dict:
     """
-    Save daily meal tracking progress (consumed foods).
+    Save daily meal tracking progress.
+    Saves to 'meal_tracking' collection using userId as document ID.
+    Uses 'merge=True' so that updates to the same day overwrite.
     """
-    db = get_db()
-    doc_ref = db.collection("meal_tracking_logs").document()
-    timestamp = datetime.utcnow().isoformat()
-    
-    payload = {
-        "userId": tracking_data.get("userId"),
-        "planId": tracking_data.get("planId"),
-        "day": tracking_data.get("day"),
-        "consumedMeals": tracking_data.get("consumedMeals", []), 
-        "timestamp": timestamp,
-        "date": tracking_data.get("date", timestamp.split('T')[0])
-    }
-    
-    doc_ref.set(payload)
-    payload["id"] = doc_ref.id
-    return payload
+    print("\n🚀 [DEBUG] save_meal_tracking function IS RUNNING")
+    try:
+        global db
+        db = get_db()
+        user_id = tracking_data.get("userId")
+        plan_id = tracking_data.get("planId") or "unknown_plan"
+        day = str(tracking_data.get("day") or "Unknown Day")
+        day_key = day.replace(' ', '_')
+        
+        print(f"📝 Syncing Daily Progress for User: {user_id}, Day: {day}")
+
+        if not user_id:
+            return {"error": "userId is required for tracking"}
+
+        # 1. Use user_id as the document ID in 'meal_tracking'
+        doc_ref = db.collection("meal_tracking").document(user_id)
+        timestamp = datetime.utcnow().isoformat()
+        
+        # We use a nested structure: progress.Day_1, progress.Day_2, etc.
+        tracking_payload = {
+            "userId": user_id,
+            "lastPlanId": plan_id,
+            "lastUpdated": timestamp,
+            "progress": {
+                day_key: {
+                    "consumedMeals": tracking_data.get("consumedMeals", []),
+                    "updatedAt": timestamp,
+                    "dayLabel": day
+                }
+            }
+        }
+        
+        # Set with merge=True to update specific nested fields without data loss
+        doc_ref.set(tracking_payload, merge=True)
+        print(f"✅ Daily progress updated in meal_tracking/{user_id} for {day}")
+        
+        # 2. Mirror the update in the main 'saved_meal_plans' document for redundancy
+        try:
+            plan_ref = db.collection("saved_meal_plans").document(user_id)
+            plan_ref.update({
+                f"tracking.{day_key}": {
+                    "consumedMeals": tracking_data.get("consumedMeals", []),
+                    "updatedAt": timestamp
+                }
+            })
+            print(f"✅ Mirror updated in saved_meal_plans/{user_id}")
+        except Exception as update_err:
+            print(f"⚠️ Mirror update skipped: {update_err}")
+
+        return {"status": "success", "userId": user_id, "day": day}
+
+    except Exception as e:
+        print(f"❌ [DEBUG] CRITICAL ERROR in save_meal_tracking: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise e

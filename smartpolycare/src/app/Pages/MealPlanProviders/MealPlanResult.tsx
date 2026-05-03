@@ -1,79 +1,16 @@
-import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { 
   ArrowLeft, Download, Printer, User, Heart, Zap, Info, ShieldAlert, 
-  Calendar, Clock, CheckCircle, Lock, Save, Settings,
+  Calendar, Clock, CheckCircle, Lock, Save, Settings, Mic,
   Activity, Scale, Ruler, Pill, Loader2,
-  ChevronLeft, ChevronRight, Mic, MicOff, Volume2
+  ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { useAuth } from '@/app/components/Contexts/AuthContext';
 import { useMealReminders } from '@/app/components/Hooks/useMealReminders';
 
-// ─── Voice Control Hook ────────────────────────────────────────────────────────
-function useVoiceControl(onCommand: (transcript: string) => void) {
-  const [isListening, setIsListening] = useState(false);
-  const [transcript, setTranscript] = useState('');
-  const [voiceStatus, setVoiceStatus] = useState<'idle' | 'listening' | 'processing' | 'success' | 'error'>('idle');
-  const recognitionRef = useRef<any>(null);
-
-  const supported = typeof window !== 'undefined' &&
-    ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window);
-
-  const startListening = useCallback(() => {
-    if (!supported) {
-      setVoiceStatus('error');
-      return;
-    }
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    const recognition = new SpeechRecognition();
-    recognition.lang = 'en-US';
-    recognition.continuous = false;
-    recognition.interimResults = true;
-    recognition.maxAlternatives = 3;
-
-    recognition.onstart = () => {
-      setIsListening(true);
-      setVoiceStatus('listening');
-      setTranscript('');
-    };
-
-    recognition.onresult = (event: any) => {
-      const current = Array.from(event.results)
-        .map((r: any) => r[0].transcript)
-        .join(' ');
-      setTranscript(current);
-      if (event.results[event.results.length - 1].isFinal) {
-        setVoiceStatus('processing');
-        onCommand(current.toLowerCase().trim());
-        setTimeout(() => setVoiceStatus('idle'), 2000);
-      }
-    };
-
-    recognition.onerror = () => {
-      setIsListening(false);
-      setVoiceStatus('error');
-      setTimeout(() => setVoiceStatus('idle'), 3000);
-    };
-
-    recognition.onend = () => {
-      setIsListening(false);
-      if (voiceStatus === 'listening') setVoiceStatus('idle');
-    };
-
-    recognitionRef.current = recognition;
-    recognition.start();
-  }, [supported, onCommand, voiceStatus]);
-
-  const stopListening = useCallback(() => {
-    recognitionRef.current?.stop();
-    setIsListening(false);
-    setVoiceStatus('idle');
-  }, []);
-
-  return { isListening, transcript, voiceStatus, supported, startListening, stopListening };
-}
-
 interface ParsedMeal {
   foodName: string;
+  category: string;
   servingSize: number;
   calories: number;
   caloriesPerGram: string;
@@ -113,10 +50,13 @@ const MealPlanResult: React.FC<MealPlanResultProps> = ({
   const [selectedDay, setSelectedDay] = useState("Day 1");
   const [showRawData, setShowRawData] = useState(false);
   const [checkedMeals, setCheckedMeals] = useState<Record<string, boolean>>({});
+  const [lockedMeals, setLockedMeals] = useState<Record<string, boolean>>({});
+  const [planStartDate, setPlanStartDate] = useState<number | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [trackingError, setTrackingError] = useState("");
-  const [voiceMatch, setVoiceMatch] = useState<string | null>(null);
-  const [dayCompleteToast, setDayCompleteToast] = useState<string | null>(null);
+  const [isListening, setIsListening] = useState(false);
+  const [voiceTranscript, setVoiceTranscript] = useState("");
+  const [voiceFeedback, setVoiceFeedback] = useState("");
 
   const selectedOption = useMemo(() => 
     result?.mealPlanOptions?.[selectedOptionIndex], 
@@ -154,20 +94,22 @@ const MealPlanResult: React.FC<MealPlanResultProps> = ({
 
   const parseMealString = useCallback((meal: string): ParsedMeal => {
     if (!meal || typeof meal !== 'string') {
-      return { foodName: 'Unknown', servingSize: 0, calories: 0, caloriesPerGram: '0', rawString: String(meal) };
+      return { foodName: 'Unknown', category: 'General', servingSize: 0, calories: 0, caloriesPerGram: '0', rawString: String(meal) };
     }
-    const match = meal.match(/^(•\s*)?(.+?)\s*-\s*(\d+)g\s*\(~(\d+)\s*kcal\)$/);
+    const match = meal.match(/^(•\s*)?(.+?)\s*(?:\((.+?)\))?\s*[—-]\s*(\d+)g\s*\(~(\d+)\s*kcal\)$/);
     if (match) {
       return {
         foodName: match[2].trim(),
-        servingSize: parseInt(match[3]),
-        calories: parseInt(match[4]),
-        caloriesPerGram: (parseInt(match[4]) / parseInt(match[3])).toFixed(2),
+        category: match[3] || 'General',
+        servingSize: parseInt(match[4]),
+        calories: parseInt(match[5]),
+        caloriesPerGram: (parseInt(match[5]) / parseInt(match[4])).toFixed(2),
         rawString: meal,
       };
     }
     return {
       foodName: meal.replace(/^•\s*/, "").split(" - ")[0] || meal,
+      category: 'General',
       servingSize: 0,
       calories: 0,
       caloriesPerGram: "0",
@@ -175,154 +117,118 @@ const MealPlanResult: React.FC<MealPlanResultProps> = ({
     };
   }, []);
 
-  const checkDayCompletion = useCallback((dayName: string) => {
+  const selectedDayTotalCalories = useMemo(() => {
+    if (!selectedDayData?.meals) return 0;
+    return selectedDayData.meals.reduce((acc: number, meal: string) => {
+      const p = parseMealString(meal);
+      return acc + (Number(p.calories) || 0);
+    }, 0);
+  }, [selectedDayData, parseMealString]);
+
+  const selectedDayConsumedCalories = useMemo(() => {
+    if (!selectedDayData?.meals) return 0;
+    return selectedDayData.meals.reduce((acc: number, meal: string, idx: number) => {
+      if (checkedMeals[`${selectedDay}-${idx}`]) {
+        const p = parseMealString(meal);
+        return acc + (Number(p.calories) || 0);
+      }
+      return acc;
+    }, 0);
+  }, [selectedDayData, parseMealString, checkedMeals, selectedDay]);
+
+  const checkDayCompletionProgress = useCallback((dayName: string) => {
     const dayData = selectedOption?.weeklyPlan?.[dayName];
-    if (!dayData) return false;
-    return dayData.meals.every((_: any, idx: number) => checkedMeals[`${dayName}-${idx}`]);
-  }, [selectedOption, checkedMeals]);
+    if (!dayData) return 0;
+    const meals = dayData.meals || [];
+    const completedCount = meals.filter((_: any, idx: number) => lockedMeals[`${dayName}-${idx}`]).length;
+    return meals.length > 0 ? (completedCount / meals.length) * 100 : 0;
+  }, [selectedOption, lockedMeals]);
 
   const isDayLocked = useCallback((dayName: string) => {
     if (isSavedView) return false;
     const dayNum = parseInt(dayName.replace("Day ", ""));
     if (dayNum === 1) return false;
-    
-    // Strict sequential lock: Day N is locked if Day N-1 is not 100% complete
+
+    // 1. Progress Check: Previous day must be >= 70% complete (LOCKED/COMMITTED progress)
     const prevDayName = `Day ${dayNum - 1}`;
-    return !checkDayCompletion(prevDayName);
-  }, [checkDayCompletion, isSavedView]);
+    const prevDayProgress = checkDayCompletionProgress(prevDayName);
+    const isProgressMet = prevDayProgress >= 70;
 
-  useEffect(() => {
-    const planId = result.id || result.databaseId;
-    const storageKey = planId ? `meal-progress-${planId}` : `meal-progress-current`;
-    if (planId) {
-      localStorage.removeItem('meal-progress-current');
+    // 2. Time Check: Daily countdown must be over (at least one day must have passed per plan day)
+    let isTimeMet = true;
+    if (planStartDate) {
+      const now = Date.now();
+      const msPerDay = 24 * 60 * 60 * 1000;
+      const daysElapsed = Math.floor((now - planStartDate) / msPerDay);
+      // Day 2 requires 1 day elapsed, Day 3 requires 2, etc.
+      isTimeMet = daysElapsed >= (dayNum - 1);
     }
 
-    const saved = localStorage.getItem(storageKey);
-    if (saved) {
-      try {
-        setCheckedMeals(JSON.parse(saved));
-      } catch (e) {
-        console.error("Failed to load progress", e);
-      }
-    } else {
+    return !(isProgressMet && isTimeMet);
+  }, [checkDayCompletionProgress, isSavedView, planStartDate]);
+
+  useEffect(() => {
+    const planId = result.id || result.databaseId || 'current';
+    
+    if (!isSavedView) {
+      // It's a fresh generation - clear old progress for this planId/user
+      localStorage.removeItem(`meal-locked-${planId}`);
+      localStorage.removeItem(`meal-start-${planId}`);
+      setLockedMeals({});
       setCheckedMeals({});
-    }
-  }, [result.id, result.databaseId]);
-
-  const processMealUpdate = useCallback((newChecked: Record<string, boolean>, today: string) => {
-    setCheckedMeals(newChecked);
-    
-    // Only update state here. Persistence happens only when user explicitly clicks Save Daily Progress.
-    const todayMeals = selectedOption?.weeklyPlan?.[today]?.meals || [];
-    
-    // ── Auto-advance to next day when current day is 100% complete ──────────
-    const allComplete = todayMeals.length > 0 &&
-      todayMeals.every((_: any, i: number) => newChecked[`${today}-${i}`]);
-
-    if (allComplete) {
-      const currentDayNum = parseInt(today.replace('Day ', ''));
-      const nextDayName = `Day ${currentDayNum + 1}`;
-      const nextDayExists = !!selectedOption?.weeklyPlan?.[nextDayName];
-
-      if (nextDayExists) {
-        setDayCompleteToast(`🎉 ${today} complete! Unlocking ${nextDayName}...`);
-        setTimeout(() => {
-          setDayCompleteToast(null);
-          setSelectedDay(nextDayName);
-          const nextDayWeek = Math.ceil((currentDayNum + 1) / 7);
-          if (nextDayWeek > currentWeek) {
-            setCurrentWeek(nextDayWeek);
-          }
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-        }, 2000);
-      } else {
-        setDayCompleteToast('🏆 Plan Complete! Congratulations!');
-        setTimeout(() => setDayCompleteToast(null), 4000);
-      }
-    }
-  }, [selectedOption, currentWeek]);
-
-  // ── Voice Command Handler ──────────────────────
-  const handleVoiceCommand = useCallback((text: string) => {
-    if (!selectedOption?.weeklyPlan?.[selectedDay]) return;
-    const meals: string[] = selectedOption.weeklyPlan[selectedDay].meals || [];
-    const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9 ]/g, '').trim();
-    const words = normalize(text).split(/\s+/);
-
-    // ── Detect intent: UNMARK or MARK ──────────────────────────────────────
-    const textLower = text.toLowerCase().replace(/['']/g, '');
-    const isUnmark = /(?:unmark|deselect|remove|undo|didnt eat|did not eat|not eat|havent eaten|skip|cancel)/.test(textLower);
-
-    // ── Pattern 1: "[un]mark meal N" / "I [didn't] eat meal N" ─────────────
-    const mealNumMark   = text.match(/(?:mark\s+)?meal\s+(\d+)/i) ||
-                          text.match(/(?:ate|eat|eaten|log|logged)\s+meal\s+(\d+)/i);
-    const mealNumUnmark = text.match(/(?:unmark|deselect|remove|undo)\s+meal\s+(\d+)/i) ||
-                          textLower.match(/(?:didnt eat|did not eat|not eat|havent eaten|skip|cancel)\s+meal\s+(\d+)/);
-
-    const mealNumMatch = mealNumUnmark || (isUnmark ? null : mealNumMark);
-    const actionIsUnmark = !!mealNumUnmark || (isUnmark && !!mealNumMark);
-
-    if (mealNumMatch) {
-      const idx = parseInt(mealNumMatch[1]) - 1;
-      if (idx >= 0 && idx < meals.length) {
-        const key = `${selectedDay}-${idx}`;
-        const newVal = !actionIsUnmark;
-        const newChecked = { ...checkedMeals, [key]: newVal };
-        processMealUpdate(newChecked, selectedDay);
-        setVoiceMatch(newVal
-          ? `✅ Meal ${idx + 1} marked as eaten`
-          : `↩️ Meal ${idx + 1} unmarked`);
-        setTimeout(() => setVoiceMatch(null), 3500);
-        return;
-      }
-    }
-
-    // ── Pattern 2: food name fuzzy match ───────────────────────────────────
-    for (let idx = 0; idx < meals.length; idx++) {
-      const rawFood = meals[idx].replace(/^•\s*/, '').split(' - ')[0] || '';
-      const foodWords = normalize(rawFood).split(/\s+/);
-      const matchCount = foodWords.filter(fw => words.some(w => w.length > 2 && fw.includes(w))).length;
-      if (matchCount >= 1) {
-        const key = `${selectedDay}-${idx}`;
-        const newVal = !isUnmark;
-        const newChecked = { ...checkedMeals, [key]: newVal };
-        processMealUpdate(newChecked, selectedDay);
-        setVoiceMatch(newVal
-          ? `✅ "${rawFood}" marked as eaten`
-          : `↩️ "${rawFood}" unmarked`);
-        setTimeout(() => setVoiceMatch(null), 3500);
-        return;
-      }
-    }
-
-    setVoiceMatch(`❓ Could not match: "${text}"`);
-    setTimeout(() => setVoiceMatch(null), 3500);
-  }, [selectedOption, selectedDay, checkedMeals, processMealUpdate]);
-
-  const { isListening, transcript, voiceStatus, supported, startListening, stopListening } =
-    useVoiceControl(handleVoiceCommand);
-
-  // Calculate daily progress percentage whenever checks or day changes
-  useEffect(() => {
-    const todayMeals = selectedOption?.weeklyPlan?.[selectedDay]?.meals || [];
-    if (todayMeals.length === 0) {
-      setDailyProgress(0);
+      const now = Date.now();
+      setPlanStartDate(now);
+      localStorage.setItem(`meal-start-${planId}`, now.toString());
       return;
     }
+
+    // Load Locked Meals
+    const lockedSaved = localStorage.getItem(`meal-locked-${planId}`);
+    if (lockedSaved) {
+      try {
+        const parsed = JSON.parse(lockedSaved);
+        setLockedMeals(parsed);
+        setCheckedMeals(parsed); 
+      } catch (e) {
+        console.error("Failed to load locked progress", e);
+      }
+    }
+
+    // Load Plan Start Date
+    const startSaved = localStorage.getItem(`meal-start-${planId}`);
+    if (startSaved) {
+      setPlanStartDate(parseInt(startSaved));
+    } else {
+      const now = Date.now();
+      setPlanStartDate(now);
+      localStorage.setItem(`meal-start-${planId}`, now.toString());
+    }
+  }, [result.id, result.databaseId, isSavedView]);
+
+  // Persistent Progress Calculation (Auto-calculate on mount/change)
+  useEffect(() => {
+    if (!selectedOption || !selectedDay) return;
+    const todayMeals = selectedOption.weeklyPlan?.[selectedDay]?.meals || [];
     const completedCount = todayMeals.filter((_: any, i: number) => checkedMeals[`${selectedDay}-${i}`]).length;
-    setDailyProgress((completedCount / todayMeals.length) * 100);
-  }, [checkedMeals, selectedDay, selectedOption, setDailyProgress]);
+    const progress = todayMeals.length > 0 ? (completedCount / todayMeals.length) * 100 : 0;
+    setDailyProgress(progress);
+  }, [selectedDay, selectedOption, checkedMeals, setDailyProgress]);
 
   const toggleMeal = (day: string, idx: number) => {
-    if (isDayLocked(day) || !selectedOption) return;
     const key = `${day}-${idx}`;
+    // Cannot change if day is locked OR if this specific meal is already locked (committed)
+    if (isDayLocked(day) || !selectedOption || lockedMeals[key]) return;
+    
     const newChecked = { ...checkedMeals, [key]: !checkedMeals[key] };
-    processMealUpdate(newChecked, day);
+    setCheckedMeals(newChecked);
   };
 
   const saveToCloud = async (day: string) => {
-    if (!user?.uid) return;
+    console.log(`📡 [Voice/UI] Triggering saveToCloud for ${day}`);
+    if (!user?.uid) {
+      console.warn("⚠️ No user ID found, cannot save to cloud.");
+      return;
+    }
     setIsSaving(true);
     setTrackingError("");
     
@@ -340,21 +246,153 @@ const MealPlanResult: React.FC<MealPlanResultProps> = ({
         timestamp: new Date().toISOString()
       };
 
-      const response = await fetch('http://127.0.0.1:5000/api/meal-plans/track', {
+      const baseUrl = process.env.NEXT_PUBLIC_LOCAL_API_URL || "http://127.0.0.1:5000";
+      const response = await fetch(`${baseUrl}/api/meal-plans/track`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
 
-      if (!response.ok) throw new Error("Failed to sync progress");
+      if (!response.ok) {
+        const status = response.status;
+        const text = await response.text().catch(() => "No response body");
+        console.error(`❌ Sync failed (Status ${status}):`, text);
+        
+        let errorMsg = "Failed to sync progress";
+        try {
+          const errorData = JSON.parse(text);
+          errorMsg = errorData.error || errorMsg;
+        } catch (e) {}
+        
+        throw new Error(errorMsg);
+      }
+      
+      // Successfully saved to cloud, now lock them locally
+      setLockedMeals(checkedMeals);
+      localStorage.setItem(`meal-locked-${result.id || result.databaseId || 'current'}`, JSON.stringify(checkedMeals));
       
       setShowSuccessMessage(true);
       setTimeout(() => setShowSuccessMessage(false), 3000);
-    } catch (err) {
-      setTrackingError("Sync failed. Local progress saved.");
+    } catch (err: any) {
+      console.error("❌ Sync Error Detail:", err);
+      setTrackingError(err.message || "Sync failed. Local progress saved.");
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const speak = (text: string) => {
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 1.1;
+    window.speechSynthesis.speak(utterance);
+  };
+
+  const startVoiceControl = () => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert("Voice recognition is not supported in this browser.");
+      return;
+    }
+
+    // Reset states
+    setVoiceTranscript("");
+    setVoiceFeedback("");
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'en-US';
+    recognition.interimResults = true;
+    recognition.continuous = false; // Stop after one command for simplicity/reliability
+
+    recognition.onstart = () => {
+      setIsListening(true);
+      setVoiceTranscript("Listening...");
+    };
+
+    recognition.onresult = (event: any) => {
+      const current = event.resultIndex;
+      const transcript = event.results[current][0].transcript.toLowerCase();
+      setVoiceTranscript(transcript);
+
+      if (event.results[current].isFinal) {
+        handleVoiceCommandInternal(transcript);
+        recognition.stop(); // Stop immediately after processing command
+      }
+    };
+
+    recognition.onerror = (event: any) => {
+      console.error("Speech Recognition Error:", event.error);
+      setIsListening(false);
+      setVoiceTranscript("");
+      if (event.error === 'no-speech') {
+        setVoiceFeedback("No speech detected.");
+      } else {
+        setVoiceFeedback("Error occurred. Try again.");
+      }
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+    };
+
+    try {
+      recognition.start();
+    } catch (e) {
+      console.error("Recognition start error:", e);
+      setIsListening(false);
+    }
+  };
+
+  const handleVoiceCommandInternal = (text: string) => {
+    // Meal Toggle
+    const mealMatch = text.match(/(mark|unmark|check|uncheck)\s+meal\s+(\d+)/);
+    if (mealMatch) {
+      const action = mealMatch[1].includes('un') ? 'unmark' : 'mark';
+      const index = parseInt(mealMatch[2]) - 1;
+      const isCurrentlyChecked = !!checkedMeals[`${selectedDay}-${index}`];
+      
+      if (action === 'mark' && !isCurrentlyChecked && !lockedMeals[`${selectedDay}-${index}`]) {
+        toggleMeal(selectedDay, index);
+        setVoiceFeedback(`Marked meal ${index + 1}`);
+        speak(`Marked meal ${index + 1}`);
+      } else if (action === 'unmark' && isCurrentlyChecked && !lockedMeals[`${selectedDay}-${index}`]) {
+        toggleMeal(selectedDay, index);
+        setVoiceFeedback(`Unmarked meal ${index + 1}`);
+        speak(`Unmarked meal ${index + 1}`);
+      }
+      return;
+    }
+
+    // Day Select
+    const dayMatch = text.match(/(select|go to|show)\s+day\s+(\d+)/);
+    if (dayMatch) {
+      const dayNum = parseInt(dayMatch[2]);
+      const dayName = `Day ${dayNum}`;
+      if (allDays.includes(dayName) && !isDayLocked(dayName)) {
+        setSelectedDay(dayName);
+        setVoiceFeedback(`Switched to Day ${dayNum}`);
+        speak(`Switched to Day ${dayNum}`);
+      }
+      return;
+    }
+
+    // Navigation
+    if (text.includes("next week")) {
+      handleWeekChange('next');
+      setVoiceFeedback("Next week");
+      speak("Next week");
+    } else if (text.includes("previous week")) {
+      handleWeekChange('prev');
+      setVoiceFeedback("Previous week");
+      speak("Previous week");
+    } else if (text.includes("save") || text.includes("sync") || text.includes("upload") || text.includes("keep progress")) {
+      setVoiceFeedback("Action: Saving progress...");
+      speak("Saving your progress to the cloud.");
+      saveToCloud(selectedDay);
+    }
+  };
+
+  const handleVoiceCommand = (command: string, params?: any) => {
+    // Legacy support
   };
 
   if (!result) return null;
@@ -370,14 +408,6 @@ const MealPlanResult: React.FC<MealPlanResultProps> = ({
 
   return (
     <div className="min-h-screen bg-slate-50/50 pb-24">
-
-      {/* Day Complete Toast Banner */}
-      {dayCompleteToast && (
-        <div className="fixed top-0 left-0 right-0 z-[100] flex items-center justify-center py-4 px-6 bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-2xl animate-pulse">
-          <p className="text-base font-black uppercase tracking-widest">{dayCompleteToast}</p>
-        </div>
-      )}
-
       {/* Top Navigation Bar */}
       <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-gray-100 px-6 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -500,7 +530,10 @@ const MealPlanResult: React.FC<MealPlanResultProps> = ({
                       </div>
                       <div>
                          <p className="text-[10px] font-black text-emerald-400 uppercase tracking-[0.2em]">Target Deficiency Resolution</p>
-                         <h3 className="text-xl font-black">Daily Calorie Target: {result.daily_calorie_range || result.dailyCalorieRange || "N/A"}</h3>
+                         <h3 className="text-xl font-black">Daily Target: {result.daily_calorie_range || Math.floor(selectedDayTotalCalories)} kcal</h3>
+                         <p className="text-[10px] font-black text-emerald-400/60 uppercase tracking-widest mt-1">
+                            Consumed: {Math.floor(selectedDayConsumedCalories)} kcal ({Math.round((selectedDayConsumedCalories / (Number(result.daily_calorie_range) || selectedDayTotalCalories || 1)) * 100)}%)
+                         </p>
                       </div>
                    </div>
                    <div className="text-right">
@@ -533,15 +566,9 @@ const MealPlanResult: React.FC<MealPlanResultProps> = ({
                    </div>
                    <h3 className="text-lg font-black text-gray-900 mb-1">{def.name}</h3>
                    <div className="flex items-center gap-2 mb-4">
-                      <span className={`px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-widest ${
-                         (def.level || 'Moderate') === 'Severe'
-                           ? 'bg-rose-50 text-rose-600'
-                           : (def.level || 'Moderate') === 'Mild'
-                             ? 'bg-blue-50 text-blue-600'
-                             : 'bg-amber-50 text-amber-600'
-                       }`}>
-                         {def.level || 'Moderate'}
-                       </span>
+                      <span className="px-2 py-0.5 bg-rose-50 text-rose-600 rounded-lg text-[10px] font-black uppercase tracking-widest">
+                        {def.level || 'Moderate'}
+                      </span>
                    </div>
                    <div className="w-full h-1.5 bg-gray-50 rounded-full overflow-hidden">
                       <div className="h-full bg-amber-400 w-2/3" />
@@ -660,7 +687,7 @@ const MealPlanResult: React.FC<MealPlanResultProps> = ({
                       <span className="text-[10px] font-black uppercase tracking-widest mb-1">{day.split(" ")[0]}</span>
                       <span className="text-lg font-black">{day.split(" ")[1]}</span>
                       {isLocked && <Lock className="w-3 h-3 absolute top-2 right-2 opacity-40 text-rose-500" />}
-                      {checkDayCompletion(day) && <CheckCircle className="w-3 h-3 absolute top-2 right-2 text-emerald-500" />}
+                      {checkDayCompletionProgress(day) >= 70 && <CheckCircle className="w-3 h-3 absolute top-2 right-2 text-emerald-500" />}
                     </button>
                   );
                 })}
@@ -714,11 +741,17 @@ const MealPlanResult: React.FC<MealPlanResultProps> = ({
                         <div>
                           <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 flex items-center gap-2">
                             Meal {idx + 1}
-                            {isChecked && <span className="text-emerald-600">✓ Logged</span>}
+                            {lockedMeals[`${selectedDay}-${idx}`] && <span className="text-emerald-600 font-bold">● Locked</span>}
+                            {isChecked && !lockedMeals[`${selectedDay}-${idx}`] && <span className="text-amber-600">✓ Pending Save</span>}
                           </p>
-                          <h4 className={`text-xl font-black transition-all ${isChecked ? "text-emerald-900/40 line-through" : "text-gray-900"}`}>
-                            {p.foodName}
-                          </h4>
+                          <div className="flex items-center gap-2 mb-1">
+                            <h4 className={`text-xl font-black transition-all ${isChecked ? "text-emerald-900/40 line-through" : "text-gray-900"}`}>
+                              {p.foodName}
+                            </h4>
+                            <span className="px-2 py-0.5 bg-gray-100 text-gray-500 rounded text-[9px] font-bold uppercase tracking-wider">
+                              {p.category}
+                            </span>
+                          </div>
                         </div>
                       </div>
                       
@@ -736,14 +769,16 @@ const MealPlanResult: React.FC<MealPlanResultProps> = ({
                              onClick={() => toggleMeal(selectedDay, idx)}
                              disabled={isLocked}
                              className={`p-3 rounded-2xl transition-all ${
-                               isChecked 
-                                 ? "bg-emerald-500 text-white shadow-lg shadow-emerald-200" 
-                                 : isLocked
-                                   ? "bg-gray-100 text-gray-300 cursor-not-allowed"
-                                   : "bg-gray-900 text-white hover:bg-black hover:scale-105"
+                               lockedMeals[`${selectedDay}-${idx}`]
+                                 ? "bg-emerald-100 text-emerald-600 cursor-not-allowed opacity-80"
+                                 : isChecked 
+                                   ? "bg-amber-500 text-white shadow-lg shadow-amber-200" 
+                                   : isLocked
+                                     ? "bg-gray-100 text-gray-300 cursor-not-allowed"
+                                     : "bg-gray-900 text-white hover:bg-black hover:scale-105"
                              }`}
                            >
-                             {isChecked ? <CheckCircle className="w-5 h-5" /> : <Save className="w-5 h-5" />}
+                             {lockedMeals[`${selectedDay}-${idx}`] ? <Lock className="w-5 h-5" /> : isChecked ? <CheckCircle className="w-5 h-5" /> : <Save className="w-5 h-5" />}
                            </button>
                          </div>
                       </div>
@@ -786,97 +821,54 @@ const MealPlanResult: React.FC<MealPlanResultProps> = ({
                      <Settings className="w-5 h-5 text-gray-400" />
                      <h5 className="text-xs font-black text-gray-900 uppercase tracking-widest">Regimen Controls</h5>
                   </div>
-
-                  {/* ── Voice Control Panel ── */}
-                  <div className="mb-4 rounded-2xl overflow-hidden border border-gray-100">
-                    <div className="bg-gray-900 px-5 py-4">
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-2">
-                          <Volume2 className="w-4 h-4 text-emerald-400" />
-                          <span className="text-[10px] font-black text-emerald-400 uppercase tracking-[0.15em]">Voice Control</span>
-                        </div>
-                        <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${
-                          voiceStatus === 'listening' ? 'bg-red-500 text-white animate-pulse' :
-                          voiceStatus === 'processing' ? 'bg-amber-400 text-black' :
-                          voiceStatus === 'success' ? 'bg-emerald-500 text-white' :
-                          voiceStatus === 'error' ? 'bg-rose-500 text-white' :
-                          'bg-white/10 text-gray-400'
-                        }`}>
-                          {voiceStatus === 'listening' ? '● Live' :
-                           voiceStatus === 'processing' ? '⟳ Matching' :
-                           voiceStatus === 'success' ? '✓ Done' :
-                           voiceStatus === 'error' ? '✗ Error' : '○ Idle'}
-                        </span>
-                      </div>
-
-                      {/* Mic Button */}
-                      <button
-                        onClick={isListening ? stopListening : startListening}
-                        disabled={!supported}
-                        className={`w-full flex items-center justify-center gap-3 py-3 rounded-xl font-black text-sm uppercase tracking-widest transition-all ${
-                          !supported
-                            ? 'bg-white/5 text-gray-600 cursor-not-allowed'
-                            : isListening
-                            ? 'bg-red-500 text-white shadow-lg shadow-red-900/30 scale-[1.02]'
-                            : 'bg-emerald-500 hover:bg-emerald-400 text-white hover:scale-[1.02]'
-                        }`}
-                      >
-                        {isListening
-                          ? <><MicOff className="w-4 h-4" /> Stop Listening</>
-                          : <><Mic className="w-4 h-4" /> {supported ? 'Tap to Speak' : 'Not Supported'}</>
-                        }
-                      </button>
-
-                      {/* Live Transcript */}
-                      {(isListening || transcript) && (
-                        <div className="mt-3 px-3 py-2 bg-white/5 rounded-xl border border-white/10">
-                          <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">Hearing:</p>
-                          <p className="text-xs text-white font-medium italic truncate">
-                            {transcript || '...'}
-                          </p>
-                        </div>
-                      )}
-
-                      {/* Match Result Toast */}
-                      {voiceMatch && (
-                        <div className={`mt-3 px-3 py-2 rounded-xl text-xs font-bold ${
-                          voiceMatch.startsWith('✅')
-                            ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                            : voiceMatch.startsWith('↩️')
-                            ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30'
-                            : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                        }`}>
-                          {voiceMatch}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Voice Command Tips */}
-                    <div className="bg-gray-50 px-5 py-4 border-t border-gray-100">
-                      <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest mb-1.5">✅ Mark as eaten:</p>
-                      <div className="space-y-1 mb-3">
-                        {['"I ate oatmeal"', '"Mark meal 2"', '"Log meal 1"', '"Ate chicken"'].map(tip => (
-                          <p key={tip} className="text-[10px] text-gray-500 font-medium">• {tip}</p>
-                        ))}
-                      </div>
-                      <p className="text-[9px] font-black text-indigo-500 uppercase tracking-widest mb-1.5">↩️ Unmark / Deselect:</p>
-                      <div className="space-y-1">
-                        {['"Unmark meal 2"', '"Deselect oatmeal"', '"I didn\'t eat rice"', '"Remove meal 3"', '"Undo meal 1"', '"Skip meal 2"'].map(tip => (
-                          <p key={tip} className="text-[10px] text-indigo-400/80 font-medium">• {tip}</p>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
                   <div className="space-y-4">
-                      <button 
-                         onClick={() => saveToCloud(selectedDay)}
-                         disabled={isSaving}
-                         className="w-full py-4 px-6 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-100"
-                      >
-                         {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                         {isSaving ? "Syncing..." : "Save Daily Progress"}
-                      </button>
+                       <button 
+                          onClick={() => saveToCloud(selectedDay)}
+                          disabled={isSaving}
+                          className="w-full py-4 px-6 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-100"
+                       >
+                          {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                          {isSaving ? "Syncing..." : "Save Daily Progress"}
+                       </button>
+
+                       <div className="pt-4 border-t border-gray-50">
+                          <button 
+                             onClick={startVoiceControl}
+                             disabled={isListening}
+                             className={`w-full py-4 px-6 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 border ${
+                               isListening 
+                               ? "bg-rose-50 border-rose-200 text-rose-600 animate-pulse" 
+                               : "bg-indigo-50 border-indigo-100 text-indigo-600 hover:bg-indigo-100"
+                             }`}
+                          >
+                             <Mic className={`w-4 h-4 ${isListening ? "animate-bounce" : ""}`} />
+                             {isListening ? "Listening..." : "Enable Voice Control"}
+                          </button>
+                          
+                          {(voiceTranscript || voiceFeedback) && (
+                            <div className="mt-3 p-3 bg-gray-50 rounded-xl border border-gray-100">
+                               <p className="text-[9px] font-bold text-gray-400 uppercase tracking-tight mb-1">Voice Feedback</p>
+                               <p className="text-xs font-medium text-gray-700 italic">"{voiceFeedback || voiceTranscript}"</p>
+                            </div>
+                          )}
+
+                          <div className="mt-6">
+                             <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Sample Commands</p>
+                             <div className="space-y-2">
+                                {[
+                                   "\"Mark meal 1\"",
+                                   "\"Select day 2\"",
+                                   "\"Next week\"",
+                                   "\"Save progress\""
+                                ].map((cmd, i) => (
+                                   <div key={i} className="flex items-center gap-2 text-[10px] font-bold text-gray-500">
+                                      <div className="w-1 h-1 rounded-full bg-indigo-400" />
+                                      <span>{cmd}</span>
+                                   </div>
+                                ))}
+                             </div>
+                          </div>
+                       </div>
                   </div>
                </div>
             </div>
