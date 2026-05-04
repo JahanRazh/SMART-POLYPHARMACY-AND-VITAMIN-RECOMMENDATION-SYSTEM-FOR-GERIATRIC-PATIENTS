@@ -63,6 +63,16 @@ const manualEmotions = [
   { label: "Neutral", emoji: "😐" },
 ];
 
+// ============================================================================
+// AdviceDetails Page (Patient Assessment Form)
+// Captures comprehensive patient data including:
+// 1. Emotion detection (via Webcam or manual selection)
+// 2. Patient demographics & lifestyle habits
+// 3. Activity & time tracking
+// 4. Psychometric questionnaires (GDA-15, GAD-7, MARS/MMAS, IADL)
+// All data is submitted to the backend to generate a personalized health plan.
+// ============================================================================
+
 const PatientAssessmentForm = () => {
   const webcamRef = useRef<Webcam | null>(null);
   const { userProfile, user } = useAuth();
@@ -150,7 +160,11 @@ const PatientAssessmentForm = () => {
     }
   }, [userProfile]);
 
-  // Select real webcam (not OBS virtual camera)
+  // ==========================================================================
+  // Effect: Webcam Device Selection
+  // Tries to find a physical webcam and explicitly excludes virtual cameras
+  // like OBS Virtual Camera to ensure real-time emotion detection works properly.
+  // ==========================================================================
   useEffect(() => {
     async function selectRealWebcam() {
       try {
@@ -376,6 +390,14 @@ const PatientAssessmentForm = () => {
 
 
 
+  // ==========================================================================
+  // Form Submission Handler
+  // Executes a 4-step process to generate and save patient data:
+  // Step 1: Request Mental Health Assessment from Flask (AI-driven)
+  // Step 2: Prepare Complete Data Payload (combining form data, emotion, etc.)
+  // Step 3: Save Patient Data to Firestore (via Next.js API)
+  // Step 4: Save Psychometric Snapshot (for historical graphing)
+  // ==========================================================================
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");

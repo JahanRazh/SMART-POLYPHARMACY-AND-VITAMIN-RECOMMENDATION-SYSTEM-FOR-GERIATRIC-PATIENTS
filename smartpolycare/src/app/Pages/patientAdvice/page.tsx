@@ -1,5 +1,16 @@
 'use client';
 
+// ============================================================================
+// PatientAdvice Page
+// The central dashboard for a patient's generated health advice.
+// It aggregates data from multiple sources:
+// 1. The 2-week AI-generated lifestyle plan (Flask /patient-advice endpoint)
+// 2. Vitamin deficiency predictions & mapped lab tests (Flask /vitamin-deficiency endpoint)
+// 3. Polypharmacy risk analysis & safety advice
+// 4. Psychometric score history (MentalHealthGraph)
+// It then auto-saves this complete snapshot to the advice history and pushes notifications.
+// ============================================================================
+
 import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import dynamic from 'next/dynamic';
 import { motion } from 'framer-motion';
@@ -114,6 +125,12 @@ function PatientAdviceContent() {
   const [activeWeek, setActiveWeek] = useState<'week_1' | 'week_2'>('week_1');
 
   // ── fetchAdvice is stable thanks to useCallback ──────────────────────────
+  
+  // ==========================================================================
+  // Auto-Save Function
+  // Compiles the 2-week plan, polypharmacy safety advice, and recommended
+  // lab tests into a single snapshot payload and posts it to the history DB.
+  // ==========================================================================
   const saveAdviceToHistory = useCallback(
     async (adviceData: TwoWeekAdvice, vitaminData?: any) => {
       try {
@@ -174,6 +191,14 @@ function PatientAdviceContent() {
     [identifier]
   );
 
+  // ==========================================================================
+  // Main Data Fetcher
+  // 1. Fetches the AI 2-week plan
+  // 2. Fetches the vitamin assessment (by UID)
+  // 3. Fetches the psychometric scores for the PDF report
+  // 4. Calls saveAdviceToHistory to snapshot everything together
+  // 5. Triggers UI Notifications (Bell icon)
+  // ==========================================================================
   const fetchAdvice = useCallback(
     async (forceRegenerate = false) => {
       if (!identifier) {

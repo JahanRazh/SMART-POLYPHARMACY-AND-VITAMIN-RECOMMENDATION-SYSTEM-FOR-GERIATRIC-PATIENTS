@@ -1,5 +1,13 @@
 'use client';
 
+// ============================================================================
+// AdviceHistory Page
+// Displays a chronological archive of all personalized health plans generated 
+// for the user. It fetches from the 'lifestyle_results/history' collection
+// via the Flask backend, rendering the most recent advice in a highlighted 
+// banner and previous advice as a grid of cards.
+// ============================================================================
+
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
@@ -8,6 +16,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import MentalHealthGraph, { AssessmentEntry, overallStatus } from '@/app/components/MentalHealthGraph';
 
 type SavedAdvice = {
+  // Comprehensive type definition matching the data structure saved to Firestore
   id: string;
   email: string;
   week_1: Array<{ day: number; recommendation: string }>;
@@ -50,6 +59,8 @@ function riskColor(risk: string) {
 }
 
 /* ── Most Recent Summary Banner ──────────────────────────────────────── */
+// Component specifically designed to highlight the very latest generated advice,
+// displaying high-level information (Emotion, Risk, Deficiencies) prominently.
 function MostRecentSummary({ advice }: { advice: SavedAdvice }) {
   const rc = riskColor(advice.inputs?.polypharmacy_risk || '');
 
@@ -163,6 +174,11 @@ function AdviceHistoryContent() {
 
   const isFetchingRef = React.useRef(false);
 
+  // ==========================================================================
+  // Effect: Fetch Full Advice History
+  // Calls the backend to retrieve the array of all past advices for the user.
+  // The array is returned sorted descending by timestamp by the server.
+  // ==========================================================================
   useEffect(() => {
     const fetchHistory = async () => {
       if (!identifier || identifier === 'null' || identifier === 'undefined' || isFetchingRef.current) {

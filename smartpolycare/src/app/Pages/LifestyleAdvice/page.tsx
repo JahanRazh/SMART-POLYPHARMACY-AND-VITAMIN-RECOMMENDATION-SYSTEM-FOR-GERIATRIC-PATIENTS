@@ -1,6 +1,12 @@
 'use client';
 
-// Import necessary modules and libraries
+// ============================================================================
+// LifestyleAdvice Page
+// Provides a static/dynamic dashboard of lifestyle habits (Nutrition, Movement,
+// Sleep) and displays the user's most recently generated personalized health 
+// plan fetched from the backend history.
+// ============================================================================
+
 import React, { useMemo, useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
@@ -265,15 +271,18 @@ function AdviceTabs() {
 
 // Main page component – displays the lifestyle advice section
 export default function LifestyleAdvicePage() {
+  // Extract user authentication and routing parameters
   const { user, userProfile } = useAuth();
   const searchParams = useSearchParams();
   const patientId = searchParams.get('patientId');
   const emailParam = searchParams.get('email');
   
-  // Priority: auth user email > URL params > fallback
+  // Resolve the primary identifier for fetching advice history.
+  // Priority: Firebase Auth Email > Query Param Email > Query Param ID
   const userEmail = user?.email || userProfile?.email || emailParam || patientId;
   const identifier = userEmail;
 
+  // Component State Variables
   const [recentAdvice, setRecentAdvice] = useState<SavedAdvice | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -318,6 +327,11 @@ export default function LifestyleAdvicePage() {
     return () => clearInterval(interval);
   }, [slideImages.length]);
 
+  // ==========================================================================
+  // Effect: Fetch Recent Advice History
+  // Retrieves the user's advice history from the Flask backend on mount.
+  // We only care about the most recent record (index 0) for this dashboard.
+  // ==========================================================================
   useEffect(() => {
     const fetchRecentAdvice = async () => {
       if (!identifier || identifier === 'null') {
@@ -326,7 +340,7 @@ export default function LifestyleAdvicePage() {
       }
 
       try {
-        // Always use 'email' parameter when identifier is an email
+        // Determine whether to query by email or generic patientId
         const isEmail = identifier && identifier.includes('@');
         const paramName = isEmail ? 'email' : 'patientId';
         const endpoint = `/patient-advice-history?${paramName}=${encodeURIComponent(identifier)}`;
@@ -335,8 +349,10 @@ export default function LifestyleAdvicePage() {
         const response = await api.get(endpoint);
         const data = response.data as { advice_history: SavedAdvice[] };
 
+        // Ensure we actually got records back
         if (data.advice_history && data.advice_history.length > 0) {
-          // Get the most recent advice (should be sorted by backend)
+          // The backend returns the array sorted descending by saved_at date.
+          // Therefore, index 0 is always the most recent advice.
           setRecentAdvice(data.advice_history[0]);
           console.log('✅ Loaded most recent advice from Flask backend:', data.advice_history[0]);
         }
