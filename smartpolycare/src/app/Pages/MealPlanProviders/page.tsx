@@ -180,16 +180,22 @@ export default function MealPlanProvidersPage() {
     try {
       // 1. Remove from Firestore via backend (if user is logged in)
       if (user?.uid) {
-        const response = await fetch(
-          `http://127.0.0.1:5000/api/meal-plans/delete?userId=${user.uid}`,
-          { method: "DELETE" },
-        );
-        if (!response.ok) {
-          const err = await response.json().catch(() => ({}));
-          console.error("❌ Backend delete failed:", err);
-          // Still clear local state even if backend fails
-        } else {
-          console.log("✅ Meal plan deleted from database");
+        const baseUrl = process.env.NEXT_PUBLIC_LOCAL_API_URL || "http://127.0.0.1:5000";
+        try {
+          const response = await fetch(
+            `${baseUrl}/api/meal-plans/delete?userId=${user.uid}`,
+            { method: "DELETE" }
+          );
+          
+          if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            console.error("❌ Backend delete failed:", err);
+          } else {
+            console.log("✅ Meal plan deleted from database");
+          }
+        } catch (fetchErr) {
+          console.error("❌ Network error during delete:", fetchErr);
+          // Don't rethrow, still allow local cleanup
         }
       }
       // 2. Always clear localStorage

@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { AlertCircle, CheckCircle, Loader2 } from "lucide-react";
+import { AlertCircle, CheckCircle, Loader2, ArrowLeft, User, Activity, Clipboard, ShieldAlert, Heart } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/components/Contexts/AuthContext";
+import { motion } from "framer-motion";
 
 interface BasicProfile {
   name: string;
@@ -154,11 +155,10 @@ const MealPlanForm: React.FC<MealPlanFormProps> = ({ onBack, onSavePlan }) => {
             const data = await response.json();
             if (data.predictions && data.predictions.length > 0) {
               setFormData((prev) => {
-                // Keep existing manually added ones and only add new unique vitamins
                 const existingNames = new Set(prev.vitaminDeficiencies.map(v => v.name));
                 const newDeficiencies = data.predictions
                   .filter((p: any) => !existingNames.has(p.vitamin))
-                  .map((p: any) => ({ name: p.vitamin, level: "Moderate" }));
+                  .map((p: any) => ({ name: p.vitamin, level: p.level || "Moderate" }));
                 
                 if (newDeficiencies.length > 0) {
                   return {
@@ -184,6 +184,7 @@ const MealPlanForm: React.FC<MealPlanFormProps> = ({ onBack, onSavePlan }) => {
   const [success, setSuccess] = useState(false);
 
   const API_URL = "http://127.0.0.1:5000/api/meal-plans";
+
   const calculateBMI = (height: string, weight: string) => {
     if (height && weight) {
       const heightInMeters = parseFloat(height) / 100;
@@ -271,15 +272,12 @@ const MealPlanForm: React.FC<MealPlanFormProps> = ({ onBack, onSavePlan }) => {
 
   const wakeUpServer = async () => {
     try {
-      await fetch("http://127.0.0.1:5000/", {
-        method: "GET",
-      });
+      await fetch("http://127.0.0.1:5000/", { method: "GET" });
       await new Promise((resolve) => setTimeout(resolve, 2000));
     } catch (error) {
       console.log("Waking up server...");
     }
   };
-
 
   const handleSubmit = async (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
@@ -287,8 +285,6 @@ const MealPlanForm: React.FC<MealPlanFormProps> = ({ onBack, onSavePlan }) => {
     const errors = validateForm();
     if (errors.length > 0) {
       setFormErrors(errors);
-      
-      // Scroll to top where errors are displayed
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
@@ -299,19 +295,15 @@ const MealPlanForm: React.FC<MealPlanFormProps> = ({ onBack, onSavePlan }) => {
     setSuccess(false);
 
     try {
-      // Clear out any stale session data before building a new plan
       sessionStorage.removeItem("mealPlanResult");
       sessionStorage.removeItem("patientProfile");
       
-      // Update the main user profile with the latest data from this form
       if (user && updateProfileData) {
         try {
           const profileUpdate: any = {};
           if (formData.basicProfile.age) profileUpdate.age = parseInt(formData.basicProfile.age);
           if (formData.basicProfile.gender) profileUpdate.gender = formData.basicProfile.gender;
-          
           await updateProfileData(profileUpdate);
-          console.log("✅ Profile updated with latest age/gender");
         } catch (profileErr) {
           console.error("Failed to update profile data", profileErr);
         }
@@ -324,8 +316,6 @@ const MealPlanForm: React.FC<MealPlanFormProps> = ({ onBack, onSavePlan }) => {
         userId: user?.uid
       };
 
-      console.log("Sending form data to API:", payload);
-
       const response = await fetch(API_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -333,26 +323,11 @@ const MealPlanForm: React.FC<MealPlanFormProps> = ({ onBack, onSavePlan }) => {
       });
 
       const data = await response.json();
-      console.log("DEBUG: Full API Response Received:", data);
-      console.log("DEBUG: databaseId from server:", data.databaseId);
-      if (data.db_error) {
-        console.error("❌ DATABASE SAVE ERROR FROM SERVER:", data.db_error);
-      }
 
       if (!response.ok) {
         throw new Error(data.message || "Failed to create meal plan");
       }
 
-      // Check if data was saved to database
-      if (data.formDataSaved || data.databaseId) {
-        console.log(
-          `✅ Form data saved to database with ID: ${data.databaseId || data.id}`
-        );
-      } else {
-        console.warn("⚠️ API response received but formDataSaved is false and no databaseId found!");
-      }
-
-      // Auto-save the generated plan to localStorage and prepare for display
       if (data.mealPlanOptions && data.mealPlanOptions.length > 0) {
         try {
           const selectedOption = data.mealPlanOptions[0];
@@ -401,31 +376,16 @@ const MealPlanForm: React.FC<MealPlanFormProps> = ({ onBack, onSavePlan }) => {
           };
           
           localStorage.setItem("savedMealPlans", JSON.stringify([localStoragePlan]));
-          console.log("✅ Auto-saved active plan to localStorage!", localStoragePlan);
-          
         } catch (e) {
           console.error("Auto-save to local storage failed", e);
         }
       }
 
-      // Save data to sessionStorage
       sessionStorage.setItem("mealPlanResult", JSON.stringify(data));
-      sessionStorage.setItem(
-        "patientProfile",
-        JSON.stringify(formData)
-      );
-      // Also save to localStorage for better persistence after refresh
-      localStorage.setItem(
-        "patientProfile",
-        JSON.stringify(formData)
-      );
-
-      console.log("Saved to sessionStorage:");
-      console.log("mealPlanResult:", data);
-      console.log("patientProfile:", formData.basicProfile);
+      sessionStorage.setItem("patientProfile", JSON.stringify(formData));
+      localStorage.setItem("patientProfile", JSON.stringify(formData));
 
       setSuccess(true);
-      // Navigate to results page
       router.push("/Pages/MealPlanProviders/results");
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
@@ -435,365 +395,411 @@ const MealPlanForm: React.FC<MealPlanFormProps> = ({ onBack, onSavePlan }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8 px-4">
-      <div className="max-w-4xl mx-auto">
-        <div className="bg-white rounded-2xl shadow-xl p-8">
-          <div className="text-center mb-10 relative">
-            {onBack && (
-              <button
-                type="button"
-                onClick={onBack}
-                className="absolute left-0 top-1 text-gray-500 hover:text-gray-800 transition flex items-center gap-1 font-medium"
-              >
-                &larr; Back
-              </button>
-            )}
-            <h1 className="text-4xl font-bold text-gray-800 mb-2">
-              Meal Plan Assessment
-            </h1>
-            <p className="text-gray-600 mb-4">
-              Complete this risk-form style assessment to generate your personalized plan
-            </p>
-          </div>
-
-          {error && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-700">
-              <AlertCircle className="w-5 h-5 flex-shrink-0" />
-              <span>{error}</span>
-            </div>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-teal-50 py-12 px-4 sm:px-6 lg:px-8">
+      <motion.div
+        className="mx-auto max-w-4xl"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.6 }}
+      >
+        {/* Header */}
+        <motion.div
+          className="mb-10 text-center relative"
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.1 }}
+        >
+          {onBack && (
+            <button
+              type="button"
+              onClick={onBack}
+              className="absolute left-0 top-1 text-teal-600 hover:text-teal-800 transition flex items-center gap-2 font-bold px-4 py-2 rounded-xl bg-white/50 border border-teal-100 shadow-sm"
+            >
+              <ArrowLeft className="w-4 h-4" /> Back
+            </button>
           )}
+          <h1 className="text-4xl font-bold text-gray-900 mb-3 tracking-tight">
+            Meal Plan Assessment
+          </h1>
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+            Complete this comprehensive assessment to generate your personalized, AI-driven geriatric nutrition plan
+          </p>
+        </motion.div>
 
-          {success && (
-            <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2 text-green-700">
-              <CheckCircle className="w-5 h-5 flex-shrink-0" />
-              <span>Meal plan created successfully!</span>
-            </div>
-          )}
+        {/* Error Alert */}
+        {error && (
+          <motion.div
+            className="mb-6 rounded-3xl border border-red-200/50 bg-red-50/80 backdrop-blur-md p-5 text-red-700 font-medium flex items-center gap-3 shadow-sm"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+          >
+            <ShieldAlert className="w-6 h-6 flex-shrink-0 text-red-500" />
+            <span>{error}</span>
+          </motion.div>
+        )}
 
-          {formErrors.length > 0 && (
-            <div className="mb-8 p-4 bg-red-50 border border-red-300 rounded-lg">
-              <h3 className="text-red-800 font-semibold mb-2">Please correct the following errors:</h3>
-              <ul className="space-y-1">
-                {formErrors.map((err, index) => (
-                  <li key={index} className="flex items-center gap-2 text-red-700 text-sm">
-                    <AlertCircle className="w-4 h-4" />
-                    <span>{err}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+        {/* Form Errors List */}
+        {formErrors.length > 0 && (
+          <motion.div
+            className="mb-8 rounded-3xl border border-orange-200/50 bg-orange-50/80 backdrop-blur-md p-6 shadow-sm"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+          >
+            <h3 className="text-orange-800 font-bold mb-3 flex items-center gap-2">
+              <AlertCircle className="w-5 h-5" /> Please correct the following:
+            </h3>
+            <ul className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1">
+              {formErrors.map((err, index) => (
+                <li key={index} className="flex items-center gap-2 text-orange-700 text-sm font-medium">
+                  <div className="w-1.5 h-1.5 rounded-full bg-orange-400"></div>
+                  <span>{err}</span>
+                </li>
+              ))}
+            </ul>
+          </motion.div>
+        )}
 
-          <div className="space-y-12 divide-y divide-gray-100">
-            {/* SECTION 1: Basic Profile */}
-            <section className="space-y-6 pt-4">
-              <h2 className="text-2xl font-semibold text-gray-800 border-b pb-2">
+        {/* Success Alert */}
+        {success && (
+          <motion.div
+            className="mb-6 rounded-3xl border border-emerald-200/50 bg-emerald-50/80 backdrop-blur-md p-5 text-emerald-700 font-medium flex items-center gap-3 shadow-sm"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+          >
+            <CheckCircle className="w-6 h-6 flex-shrink-0 text-emerald-500" />
+            <span>Meal plan created successfully! Redirecting...</span>
+          </motion.div>
+        )}
+
+        <form className="space-y-8">
+          {/* SECTION 1: Basic Profile */}
+          <motion.section
+            className="rounded-3xl border border-white/40 bg-white/20 backdrop-blur-xl p-8 shadow-xl hover:shadow-2xl transition-all duration-300"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            viewport={{ once: true }}
+          >
+            <div className="mb-8">
+              <h2 className="text-2xl font-bold text-gray-900 mb-2 flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-blue-100 text-blue-600">
+                  <User className="w-6 h-6" />
+                </div>
                 Basic Profile
               </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Name *
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.basicProfile.name}
-                    onChange={(e) =>
-                      handleInputChange("basicProfile", "name", e.target.value)
-                    }
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    placeholder="Enter your name"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Age *
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.basicProfile.age}
-                    onChange={(e) =>
-                      handleInputChange("basicProfile", "age", e.target.value)
-                    }
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    placeholder="Age"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Gender *
-                  </label>
-                  <select
-                    value={formData.basicProfile.gender}
-                    onChange={(e) =>
-                      handleInputChange("basicProfile", "gender", e.target.value)
-                    }
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">Select Gender</option>
-                    <option value="male">Male</option>
-                    <option value="female">Female</option>
-                    <option value="other">Other</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Height (cm) *
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.basicProfile.height}
-                    onChange={(e) =>
-                      handleInputChange("basicProfile", "height", e.target.value)
-                    }
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    placeholder="Height in cm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Weight (kg) *
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.basicProfile.weight}
-                    onChange={(e) =>
-                      handleInputChange("basicProfile", "weight", e.target.value)
-                    }
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    placeholder="Weight in kg"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    BMI (Auto-calculated)
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.basicProfile.bmi}
-                    disabled
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-600"
-                    placeholder="Auto-calculated"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    BMI Level
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.basicProfile.bmiLevel}
-                    disabled
-                    className={`w-full px-4 py-2 border rounded-lg font-semibold ${
-                      formData.basicProfile.bmiLevel === "Normal"
-                        ? "bg-green-100 text-green-800 border-green-300"
-                        : formData.basicProfile.bmiLevel === "Overweight"
-                        ? "bg-yellow-100 text-yellow-800 border-yellow-300"
-                        : formData.basicProfile.bmiLevel === "Underweight"
-                        ? "bg-blue-100 text-blue-800 border-blue-300"
-                        : formData.basicProfile.bmiLevel === "Obese"
-                        ? "bg-red-100 text-red-800 border-red-300"
-                        : "bg-gray-100 text-gray-600"
-                    }`}
-                    placeholder="Auto-calculated"
-                  />
-                </div>
+              <p className="text-sm text-gray-600 ml-12">Essential physical measurements for calorie calculation</p>
+            </div>
 
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Activity Level *
-                  </label>
-                  <select
-                    value={formData.basicProfile.activityLevel}
-                    onChange={(e) =>
-                      handleInputChange(
-                        "basicProfile",
-                        "activityLevel",
-                        e.target.value
-                      )
-                    }
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">Select Activity Level</option>
-                    <option value="sedentary">
-                      Sedentary (little or no exercise)
-                    </option>
-                    <option value="light">Light (exercise 1-3 days/week)</option>
-                    <option value="moderate">
-                      Moderate (exercise 3-5 days/week)
-                    </option>
-                    <option value="active">
-                      Active (exercise 6-7 days/week)
-                    </option>
-                    <option value="very-active">
-                      Very Active (intense exercise daily)
-                    </option>
-                  </select>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="md:col-span-2">
+                <label className="block text-sm font-bold text-gray-700 mb-2 ml-1">
+                  Full Name
+                </label>
+                <input
+                  type="text"
+                  value={formData.basicProfile.name}
+                  onChange={(e) => handleInputChange("basicProfile", "name", e.target.value)}
+                  className="w-full px-5 py-3 rounded-2xl border border-white/50 bg-white/40 backdrop-blur-sm text-gray-900 placeholder:text-gray-400 focus:border-blue-400 focus:outline-none focus:ring-4 focus:ring-blue-100 transition-all shadow-sm"
+                  placeholder="Enter your full name"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-sm font-bold text-gray-700 mb-2 ml-1">Age</label>
+                <input
+                  type="number"
+                  value={formData.basicProfile.age}
+                  onChange={(e) => handleInputChange("basicProfile", "age", e.target.value)}
+                  className="w-full px-5 py-3 rounded-2xl border border-white/50 bg-white/40 backdrop-blur-sm text-gray-900 focus:border-blue-400 focus:outline-none focus:ring-4 focus:ring-blue-100 transition-all shadow-sm"
+                  placeholder="Years"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-sm font-bold text-gray-700 mb-2 ml-1">Gender</label>
+                <select
+                  value={formData.basicProfile.gender}
+                  onChange={(e) => handleInputChange("basicProfile", "gender", e.target.value)}
+                  className="w-full px-5 py-3 rounded-2xl border border-white/50 bg-white/40 backdrop-blur-sm text-gray-900 focus:border-blue-400 focus:outline-none focus:ring-4 focus:ring-blue-100 transition-all shadow-sm appearance-none"
+                >
+                  <option value="">Select Gender</option>
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-sm font-bold text-gray-700 mb-2 ml-1">Height (cm)</label>
+                <input
+                  type="number"
+                  value={formData.basicProfile.height}
+                  onChange={(e) => handleInputChange("basicProfile", "height", e.target.value)}
+                  className="w-full px-5 py-3 rounded-2xl border border-white/50 bg-white/40 backdrop-blur-sm text-gray-900 focus:border-blue-400 focus:outline-none focus:ring-4 focus:ring-blue-100 transition-all shadow-sm"
+                  placeholder="Height in cm"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-sm font-bold text-gray-700 mb-2 ml-1">Weight (kg)</label>
+                <input
+                  type="number"
+                  value={formData.basicProfile.weight}
+                  onChange={(e) => handleInputChange("basicProfile", "weight", e.target.value)}
+                  className="w-full px-5 py-3 rounded-2xl border border-white/50 bg-white/40 backdrop-blur-sm text-gray-900 focus:border-blue-400 focus:outline-none focus:ring-4 focus:ring-blue-100 transition-all shadow-sm"
+                  placeholder="Weight in kg"
+                />
+              </div>
+
+              {/* BMI Insight Card */}
+              <div className="md:col-span-2 mt-2 p-6 rounded-3xl bg-gradient-to-br from-blue-50/50 to-teal-50/50 border border-white shadow-inner grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div className="flex flex-col">
+                  <span className="text-xs font-bold text-blue-600 uppercase tracking-widest mb-1">Body Mass Index</span>
+                  <span className="text-3xl font-black text-gray-900">{formData.basicProfile.bmi || "—"}</span>
+                </div>
+                <div className="flex flex-col justify-center">
+                  <span className="text-xs font-bold text-teal-600 uppercase tracking-widest mb-1">Health Category</span>
+                  <div className="flex items-center gap-2">
+                    <span className={`px-4 py-1 rounded-full text-sm font-black shadow-sm ${
+                      formData.basicProfile.bmiLevel === "Normal" ? "bg-green-100 text-green-700" :
+                      formData.basicProfile.bmiLevel === "Overweight" ? "bg-yellow-100 text-yellow-700" :
+                      formData.basicProfile.bmiLevel === "Underweight" ? "bg-blue-100 text-blue-700" :
+                      formData.basicProfile.bmiLevel === "Obese" ? "bg-red-100 text-red-700" : "bg-gray-100 text-gray-600"
+                    }`}>
+                      {formData.basicProfile.bmiLevel || "Awaiting Input"}
+                    </span>
+                  </div>
                 </div>
               </div>
-            </section>
 
-            {/* SECTION 2: Medical Conditions */}
-            <section className="space-y-6 pt-10">
-              <h2 className="text-2xl font-semibold text-gray-800 border-b pb-2">
+              <div className="md:col-span-2 space-y-2">
+                <label className="block text-sm font-bold text-gray-700 mb-2 ml-1">Activity Level</label>
+                <select
+                  value={formData.basicProfile.activityLevel}
+                  onChange={(e) => handleInputChange("basicProfile", "activityLevel", e.target.value)}
+                  className="w-full px-5 py-3 rounded-2xl border border-white/50 bg-white/40 backdrop-blur-sm text-gray-900 focus:border-blue-400 focus:outline-none focus:ring-4 focus:ring-blue-100 transition-all shadow-sm appearance-none"
+                >
+                  <option value="">Select Activity Level</option>
+                  <option value="sedentary">Sedentary (little or no exercise)</option>
+                  <option value="light">Light (exercise 1-3 days/week)</option>
+                  <option value="moderate">Moderate (exercise 3-5 days/week)</option>
+                  <option value="active">Active (exercise 6-7 days/week)</option>
+                  <option value="very-active">Very Active (intense exercise daily)</option>
+                </select>
+              </div>
+            </div>
+          </motion.section>
+
+          {/* SECTION 2: Medical Conditions */}
+          <motion.section
+            className="rounded-3xl border border-white/40 bg-white/20 backdrop-blur-xl p-8 shadow-xl hover:shadow-2xl transition-all duration-300"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.1 }}
+            viewport={{ once: true }}
+          >
+            <div className="mb-8">
+              <h2 className="text-2xl font-bold text-gray-900 mb-2 flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-red-100 text-red-600">
+                  <Activity className="w-6 h-6" />
+                </div>
                 Medical Conditions
               </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {(
-                  Object.keys(formData.medicalConditions) as Array<
-                    keyof MedicalConditions
-                  >
-                ).map((key) => {
-                  const value = formData.medicalConditions[key];
-                  if (key === "other") {
-                    return (
-                      <div key={key} className="md:col-span-2 mt-2">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Other Conditions
-                        </label>
-                        <input
-                          type="text"
-                          value={value as string}
-                          onChange={(e) =>
-                            handleInputChange(
-                              "medicalConditions",
-                              "other",
-                              e.target.value
-                            )
-                          }
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                          placeholder="Specify other conditions"
-                        />
-                      </div>
-                    );
-                  }
-                  return (
-                    <label
-                      key={key}
-                      className="flex items-center gap-3 cursor-pointer p-3 rounded hover:bg-gray-50 transition border border-transparent hover:border-gray-200"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={value as boolean}
-                        onChange={() => handleCheckbox("medicalConditions", key)}
-                        className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 mt-0.5"
-                      />
-                      <span className="text-gray-700 capitalize text-lg">
-                        {key.replace(/([A-Z])/g, " $1").trim()}
-                      </span>
-                    </label>
-                  );
-                })}
-              </div>
-            </section>
+              <p className="text-sm text-gray-600 ml-12">Select any existing health conditions for tailored nutrition</p>
+            </div>
 
-            {/* SECTION 4: Dietary Restrictions */}
-            <section className="space-y-6 pt-10">
-              <h2 className="text-2xl font-semibold text-gray-800 border-b pb-2">
+            <div className="grid gap-4 md:grid-cols-2">
+              {(Object.keys(formData.medicalConditions) as Array<keyof MedicalConditions>).map((key, idx) => {
+                const value = formData.medicalConditions[key];
+                if (key === "other") return null;
+
+                return (
+                  <motion.label
+                    key={key}
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    whileInView={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.3, delay: idx * 0.05 }}
+                    viewport={{ once: true }}
+                    className={`flex items-center gap-4 cursor-pointer p-4 rounded-2xl border-2 transition-all group ${
+                      value ? 'bg-red-50/50 border-red-200 shadow-md' : 'bg-white/30 border-white/50 hover:bg-white/50'
+                    }`}
+                  >
+                    <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${
+                      value ? 'bg-red-500 border-red-500 text-white' : 'border-gray-300 bg-white group-hover:border-red-400'
+                    }`}>
+                      {value && <CheckCircle className="w-4 h-4" />}
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={value as boolean}
+                      onChange={() => handleCheckbox("medicalConditions", key)}
+                      className="hidden"
+                    />
+                    <span className={`text-lg font-bold transition-colors ${value ? 'text-red-900' : 'text-gray-700'}`}>
+                      {key.replace(/([A-Z])/g, " $1").trim().charAt(0).toUpperCase() + key.replace(/([A-Z])/g, " $1").trim().slice(1)}
+                    </span>
+                  </motion.label>
+                );
+              })}
+              
+              <div className="md:col-span-2 mt-2">
+                <label className="block text-sm font-bold text-gray-700 mb-2 ml-1">Other Conditions</label>
+                <input
+                  type="text"
+                  value={formData.medicalConditions.other}
+                  onChange={(e) => handleInputChange("medicalConditions", "other", e.target.value)}
+                  className="w-full px-5 py-3 rounded-2xl border border-white/50 bg-white/40 backdrop-blur-sm text-gray-900 placeholder:text-gray-400 focus:border-red-400 focus:outline-none focus:ring-4 focus:ring-red-100 transition-all shadow-sm"
+                  placeholder="Specify other conditions (comma separated)"
+                />
+              </div>
+            </div>
+          </motion.section>
+
+          {/* SECTION 3: Dietary Restrictions */}
+          <motion.section
+            className="rounded-3xl border border-white/40 bg-white/20 backdrop-blur-xl p-8 shadow-xl hover:shadow-2xl transition-all duration-300"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            viewport={{ once: true }}
+          >
+            <div className="mb-8">
+              <h2 className="text-2xl font-bold text-gray-900 mb-2 flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-emerald-100 text-emerald-600">
+                  <Heart className="w-6 h-6" />
+                </div>
                 Dietary Restrictions
               </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {(
-                  Object.keys(formData.dietaryRestrictions) as Array<
-                    keyof DietaryRestrictions
-                  >
-                ).map((key) => {
-                  const value = formData.dietaryRestrictions[key];
-                  if (key === "other") {
-                    return (
-                      <div key={key} className="md:col-span-2 mt-2">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Other Restrictions
-                        </label>
-                        <input
-                          type="text"
-                          value={value as string}
-                          onChange={(e) =>
-                            handleInputChange(
-                              "dietaryRestrictions",
-                              "other",
-                              e.target.value
-                            )
-                          }
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                          placeholder="Specify other restrictions"
-                        />
-                      </div>
-                    );
-                  }
-                  return (
-                    <label
-                      key={key}
-                      className="flex items-center gap-3 cursor-pointer p-3 rounded hover:bg-gray-50 transition border border-transparent hover:border-gray-200"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={value as boolean}
-                        onChange={() =>
-                          handleCheckbox("dietaryRestrictions", key)
-                        }
-                        className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 mt-0.5"
-                      />
-                      <span className="text-gray-700 capitalize text-lg">
-                        {key.replace(/([A-Z])/g, " $1").trim()}
-                      </span>
-                    </label>
-                  );
-                })}
-              </div>
-            </section>
+              <p className="text-sm text-gray-600 ml-12">Your dietary preferences and allergies</p>
+            </div>
 
-            {/* SECTION: Vitamin Deficiencies */}
-            <section className="space-y-6 pt-10">
-              <h2 className="text-2xl font-semibold text-gray-800 border-b pb-2">
+            <div className="grid gap-4 md:grid-cols-2">
+              {(Object.keys(formData.dietaryRestrictions) as Array<keyof DietaryRestrictions>).map((key, idx) => {
+                const value = formData.dietaryRestrictions[key];
+                if (key === "other") return null;
+
+                return (
+                  <motion.label
+                    key={key}
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    whileInView={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.3, delay: idx * 0.05 }}
+                    viewport={{ once: true }}
+                    className={`flex items-center gap-4 cursor-pointer p-4 rounded-2xl border-2 transition-all group ${
+                      value ? 'bg-emerald-50/50 border-emerald-200 shadow-md' : 'bg-white/30 border-white/50 hover:bg-white/50'
+                    }`}
+                  >
+                    <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${
+                      value ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-gray-300 bg-white group-hover:border-emerald-400'
+                    }`}>
+                      {value && <CheckCircle className="w-4 h-4" />}
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={value as boolean}
+                      onChange={() => handleCheckbox("dietaryRestrictions", key)}
+                      className="hidden"
+                    />
+                    <span className={`text-lg font-bold transition-colors ${value ? 'text-emerald-900' : 'text-gray-700'}`}>
+                      {key.replace(/([A-Z])/g, " $1").trim().charAt(0).toUpperCase() + key.replace(/([A-Z])/g, " $1").trim().slice(1)}
+                    </span>
+                  </motion.label>
+                );
+              })}
+              
+              <div className="md:col-span-2 mt-2">
+                <label className="block text-sm font-bold text-gray-700 mb-2 ml-1">Other Restrictions</label>
+                <input
+                  type="text"
+                  value={formData.dietaryRestrictions.other}
+                  onChange={(e) => handleInputChange("dietaryRestrictions", "other", e.target.value)}
+                  className="w-full px-5 py-3 rounded-2xl border border-white/50 bg-white/40 backdrop-blur-sm text-gray-900 placeholder:text-gray-400 focus:border-emerald-400 focus:outline-none focus:ring-4 focus:ring-emerald-100 transition-all shadow-sm"
+                  placeholder="Specify allergies or preferences"
+                />
+              </div>
+            </div>
+          </motion.section>
+
+          {/* SECTION: Vitamin Deficiencies */}
+          <motion.section
+            className="rounded-3xl border border-white/40 bg-white/20 backdrop-blur-xl p-8 shadow-xl hover:shadow-2xl transition-all duration-300"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.3 }}
+            viewport={{ once: true }}
+          >
+            <div className="mb-6">
+              <h2 className="text-2xl font-bold text-gray-900 mb-2 flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-amber-100 text-amber-600">
+                  <Clipboard className="w-6 h-6" />
+                </div>
                 Vitamin Deficiencies
               </h2>
-              
-              <div className="bg-gray-50 p-6 rounded-xl border border-gray-200">
-                <p className="text-gray-600 mb-4 whitespace-pre-wrap">
-                  Based on your prior Vitamin Deficiency Assessment, the following
-                  deficiencies have been automatically identified and pre-filled into your profile.
-                </p>
-
-                {formData.vitaminDeficiencies.length > 0 ? (
-                  <div className="mt-4 space-y-2">
-                    <h4 className="text-sm font-medium text-gray-700">Identified Deficiencies:</h4>
-                    <div className="flex flex-wrap gap-2">
-                      {formData.vitaminDeficiencies.map((def, idx) => (
-                        <div key={idx} className="flex items-center gap-2 bg-white border border-gray-200 px-3 py-1.5 rounded-full shadow-sm">
-                          <span className="text-sm font-medium text-gray-800">{def.name}</span>
-                          <span className="text-xs px-2 py-0.5 bg-red-100 text-red-700 rounded-full font-semibold">{def.level}</span>
-                        </div>
-                      ))}
-                    </div>
+              <p className="text-sm text-gray-600 ml-12">Auto-filled from your previous assessments</p>
+            </div>
+            
+            <div className="p-6 rounded-3xl bg-amber-50/50 border border-amber-100 shadow-inner">
+              {formData.vitaminDeficiencies.length > 0 ? (
+                <div className="space-y-4">
+                  <p className="text-sm text-amber-800 font-medium leading-relaxed">
+                    The following deficiencies have been identified and will be prioritized in your meal plan generation:
+                  </p>
+                  <div className="flex flex-wrap gap-3">
+                    {formData.vitaminDeficiencies.map((def, idx) => (
+                      <motion.div
+                        key={idx}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: idx * 0.1 }}
+                        className="flex items-center gap-2 bg-white border border-amber-200 px-4 py-2 rounded-2xl shadow-sm hover:shadow-md transition-shadow"
+                      >
+                        <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+                        <span className="text-sm font-black text-gray-800">{def.name}</span>
+                        <span className="text-[10px] px-2 py-0.5 bg-red-100 text-red-700 rounded-full font-black uppercase tracking-wider">{def.level}</span>
+                      </motion.div>
+                    ))}
                   </div>
-                ) : (
-                   <p className="text-sm text-gray-500 italic">No previous deficiency records found.</p>
-                )}
-              </div>
-            </section>
-          </div>
+                </div>
+              ) : (
+                <div className="text-center py-6">
+                  <p className="text-sm text-amber-700/60 font-medium italic">No previous deficiency records found in your profile.</p>
+                </div>
+              )}
+            </div>
+          </motion.section>
 
           {/* Submit Button */}
-          <div className="mt-12 pt-8 border-t border-gray-200">
+          <motion.div
+            className="pt-10 flex justify-center"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.5 }}
+          >
             <button
               type="button"
               onClick={handleSubmit}
               disabled={loading}
-              className="w-full md:w-auto md:min-w-[300px] ml-auto px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold text-lg rounded-xl hover:from-blue-700 hover:to-indigo-700 transform hover:-translate-y-1 hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-3 mx-auto"
+              className="group relative w-full md:w-auto md:min-w-[400px] overflow-hidden rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 p-px font-bold text-white shadow-2xl transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? (
-                <>
-                  <Loader2 className="w-6 h-6 animate-spin" />
-                  Generating Plan...
-                </>
-              ) : (
-                "Generate Meal Plan"
-              )}
+              <div className="relative flex items-center justify-center gap-3 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 px-10 py-5 transition-all group-hover:bg-transparent">
+                {loading ? (
+                  <>
+                    <Loader2 className="w-6 h-6 animate-spin" />
+                    <span>Analyzing & Generating...</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-xl">Generate Personalized Meal Plan</span>
+                    <CheckCircle className="w-6 h-6 transition-transform group-hover:translate-x-1" />
+                  </>
+                )}
+              </div>
+              {/* Animated background glow */}
+              <div className="absolute inset-0 -z-10 bg-gradient-to-r from-blue-400 via-indigo-400 to-teal-400 opacity-0 transition-opacity group-hover:opacity-100 blur-xl animate-pulse"></div>
             </button>
-          </div>
-        </div>
-      </div>
+          </motion.div>
+        </form>
+      </motion.div>
     </div>
   );
 };
