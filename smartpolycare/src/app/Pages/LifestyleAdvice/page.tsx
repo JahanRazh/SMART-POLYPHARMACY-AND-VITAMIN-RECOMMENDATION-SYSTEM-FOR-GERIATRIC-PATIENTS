@@ -329,7 +329,7 @@ export default function LifestyleAdvicePage() {
         // Always use 'email' parameter when identifier is an email
         const isEmail = identifier && identifier.includes('@');
         const paramName = isEmail ? 'email' : 'patientId';
-        const endpoint = `/patient-advice-history?${paramName}=${encodeURIComponent(identifier)}`;
+        const endpoint = `/patient-advice-history?${paramName}=${encodeURIComponent(identifier || '')}`;
         
         console.log(`📡 Fetching advice history for ${paramName}: ${identifier}`);
         const response = await api.get(endpoint);

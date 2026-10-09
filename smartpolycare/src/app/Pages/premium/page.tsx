@@ -116,7 +116,7 @@ export default function PremiumPage() {
             className="flex justify-center mb-8"
           >
             <Link
-              href={`/Pages/patientAdvice?${emailParam ? 'email' : 'patientId'}=${encodeURIComponent(identifier)}`}
+              href={`/Pages/patientAdvice?${emailParam ? 'email' : 'patientId'}=${encodeURIComponent(identifier || '')}`}
               className="inline-flex items-center gap-2 text-teal-600 hover:text-teal-700 font-semibold transition-colors"
             >
               ← Back to Free Plan
@@ -343,7 +343,7 @@ export default function PremiumPage() {
               Get Started Today
             </button>
             <Link
-              href={`/Pages/patientAdvice?${emailParam ? 'email' : 'patientId'}=${encodeURIComponent(identifier)}`}
+              href={`/Pages/patientAdvice?${emailParam ? 'email' : 'patientId'}=${encodeURIComponent(identifier || '')}`}
               className="border-2 border-white text-white font-bold px-8 py-3 rounded-xl hover:bg-white/10 transition-all"
             >
               Back to Free Plan

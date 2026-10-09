@@ -848,7 +848,7 @@ const MealPlanResult: React.FC<MealPlanResultProps> = ({
                           {(voiceTranscript || voiceFeedback) && (
                             <div className="mt-3 p-3 bg-gray-50 rounded-xl border border-gray-100">
                                <p className="text-[9px] font-bold text-gray-400 uppercase tracking-tight mb-1">Voice Feedback</p>
-                               <p className="text-xs font-medium text-gray-700 italic">"{voiceFeedback || voiceTranscript}"</p>
+                               <p className="text-xs font-medium text-gray-700 italic">&quot;{voiceFeedback || voiceTranscript}&quot;</p>
                             </div>
                           )}
 
