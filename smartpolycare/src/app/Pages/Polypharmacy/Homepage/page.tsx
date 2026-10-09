@@ -26,31 +26,31 @@ export default function PolypharmacyHomepage() {
           }}
         />
 
-        <div className="container mx-auto max-w-6xl px-6 pt-24 pb-16 relative">
+        <div className="container mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 pt-16 sm:pt-20 md:pt-24 pb-12 sm:pb-16 relative">
           <motion.div {...fadeUp()} className="max-w-3xl">
-            <span className="inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-indigo-600">
+            <span className="inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50 px-3 sm:px-4 py-1 sm:py-1.5 text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-indigo-600">
               <span className="h-1.5 w-1.5 rounded-full bg-indigo-500 animate-pulse" />
               Clinical Decision Support
             </span>
 
-            <h1 className="mt-6 text-3xl font-bold sm:text-4xl md:text-5xl">
-              Intelligent Polypharmacy Risk
-              <span className="block bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">
+            <h1 className="mt-4 sm:mt-6 text-2xl font-bold sm:text-3xl md:text-4xl lg:text-5xl tracking-tight leading-tight sm:leading-tight md:leading-tight">
+              Intelligent Polypharmacy Risk{" "}
+              <span className="block sm:inline md:block bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">
                 Assessment System
               </span>
             </h1>
 
-            <p className="mt-5 text-lg leading-relaxed text-gray-600 md:text-xl max-w-2xl">
+            <p className="mt-3 sm:mt-5 text-sm sm:text-base md:text-lg leading-relaxed text-gray-600 max-w-2xl">
               An intelligent, ML-powered platform designed for geriatric care.
               Analyze drug–drug interactions, predict adverse events, and
               calculate personalized polypharmacy risk scores all in one
               comprehensive clinical dashboard.
             </p>
 
-            <div className="mt-8 flex flex-wrap gap-4">
+            <div className="mt-6 sm:mt-8 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
               <Link
                 href="/Pages/Polypharmacy/Polyform"
-                className="group flex items-center gap-2 rounded-xl bg-indigo-600 px-6 py-3.5 text-sm font-semibold text-white shadow-lg shadow-indigo-200 transition-all hover:bg-indigo-700 hover:shadow-indigo-300 hover:-translate-y-0.5"
+                className="group flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 sm:px-6 py-3 sm:py-3.5 text-sm font-semibold text-white shadow-lg shadow-indigo-200 transition-all hover:bg-indigo-700 hover:shadow-indigo-300 hover:-translate-y-0.5 text-center"
               >
                 Start New Analysis
                 <svg
@@ -69,7 +69,7 @@ export default function PolypharmacyHomepage() {
 
               <Link
                 href="/Pages/Polypharmacy/DashBoard"
-                className="flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-6 py-3.5 text-sm font-semibold text-gray-700 shadow-sm transition-all hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-600 hover:-translate-y-0.5"
+                className="flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-5 sm:px-6 py-3 sm:py-3.5 text-sm font-semibold text-gray-700 shadow-sm transition-all hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-600 hover:-translate-y-0.5 text-center"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -87,7 +87,7 @@ export default function PolypharmacyHomepage() {
           {/* Hero stat cards */}
           <motion.div
             {...fadeUp(0.25)}
-            className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
+            className="mt-10 sm:mt-14 grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4"
           >
             <StatCard
               icon={
@@ -141,15 +141,15 @@ export default function PolypharmacyHomepage() {
       </section>
 
       {/* ── WHAT IS POLYPHARMACY ── */}
-      <section className="container mx-auto max-w-6xl px-6 py-16">
+      <section className="container mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
         <motion.div {...fadeUp(0.1)}>
           <SectionHeading
             badge="Understanding the Problem"
             title="What is Polypharmacy?"
           />
-          <div className="mt-8 grid gap-8 lg:grid-cols-2">
-            <div className="rounded-2xl border border-gray-100 bg-white p-8 shadow-sm">
-              <p className="text-gray-600 leading-relaxed text-[15px]">
+          <div className="mt-6 sm:mt-8 grid gap-6 sm:gap-8 lg:grid-cols-2">
+            <div className="rounded-2xl border border-gray-100 bg-white p-5 sm:p-6 md:p-8 shadow-sm">
+              <p className="text-gray-600 leading-relaxed text-sm sm:text-[15px]">
                 <strong className="text-gray-900">Polypharmacy</strong> refers
                 to the concurrent use of <strong>five or more medications</strong>{" "}
                 by a patient, a phenomenon increasingly common among elderly
@@ -158,7 +158,7 @@ export default function PolypharmacyHomepage() {
                 drug events (ADEs), medication non-adherence, and reduced quality
                 of life.
               </p>
-              <p className="mt-4 text-gray-600 leading-relaxed text-[15px]">
+              <p className="mt-4 text-gray-600 leading-relaxed text-sm sm:text-[15px]">
                 Geriatric patients are particularly vulnerable due to
                 age-related changes in drug metabolism, compromised liver and
                 kidney function, and multiple co-existing chronic conditions.
@@ -167,7 +167,7 @@ export default function PolypharmacyHomepage() {
                 adverse drug events compared to those on fewer drugs.
               </p>
             </div>
-            <div className="rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50 to-violet-50 p-8 shadow-sm">
+            <div className="rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50 to-violet-50 p-5 sm:p-6 md:p-8 shadow-sm">
               <h3 className="text-base font-bold text-indigo-900 mb-4 flex items-center gap-2">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5 text-indigo-500">
                   <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a.75.75 0 000 1.5h.253a.25.25 0 01.244.304l-.459 2.066A1.75 1.75 0 0010.747 15H11a.75.75 0 000-1.5h-.253a.25.25 0 01-.244-.304l.459-2.066A1.75 1.75 0 009.253 9H9z" clipRule="evenodd" />
@@ -182,11 +182,11 @@ export default function PolypharmacyHomepage() {
                   "Manual review of drug pairs scales poorly — AI-assisted screening is essential",
                   "Early risk identification enables proactive deprescribing and safer care",
                 ].map((item, i) => (
-                  <li key={i} className="flex items-start gap-3 text-sm text-indigo-900/80">
-                    <span className="mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-indigo-200/60 text-xs font-bold text-indigo-700">
+                  <li key={i} className="flex items-start gap-2.5 sm:gap-3 text-xs sm:text-sm text-indigo-900/80">
+                    <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-indigo-200/60 text-xs font-bold text-indigo-700">
                       {i + 1}
                     </span>
-                    {item}
+                    <span className="leading-relaxed">{item}</span>
                   </li>
                 ))}
               </ul>
@@ -197,13 +197,13 @@ export default function PolypharmacyHomepage() {
 
       {/* ── HOW IT WORKS ── */}
       <section className="bg-white border-y border-gray-100">
-        <div className="container mx-auto max-w-6xl px-6 py-16">
+        <div className="container mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
           <motion.div {...fadeUp(0.1)}>
             <SectionHeading
               badge="System Workflow"
               title="How the Analysis Works"
             />
-            <div className="mt-10 grid gap-6 md:grid-cols-3">
+            <div className="mt-8 sm:mt-10 grid gap-5 sm:gap-6 md:grid-cols-3">
               <StepCard
                 step="01"
                 title="Input Patient Data"
@@ -228,13 +228,13 @@ export default function PolypharmacyHomepage() {
       </section>
 
       {/* ── CORE FEATURES ── */}
-      <section className="container mx-auto max-w-6xl px-6 py-16">
+      <section className="container mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
         <motion.div {...fadeUp(0.1)}>
           <SectionHeading
             badge="Core Capabilities"
             title="What Our System Analyzes"
           />
-          <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-8 sm:mt-10 grid gap-4 sm:gap-5 sm:grid-cols-2 lg:grid-cols-3">
             <FeatureCard
               icon={
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-6 w-6">
@@ -304,22 +304,22 @@ export default function PolypharmacyHomepage() {
 
       {/* ── RISK SCORING EXPLAINED ── */}
       <section className="bg-gradient-to-br from-gray-900 via-slate-900 to-indigo-950 text-white">
-        <div className="container mx-auto max-w-6xl px-6 py-16">
+        <div className="container mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
           <motion.div {...fadeUp(0.1)}>
-            <span className="inline-flex items-center gap-2 rounded-full border border-indigo-400/30 bg-indigo-500/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-indigo-300">
+            <span className="inline-flex items-center gap-2 rounded-full border border-indigo-400/30 bg-indigo-500/10 px-3 sm:px-4 py-1 sm:py-1.5 text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-indigo-300">
               Risk Methodology
             </span>
-            <h2 className="mt-4 text-3xl font-bold tracking-tight sm:text-4xl">
+            <h2 className="mt-3 sm:mt-4 text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight">
               How the Risk Score is Calculated
             </h2>
-            <p className="mt-3 max-w-2xl text-gray-400 text-[15px] leading-relaxed">
+            <p className="mt-3 max-w-2xl text-gray-400 text-sm sm:text-[15px] leading-relaxed">
               The polypharmacy risk score is a weighted composite of five
               clinical sub-scores, computed using rule-based algorithms and
               evidence-based thresholds. Each parameter is scored independently
               and combined using configurable clinical weights.
             </p>
 
-            <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+            <div className="mt-8 sm:mt-10 grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
               <ScoreCard
                 label="S1"
                 title="Medication Count"
@@ -358,15 +358,17 @@ export default function PolypharmacyHomepage() {
             </div>
 
             {/* Formula */}
-            <div className="mt-8 rounded-xl border border-indigo-500/20 bg-indigo-500/5 p-6">
-              <p className="text-xs font-semibold uppercase tracking-wider text-indigo-400 mb-3">
+            <div className="mt-6 sm:mt-8 rounded-xl sm:rounded-2xl border border-indigo-500/20 bg-indigo-500/5 p-4 sm:p-6">
+              <p className="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-indigo-400 mb-2 sm:mb-3">
                 Risk Score Formula
               </p>
-              <p className="font-mono text-base text-gray-200 leading-relaxed font-bold bg-indigo-500/10 p-4 rounded-lg border border-indigo-500/20 text-center mb-6">
-                Risk Score = min( (W₁ × S₁) + (W₂ × S₂) + (W₃ × S₃) + (W₄ × S₄) + (W₅ × S₅) , 100 )
-              </p>
+              <div className="overflow-x-auto rounded-lg border border-indigo-500/20 bg-indigo-500/10 p-3 sm:p-4 mb-5 sm:mb-6">
+                <p className="font-mono text-xs sm:text-sm md:text-base text-gray-200 leading-relaxed font-bold text-center whitespace-nowrap sm:whitespace-normal">
+                  Risk Score = min( (W₁ × S₁) + (W₂ × S₂) + (W₃ × S₃) + (W₄ × S₄) + (W₅ × S₅) , 100 )
+                </p>
+              </div>
 
-              <div className="mb-6 grid gap-6 sm:grid-cols-2 text-sm text-gray-300 bg-black/10 p-5 rounded-lg border border-indigo-500/10">
+              <div className="mb-5 sm:mb-6 grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2 text-xs sm:text-sm text-gray-300 bg-black/10 p-3.5 sm:p-5 rounded-lg border border-indigo-500/10">
                 <div>
                   <p className="font-semibold text-indigo-300 mb-2 border-b border-indigo-500/20 pb-1.5 flex items-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
@@ -376,11 +378,11 @@ export default function PolypharmacyHomepage() {
                   </p>
                   <ul className="space-y-2">
                     <li className="flex items-start gap-2">
-                      <span className="text-indigo-400 font-mono font-bold w-4">W</span>
+                      <span className="text-indigo-400 font-mono font-bold w-4 shrink-0">W</span>
                       <span>= Polypharmacy Risk Weight Score</span>
                     </li>
                     <li className="flex items-start gap-2">
-                      <span className="text-indigo-400 font-mono font-bold w-4">S</span>
+                      <span className="text-indigo-400 font-mono font-bold w-4 shrink-0">S</span>
                       <span>= Polypharmacy Risk Calculation Related Sub Factors</span>
                     </li>
                   </ul>
@@ -393,46 +395,46 @@ export default function PolypharmacyHomepage() {
                     Weight Distribution (Out of 100)
                   </p>
                   <ul className="space-y-1.5">
-                    <li className="flex items-center justify-between border-b border-white/5 pb-1">
-                      <div className="flex items-center gap-2">
-                        <span className="text-indigo-400 font-mono font-bold w-5">W₁</span>
-                        <span>Medication Count Risk Weight</span>
+                    <li className="flex items-center justify-between border-b border-white/5 pb-1 gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="text-indigo-400 font-mono font-bold w-5 shrink-0">W₁</span>
+                        <span className="truncate">Medication Count Risk Weight</span>
                       </div>
-                      <span className="font-mono text-indigo-300 font-semibold">= 25</span>
+                      <span className="font-mono text-indigo-300 font-semibold shrink-0">= 25</span>
                     </li>
-                    <li className="flex items-center justify-between border-b border-white/5 pb-1">
-                      <div className="flex items-center gap-2">
-                        <span className="text-indigo-400 font-mono font-bold w-5">W₂</span>
-                        <span>Patient Age Risk Weight</span>
+                    <li className="flex items-center justify-between border-b border-white/5 pb-1 gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="text-indigo-400 font-mono font-bold w-5 shrink-0">W₂</span>
+                        <span className="truncate">Patient Age Risk Weight</span>
                       </div>
-                      <span className="font-mono text-indigo-300 font-semibold">= 25</span>
+                      <span className="font-mono text-indigo-300 font-semibold shrink-0">= 25</span>
                     </li>
-                    <li className="flex items-center justify-between border-b border-white/5 pb-1">
-                      <div className="flex items-center gap-2">
-                        <span className="text-indigo-400 font-mono font-bold w-5">W₃</span>
-                        <span>Drug Interactions Risk Weight</span>
+                    <li className="flex items-center justify-between border-b border-white/5 pb-1 gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="text-indigo-400 font-mono font-bold w-5 shrink-0">W₃</span>
+                        <span className="truncate">Drug Interactions Risk Weight</span>
                       </div>
-                      <span className="font-mono text-indigo-300 font-semibold">= 30</span>
+                      <span className="font-mono text-indigo-300 font-semibold shrink-0">= 30</span>
                     </li>
-                    <li className="flex items-center justify-between border-b border-white/5 pb-1">
-                      <div className="flex items-center gap-2">
-                        <span className="text-indigo-400 font-mono font-bold w-5">W₄</span>
-                        <span>Liver Function Risk Weight</span>
+                    <li className="flex items-center justify-between border-b border-white/5 pb-1 gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="text-indigo-400 font-mono font-bold w-5 shrink-0">W₄</span>
+                        <span className="truncate">Liver Function Risk Weight</span>
                       </div>
-                      <span className="font-mono text-indigo-300 font-semibold">= 10</span>
+                      <span className="font-mono text-indigo-300 font-semibold shrink-0">= 10</span>
                     </li>
-                    <li className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="text-indigo-400 font-mono font-bold w-5">W₅</span>
-                        <span>Kidney Function Risk Weight</span>
+                    <li className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="text-indigo-400 font-mono font-bold w-5 shrink-0">W₅</span>
+                        <span className="truncate">Kidney Function Risk Weight</span>
                       </div>
-                      <span className="font-mono text-indigo-300 font-semibold">= 10</span>
+                      <span className="font-mono text-indigo-300 font-semibold shrink-0">= 10</span>
                     </li>
                   </ul>
                 </div>
               </div>
 
-              <div className="mt-2 grid gap-3 sm:grid-cols-4">
+              <div className="mt-2 grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
                 <RiskLevelBadge level="Low" range="0 – 29" color="emerald" />
                 <RiskLevelBadge level="Moderate" range="30 – 59" color="yellow" />
                 <RiskLevelBadge level="High" range="60 – 79" color="orange" />
@@ -444,13 +446,13 @@ export default function PolypharmacyHomepage() {
       </section>
 
       {/* ── TARGET AUDIENCE ── */}
-      <section className="container mx-auto max-w-6xl px-6 py-16">
+      <section className="container mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
         <motion.div {...fadeUp(0.1)}>
           <SectionHeading
             badge="Who Benefits"
             title="Designed for Geriatric Care"
           />
-          <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-6 sm:mt-8 grid gap-4 sm:gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
             <AudienceCard
               emoji="👨‍⚕️"
               title="Physicians"
@@ -477,20 +479,20 @@ export default function PolypharmacyHomepage() {
 
       {/* ── CTA ── */}
       <section className="border-t border-gray-100 bg-gradient-to-br from-indigo-50 via-violet-50 to-white">
-        <div className="container mx-auto max-w-4xl px-6 py-20 text-center">
+        <div className="container mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-14 sm:py-16 md:py-20 text-center">
           <motion.div {...fadeUp(0.1)}>
-            <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-gray-900">
               Ready to Analyze Your Medications?
             </h2>
-            <p className="mt-4 text-gray-600 text-lg max-w-2xl mx-auto">
+            <p className="mt-3 sm:mt-4 text-gray-600 text-sm sm:text-base md:text-lg max-w-2xl mx-auto">
               Start a comprehensive polypharmacy risk assessment in under a
               minute. Enter your medications, receive instant insights, and
               download a clinical-grade report.
             </p>
-            <div className="mt-8 flex flex-wrap justify-center gap-4">
+            <div className="mt-6 sm:mt-8 flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3 sm:gap-4">
               <Link
                 href="/Pages/Polypharmacy/Polyform"
-                className="group flex items-center gap-2 rounded-xl bg-indigo-600 px-8 py-4 text-base font-semibold text-white shadow-lg shadow-indigo-200 transition-all hover:bg-indigo-700 hover:shadow-indigo-300 hover:-translate-y-0.5"
+                className="group flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-6 sm:px-8 py-3.5 sm:py-4 text-sm sm:text-base font-semibold text-white shadow-lg shadow-indigo-200 transition-all hover:bg-indigo-700 hover:shadow-indigo-300 hover:-translate-y-0.5 text-center"
               >
                 Start Analysis Now
                 <svg
@@ -508,7 +510,7 @@ export default function PolypharmacyHomepage() {
               </Link>
               <Link
                 href="/Pages/Polypharmacy/DashBoard"
-                className="rounded-xl border border-gray-200 bg-white px-8 py-4 text-base font-semibold text-gray-700 shadow-sm transition-all hover:border-indigo-200 hover:text-indigo-600 hover:-translate-y-0.5"
+                className="flex items-center justify-center rounded-xl border border-gray-200 bg-white px-6 sm:px-8 py-3.5 sm:py-4 text-sm sm:text-base font-semibold text-gray-700 shadow-sm transition-all hover:border-indigo-200 hover:text-indigo-600 hover:-translate-y-0.5 text-center"
               >
                 View My Dashboard
               </Link>
@@ -525,10 +527,10 @@ export default function PolypharmacyHomepage() {
 function SectionHeading({ badge, title }: { badge: string; title: string }) {
   return (
     <div>
-      <span className="inline-flex items-center rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-indigo-600">
+      <span className="inline-flex items-center rounded-full border border-indigo-200 bg-indigo-50 px-2.5 sm:px-3 py-0.5 sm:py-1 text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-indigo-600">
         {badge}
       </span>
-      <h2 className="mt-3 text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
+      <h2 className="mt-2.5 sm:mt-3 text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-gray-900">
         {title}
       </h2>
     </div>
@@ -556,16 +558,16 @@ function StatCard({
   };
   return (
     <div
-      className={`group rounded-2xl border p-5 shadow-sm transition-all hover:shadow-md hover:-translate-y-0.5 ${colors[accent]}`}
+      className={`group rounded-xl sm:rounded-2xl border p-3.5 sm:p-5 shadow-sm transition-all hover:shadow-md hover:-translate-y-0.5 ${colors[accent]}`}
     >
-      <div className="flex items-center gap-3 mb-3">
-        <div className="opacity-70">{icon}</div>
-        <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">
+      <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3">
+        <div className="opacity-70 scale-90 sm:scale-100">{icon}</div>
+        <span className="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-gray-400 truncate">
           {label}
         </span>
       </div>
-      <p className="text-2xl font-extrabold text-gray-900">{value}</p>
-      <p className="mt-1 text-xs text-gray-500">{sub}</p>
+      <p className="text-xl sm:text-2xl font-extrabold text-gray-900 tracking-tight">{value}</p>
+      <p className="mt-1 text-[11px] sm:text-xs text-gray-500 line-clamp-2 leading-tight">{sub}</p>
     </div>
   );
 }
@@ -587,14 +589,14 @@ function StepCard({
     emerald: "from-emerald-500 to-emerald-600",
   };
   return (
-    <div className="group relative rounded-2xl border border-gray-100 bg-white p-6 shadow-sm transition-all hover:shadow-md hover:-translate-y-0.5">
+    <div className="group relative rounded-xl sm:rounded-2xl border border-gray-100 bg-white p-5 sm:p-6 shadow-sm transition-all hover:shadow-md hover:-translate-y-0.5">
       <div
-        className={`mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br ${bgMap[color]} text-white text-sm font-bold shadow-sm`}
+        className={`mb-3 sm:mb-4 flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl bg-gradient-to-br ${bgMap[color]} text-white text-xs sm:text-sm font-bold shadow-sm`}
       >
         {step}
       </div>
-      <h3 className="text-lg font-bold text-gray-900">{title}</h3>
-      <p className="mt-2 text-sm text-gray-600 leading-relaxed">{desc}</p>
+      <h3 className="text-base sm:text-lg font-bold text-gray-900">{title}</h3>
+      <p className="mt-2 text-xs sm:text-sm text-gray-600 leading-relaxed">{desc}</p>
     </div>
   );
 }
@@ -628,15 +630,15 @@ function FeatureCard({
   };
   return (
     <div
-      className={`group rounded-2xl border border-gray-100 bg-white p-6 shadow-sm transition-all hover:shadow-md hover:-translate-y-0.5 ${borderMap[accent]}`}
+      className={`group rounded-xl sm:rounded-2xl border border-gray-100 bg-white p-5 sm:p-6 shadow-sm transition-all hover:shadow-md hover:-translate-y-0.5 ${borderMap[accent]}`}
     >
       <div
-        className={`mb-4 flex h-11 w-11 items-center justify-center rounded-xl ${iconBgMap[accent]}`}
+        className={`mb-3 sm:mb-4 flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-xl ${iconBgMap[accent]}`}
       >
         {icon}
       </div>
-      <h3 className="text-base font-bold text-gray-900">{title}</h3>
-      <p className="mt-2 text-sm text-gray-600 leading-relaxed">{desc}</p>
+      <h3 className="text-sm sm:text-base font-bold text-gray-900">{title}</h3>
+      <p className="mt-2 text-xs sm:text-sm text-gray-600 leading-relaxed">{desc}</p>
     </div>
   );
 }
@@ -662,15 +664,15 @@ function ScoreCard({
     teal: "border-teal-500/30 bg-teal-500/10 text-teal-300",
   };
   return (
-    <div className={`rounded-xl border p-4 ${colorMap[color]}`}>
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-lg font-extrabold">{label}</span>
-        <span className="rounded-full bg-white/10 px-2 py-0.5 text-xs font-bold">
+    <div className={`rounded-xl border p-3.5 sm:p-4 ${colorMap[color]}`}>
+      <div className="flex items-center justify-between mb-1.5 sm:mb-2">
+        <span className="text-base sm:text-lg font-extrabold">{label}</span>
+        <span className="rounded-full bg-white/10 px-2 py-0.5 text-[11px] sm:text-xs font-bold">
           {weight}
         </span>
       </div>
-      <h4 className="text-sm font-semibold text-white">{title}</h4>
-      <p className="mt-1.5 text-xs leading-relaxed opacity-70">{desc}</p>
+      <h4 className="text-xs sm:text-sm font-semibold text-white">{title}</h4>
+      <p className="mt-1 sm:mt-1.5 text-[11px] sm:text-xs leading-relaxed opacity-70">{desc}</p>
     </div>
   );
 }
@@ -692,10 +694,10 @@ function RiskLevelBadge({
   };
   return (
     <div
-      className={`flex items-center justify-between rounded-lg border px-3 py-2 ${bgMap[color]}`}
+      className={`flex items-center justify-between rounded-lg border px-2.5 sm:px-3 py-1.5 sm:py-2 ${bgMap[color]}`}
     >
-      <span className="text-xs font-bold">{level}</span>
-      <span className="text-xs font-mono opacity-70">{range}</span>
+      <span className="text-[11px] sm:text-xs font-bold">{level}</span>
+      <span className="text-[11px] sm:text-xs font-mono opacity-70">{range}</span>
     </div>
   );
 }
@@ -710,10 +712,10 @@ function AudienceCard({
   desc: string;
 }) {
   return (
-    <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm text-center transition-all hover:shadow-md hover:-translate-y-0.5">
-      <span className="text-3xl">{emoji}</span>
-      <h3 className="mt-3 text-base font-bold text-gray-900">{title}</h3>
-      <p className="mt-2 text-sm text-gray-600 leading-relaxed">{desc}</p>
+    <div className="rounded-xl sm:rounded-2xl border border-gray-100 bg-white p-5 sm:p-6 shadow-sm text-center transition-all hover:shadow-md hover:-translate-y-0.5">
+      <span className="text-2xl sm:text-3xl block">{emoji}</span>
+      <h3 className="mt-2.5 sm:mt-3 text-sm sm:text-base font-bold text-gray-900">{title}</h3>
+      <p className="mt-2 text-xs sm:text-sm text-gray-600 leading-relaxed">{desc}</p>
     </div>
   );
 }
