@@ -39,12 +39,15 @@ interface SavedMealPlan {
     patientGender?: string;
     bmi: number;
     bmiCategory: string;
+    bmi_category?: string;
     bmiAdvice?: string;
     dailyCalorieRange?: string;
+    daily_calorie_range?: string;
     weight?: string;
     height?: string;
     activityLevel?: string;
     plan_duration?: string;
+    planDuration?: string;
     medicalConditions?: string[];
     dietaryRestrictions?: string[];
     vitaminDeficiencies?: { name: string; level: string }[];

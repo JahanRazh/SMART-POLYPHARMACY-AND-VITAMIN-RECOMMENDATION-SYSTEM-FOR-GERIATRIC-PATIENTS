@@ -282,7 +282,7 @@ export default function VitaminDeficiencyPage() {
       headStyles: { fillColor: [14, 165, 233] },
     });
 
-    let finalY = (doc as any).lastAutoTable.finalY || 55;
+    const finalY = (doc as any).lastAutoTable.finalY || 55;
 
     doc.setFontSize(14);
     doc.text("2. Predicted Vitamin Depletions", 14, finalY + 15);
