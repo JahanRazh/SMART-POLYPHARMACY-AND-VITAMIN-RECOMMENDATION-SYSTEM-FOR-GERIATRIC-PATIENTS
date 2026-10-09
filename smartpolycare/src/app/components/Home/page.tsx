@@ -134,9 +134,9 @@ const Home = () => {
   return (
     <div className="min-h-screen">
       {/* Hero Section - Clinical Grade */}
-      <section className="relative bg-white py-20 lg:py-6.5 ">
-        <div className="container mx-auto px-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+      <section className="relative bg-white py-10 sm:py-16 lg:py-6.5 ">
+        <div className="container mx-auto px-4 sm:px-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
             <motion.div
               className="space-y-10"
               initial={{ opacity: 0, x: -50 }}
@@ -158,7 +158,7 @@ const Home = () => {
                   </span>
                 </motion.div>
                 <motion.h1
-                  className="text-3xl lg:text-3xl xl:text-3xl font-bold text-gray-900 leading-tight"
+                  className="text-2xl sm:text-3xl lg:text-3xl xl:text-3xl font-bold text-gray-900 leading-tight"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ duration: 0.8, delay: 0.3 }}
@@ -174,7 +174,7 @@ const Home = () => {
                   </motion.span>
                 </motion.h1>
                 <motion.p
-                  className="text-xl text-gray-600 leading-relaxed max-w-2xl"
+                  className="text-base sm:text-xl text-gray-600 leading-relaxed max-w-2xl"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ duration: 0.8, delay: 0.4 }}
@@ -217,7 +217,7 @@ const Home = () => {
             </motion.div>
 
             <motion.div
-              className="relative"
+              className="relative hidden sm:block"
               initial={{ opacity: 0, x: 50 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.8 }}
@@ -227,7 +227,7 @@ const Home = () => {
                 animate={{ y: [0, 10, 0] }}
                 transition={{ duration: 4, repeat: Infinity }}
               >
-                <img src="/images/polycare.jpg" alt="Clinical illustration" />
+                <img src="/images/polycare.jpg" alt="Clinical illustration" className="max-w-full h-auto rounded-xl" />
               </motion.div>
             </motion.div>
           </div>

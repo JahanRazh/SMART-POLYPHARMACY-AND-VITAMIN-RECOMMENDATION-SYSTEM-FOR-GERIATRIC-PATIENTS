@@ -340,25 +340,29 @@ body {
   font-size: 16px;
 }
 
-/* Tablet */
+/* Tablet and above */
 @media (min-width: 600px) {
   body {
-    font-size: 18px;
+    font-size: 16px;
   }
 }
 
-/* Small laptop / desktop */
+/* Desktop */
 @media (min-width: 1024px) {
   body {
-    font-size: 18px;
+    font-size: 16px;
   }
 }
 
-/* Large desktop */
-@media (min-width: 1440px) {
-  body {
-    font-size: 22px;
-  }
+/* Responsive safe defaults */
+img, video {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Prevent horizontal overflow on any page */
+html, body {
+  overflow-x: hidden;
 }
 
 .nav-link {
