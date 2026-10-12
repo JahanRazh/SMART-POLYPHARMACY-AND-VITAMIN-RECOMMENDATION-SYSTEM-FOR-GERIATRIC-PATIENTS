@@ -397,7 +397,7 @@ export default function LifestyleAdvicePage() {
           />
         </div>
 
-        <div className="relative container mx-auto px-6">
+        <div className="relative container mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           {/* Header Content with Image Carousel */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
             {/* Left Side - Content */}
@@ -550,7 +550,7 @@ export default function LifestyleAdvicePage() {
       </section>
 
       {/* Main Content */}
-      <section className="relative container mx-auto px-6 py-16 lg:py-20">
+      <section className="relative container mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-16 lg:py-20">
         {/* Most Recent Advice Section - Enhanced */}
         {!loading && recentAdvice && (
           <motion.div
