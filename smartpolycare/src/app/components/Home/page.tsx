@@ -224,12 +224,12 @@ const Home = () => {
 
             {/* Right Side: Visual Illustration */}
             <motion.div
-              className="relative flex items-center justify-center w-full mt-6 lg:mt-0"
+              className="relative flex items-center justify-center w-full -mt-4 sm:-mt-8 lg:-mt-14 lg:-translate-y-8"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.3 }}
             >
-              <div className="relative w-full max-w-[320px] xs:max-w-xs sm:max-w-md lg:max-w-lg mx-auto flex items-center justify-center">
+              <div className="relative w-full max-w-[360px] xs:max-w-sm sm:max-w-lg lg:max-w-xl mx-auto flex items-center justify-center">
                 {/* Main Illustration without any background box */}
                 <motion.div
                   className="flex items-center justify-center w-full"
@@ -239,7 +239,7 @@ const Home = () => {
                   <img
                     src="/images/polycare.png"
                     alt="Clinical illustration"
-                    className="w-full h-auto max-h-[300px] sm:max-h-[380px] lg:max-h-[460px] object-contain select-none pointer-events-none"
+                    className="w-full h-auto max-h-[350px] sm:max-h-[440px] lg:max-h-[530px] object-contain select-none pointer-events-none"
                   />
                 </motion.div>
               </div>
