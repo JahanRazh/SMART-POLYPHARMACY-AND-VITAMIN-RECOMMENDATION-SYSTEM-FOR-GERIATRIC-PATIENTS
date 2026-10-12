@@ -365,6 +365,14 @@ html, body {
   overflow-x: hidden;
 }
 
+/* Site-wide container centering and max-width alignment */
+.container {
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+  max-width: 72rem;
+}
+
 .nav-link {
   @apply text-gray-700 hover:text-teal-600 font-medium transition-colors duration-200;
 }
