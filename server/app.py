@@ -7,7 +7,7 @@ from flask_cors import CORS
 env_file = os.path.join(os.path.dirname(__file__), '.env')
 if os.path.exists(env_file):
     print(f"📁 Loading environment from: {env_file}")
-    with open(env_file) as f:
+    with open(env_file, "r", encoding="utf-8-sig") as f:
         for line in f:
             line = line.strip()
             if line and not line.startswith('#') and '=' in line:
