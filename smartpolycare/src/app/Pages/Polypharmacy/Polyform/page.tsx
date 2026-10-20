@@ -4,6 +4,7 @@ import { useAuth } from "@/app/components/Contexts/AuthContext";
 import React, { FormEvent, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { API_BASE_URL } from "@/app/lib/apiConfig";
 
 type SeveritySummary = Record<string, number>;
 
@@ -76,7 +77,7 @@ type AssessmentResponse = {
 };
 
 const MAX_DRUGS = 20;
-const API_BASE = process.env.NEXT_PUBLIC_LOCAL_API_URL;
+const API_BASE = API_BASE_URL;
 
 const PolypharmacyPage = () => {
   const { user, userProfile } = useAuth();
@@ -281,7 +282,7 @@ const PolypharmacyPage = () => {
     setSuccessMessage("");
     setIsLoadingVitaminDrugs(true);
     try {
-      const response = await fetch(`${API_BASE || "http://localhost:5000"}/api/vitamin-deficiency/assessment?userId=${user.uid}`);
+      const response = await fetch(`${API_BASE}/api/vitamin-deficiency/assessment?userId=${user.uid}`);
       if (response.ok) {
         const data = await response.json();
         if (data && data.inputDrugs && data.inputDrugs.length > 0) {

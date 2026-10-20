@@ -4,13 +4,16 @@ from tensorflow.keras.models import load_model
 import base64
 import cv2
 import numpy as np
+import os
 from datetime import datetime
 from typing import Optional, Tuple
 
 emotion_bp = Blueprint("emotion_bp", __name__)
 
 # Load emotion model (transfer learning)
-model = load_model("models/model_3_csv_transfer_learning.keras")
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+MODEL_PATH = os.path.join(BASE_DIR, "models", "model_3_csv_transfer_learning.keras")
+model = load_model(MODEL_PATH)
 emotion_labels = ["Angry", "Disgust", "Fear", "Happy", "Sad", "Surprise", "Neutral"]
 
 # OpenCV face detector

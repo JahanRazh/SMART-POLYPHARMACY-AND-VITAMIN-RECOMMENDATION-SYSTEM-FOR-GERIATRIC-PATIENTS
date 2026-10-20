@@ -7,6 +7,7 @@ import { Plus, X, Search, Beaker, RotateCcw, Activity, Download, FileText, FileS
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
+import { API_BASE_URL } from "@/app/lib/apiConfig";
 
 /* ================= TYPES ================= */
 
@@ -44,7 +45,7 @@ type PredictionResponse = {
 };
 
 /* ================= API BASE ================= */
-const API = "http://localhost:5000/api/vitamin-deficiency";
+const API = `${API_BASE_URL}/api/vitamin-deficiency`;
 
 /* ================= COMPONENT ================= */
 

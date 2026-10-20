@@ -5,6 +5,7 @@ import Webcam from "react-webcam";
 import { useAuth } from "@/app/components/Contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
+import { API_BASE_URL } from "@/app/lib/apiConfig";
 
 // --- Questionnaire Data Structures ---
 const gda15Questions = [
@@ -316,7 +317,7 @@ const PatientAssessmentForm = () => {
         // Get user email for emotion detection
         const userEmail = user?.email || userProfile?.email || "";
 
-        const res = await fetch("http://127.0.0.1:5000/detect_emotion", {
+        const res = await fetch(`${API_BASE_URL}/detect_emotion`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -432,7 +433,7 @@ const PatientAssessmentForm = () => {
     try {
       // Step 1: Get mental health assessment
       console.log("📡 Step 1/3: Calling mental health assessment endpoint...");
-      const assessmentRes = await fetch("http://127.0.0.1:5000/full_assessment", {
+      const assessmentRes = await fetch(`${API_BASE_URL}/full_assessment`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -536,8 +537,8 @@ const PatientAssessmentForm = () => {
       // Add helpful troubleshooting info
       if (error.message.includes("Failed to fetch") || error.message.includes("NetworkError")) {
         displayError = `Network Error: Cannot connect to the server. Please check:\n` +
-          `1. Flask server is running (http://127.0.0.1:5000)\n` +
-          `2. Next.js dev server is running (http://localhost:3000)\n` +
+          `1. Flask server is running (${API_BASE_URL})\n` +
+          `2. Next.js server is running\n` +
           `3. You have internet connection\n\n` +
           `Original error: ${error.message}`;
       } else if (error.message.includes("Assessment failed")) {

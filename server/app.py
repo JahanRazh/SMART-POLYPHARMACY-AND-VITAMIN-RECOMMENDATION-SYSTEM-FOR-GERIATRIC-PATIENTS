@@ -45,15 +45,7 @@ app = Flask(__name__)
 
 
 # Configure CORS explicitly to allow all origins
-CORS(app, resources={
-    r"/api/*": {"origins": "*"},
-    r"/full_assessment": {"origins": "*"},
-    r"/detect_emotion": {"origins": "*"},
-
-    r"/meal_plan": {"origins": "*"},
-    r"/polypharmacy_assessment": {"origins": "*"},
-    r"/patient*": {"origins": "*"},
-}, allow_headers=["Content-Type", "Authorization"])
+CORS(app, resources={r"/*": {"origins": "*"}}, allow_headers=["Content-Type", "Authorization"])
 
 # Register blueprints
 app.register_blueprint(polypharmacy_bp)
@@ -110,7 +102,9 @@ if __name__ == "__main__":
     print("💾 Using Firebase Admin SDK for database access\n")
     
     try:
-        app.run(host="127.0.0.1", port=5000, debug=False, use_reloader=False)
+        port = int(os.environ.get("PORT", 5000))
+        host = os.environ.get("HOST", "0.0.0.0")
+        app.run(host=host, port=port, debug=False, use_reloader=False)
     except OSError as e:
         if "Address already in use" in str(e):
             print("❌ ERROR: Port 5000 is already in use!")

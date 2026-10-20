@@ -13,6 +13,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { useAuth } from "@/app/components/Contexts/AuthContext";
+import { API_BASE_URL } from "@/app/lib/apiConfig";
 
 /* ───────────────── animation helpers ───────────────── */
 const fadeUp = (delay = 0) => ({
@@ -123,7 +124,7 @@ export default function MealPlanProvidersPage() {
     setLoading(true);
     try {
       const response = await fetch(
-        `http://127.0.0.1:5000/api/meal-plans/active?userId=${user.uid}`,
+        `${API_BASE_URL}/api/meal-plans/active?userId=${user.uid}`,
       );
       if (response.status === 404) {
         // No active plan found, show message or fallback
@@ -183,7 +184,7 @@ export default function MealPlanProvidersPage() {
     try {
       // 1. Remove from Firestore via backend (if user is logged in)
       if (user?.uid) {
-        const baseUrl = process.env.NEXT_PUBLIC_LOCAL_API_URL || "http://127.0.0.1:5000";
+        const baseUrl = API_BASE_URL;
         try {
           const response = await fetch(
             `${baseUrl}/api/meal-plans/delete?userId=${user.uid}`,
