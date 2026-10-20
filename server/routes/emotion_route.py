@@ -10,10 +10,48 @@ from typing import Optional, Tuple
 
 emotion_bp = Blueprint("emotion_bp", __name__)
 
+# Cross-platform compatibility fix for Keras 2.15 models saved on Windows:
+# On Windows, Keras creates HDF5 keys with backslashes ('\'). On Linux/Render,
+# Keras looks up keys with forward slashes ('/'), causing:
+# ValueError: Layer 'Conv1' expected 1 variables, but received 0 variables during loading.
+try:
+    import keras.src.saving.saving_lib as _keras_saving_lib
+    _orig_h5_get = _keras_saving_lib.H5IOStore.get
+
+    def _compat_h5_get(self, path):
+        if not path:
+            return self.h5_file["vars"] if "vars" in self.h5_file else {}
+        clean_path = path.strip("/\\")
+        if path in self.h5_file and "vars" in self.h5_file[path]:
+            return self.h5_file[path]["vars"]
+        if clean_path in self.h5_file and "vars" in self.h5_file[clean_path]:
+            return self.h5_file[clean_path]["vars"]
+        win_path = clean_path.replace("/", "\\")
+        if win_path in self.h5_file and "vars" in self.h5_file[win_path]:
+            return self.h5_file[win_path]["vars"]
+        posix_path = clean_path.replace("\\", "/")
+        if posix_path in self.h5_file and "vars" in self.h5_file[posix_path]:
+            return self.h5_file[posix_path]["vars"]
+        return _orig_h5_get(self, path)
+
+    _keras_saving_lib.H5IOStore.get = _compat_h5_get
+except Exception as _patch_err:
+    print(f"[WARN] Could not patch Keras H5IOStore: {_patch_err}")
+
 # Load emotion model (transfer learning)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MODEL_PATH = os.path.join(BASE_DIR, "models", "model_3_csv_transfer_learning.keras")
-model = load_model(MODEL_PATH)
+
+model = None
+try:
+    if os.path.exists(MODEL_PATH):
+        model = load_model(MODEL_PATH)
+        print(f"[INFO] Emotion model loaded successfully from {MODEL_PATH}")
+    else:
+        print(f"[WARN] Emotion model file not found at {MODEL_PATH}")
+except Exception as e:
+    print(f"[ERROR] Failed to load emotion model: {e}")
+
 emotion_labels = ["Angry", "Disgust", "Fear", "Happy", "Sad", "Surprise", "Neutral"]
 
 # OpenCV face detector
@@ -64,6 +102,9 @@ def detect_emotion():
     face_input, face_box = extract_face_for_model(frame)
     if face_input is None:
         return jsonify({"emotion": None, "all_predictions": {}, "face_detected": False}), 200
+
+    if model is None:
+        return jsonify({"error": "Emotion model is currently unavailable on server"}), 503
 
     preds = model.predict(face_input, verbose=0)[0]
     emotion_idx = int(np.argmax(preds))
