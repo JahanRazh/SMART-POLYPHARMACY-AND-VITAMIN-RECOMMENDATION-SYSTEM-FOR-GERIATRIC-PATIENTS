@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { API_BASE_URL } from "@/app/lib/apiConfig";
 
 type SeveritySummary = Record<string, number>;
 
@@ -86,7 +87,7 @@ type AssessmentResponse = {
     source?: string;
 };
 
-const API_BASE = process.env.NEXT_PUBLIC_LOCAL_API_URL;
+const API_BASE = API_BASE_URL;
 
 const DashboardPage = () => {
     const { user } = useAuth();

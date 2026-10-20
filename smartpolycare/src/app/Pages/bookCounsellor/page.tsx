@@ -6,7 +6,8 @@ import Link from 'next/link';
 import axios from 'axios';
 import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/app/components/Contexts/AuthContext';
-const api = axios.create({ baseURL: 'http://127.0.0.1:5000/api' });
+import { API_BASE_URL } from '@/app/lib/apiConfig';
+const api = axios.create({ baseURL: `${API_BASE_URL}/api` });
 
 // --- Counsellor Data ---
 const counsellors = [

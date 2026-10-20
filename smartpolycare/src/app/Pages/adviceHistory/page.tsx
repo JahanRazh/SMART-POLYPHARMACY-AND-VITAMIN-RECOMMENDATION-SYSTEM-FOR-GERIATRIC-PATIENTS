@@ -6,6 +6,7 @@ import axios from 'axios';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import MentalHealthGraph, { AssessmentEntry, overallStatus } from '@/app/components/MentalHealthGraph';
+import { API_BASE_URL } from '@/app/lib/apiConfig';
 
 type SavedAdvice = {
   id: string;
@@ -26,7 +27,7 @@ type SavedAdvice = {
   vitamin_deficiencies?: string[];
 };
 
-const api = axios.create({ baseURL: 'http://127.0.0.1:5000/api' });
+const api = axios.create({ baseURL: `${API_BASE_URL}/api` });
 
 function formatDate(dateString?: string): string {
   if (!dateString) return 'N/A';

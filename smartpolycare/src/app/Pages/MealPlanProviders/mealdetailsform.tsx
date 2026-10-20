@@ -5,6 +5,7 @@ import { AlertCircle, CheckCircle, Loader2, ArrowLeft, User, Activity, Clipboard
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/components/Contexts/AuthContext";
 import { motion } from "framer-motion";
+import { API_BASE_URL } from "@/app/lib/apiConfig";
 
 interface BasicProfile {
   name: string;
@@ -150,7 +151,7 @@ const MealPlanForm: React.FC<MealPlanFormProps> = ({ onBack, onSavePlan }) => {
     const fetchVitaminDeficiencies = async () => {
       if (user?.uid) {
         try {
-          const response = await fetch(`http://127.0.0.1:5000/api/vitamin-deficiency/assessment?userId=${user.uid}`);
+          const response = await fetch(`${API_BASE_URL}/api/vitamin-deficiency/assessment?userId=${user.uid}`);
           if (response.ok) {
             const data = await response.json();
             if (data.predictions && data.predictions.length > 0) {
@@ -183,7 +184,7 @@ const MealPlanForm: React.FC<MealPlanFormProps> = ({ onBack, onSavePlan }) => {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
 
-  const API_URL = "http://127.0.0.1:5000/api/meal-plans";
+  const API_URL = `${API_BASE_URL}/api/meal-plans`;
 
   const calculateBMI = (height: string, weight: string) => {
     if (height && weight) {
@@ -272,7 +273,7 @@ const MealPlanForm: React.FC<MealPlanFormProps> = ({ onBack, onSavePlan }) => {
 
   const wakeUpServer = async () => {
     try {
-      await fetch("http://127.0.0.1:5000/", { method: "GET" });
+      await fetch(`${API_BASE_URL}/`, { method: "GET" });
       await new Promise((resolve) => setTimeout(resolve, 2000));
     } catch (error) {
       console.log("Waking up server...");

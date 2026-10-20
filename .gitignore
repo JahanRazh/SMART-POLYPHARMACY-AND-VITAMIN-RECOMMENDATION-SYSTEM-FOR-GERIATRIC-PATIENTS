@@ -85,11 +85,23 @@ __pycache__/
 .vscode/
 
 # Secrets/credentials
+*serviceAccountKey*.json
+**/serviceAccountKey.json
 serviceAccountKey.json
 
+# Environment files
+.env
+.env*.local
+*.env
 server/.env
+smartpolycare/.env*
+
+# Startup scripts with keys
 server/start_flask_with_api_key.py
-# start flask
 start_flask_with_api_key.py
-env
 start_flask.bat
+
+# Runtime generated files
+server/patient_emotions.csv
+git_status.txt
+server/project _folder/

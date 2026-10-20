@@ -9,6 +9,7 @@ import axios from "axios";
 import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/app/components/Contexts/AuthContext";
 import MentalHealthGraph from "@/app/components/MentalHealthGraph";
+import { API_BASE_URL } from "@/app/lib/apiConfig";
 
 // Type definition for each advice tab
 // Each tab has: key, label, summary, and a list of recommendations
@@ -45,7 +46,7 @@ type SavedAdvice = {
 };
 
 // API configuration
-const api = axios.create({ baseURL: 'http://127.0.0.1:5000/api' });
+const api = axios.create({ baseURL: `${API_BASE_URL}/api` });
 
 function formatDate(dateString?: string): string {
   if (!dateString) return 'N/A';

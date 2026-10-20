@@ -13,12 +13,27 @@ import json
 from typing import Dict, Optional
 import google.generativeai as genai
 
-# Configure Gemini API - check multiple sources
+# Configure Gemini API securely from environment
 GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY")
-print(f"[advice_generator] GOOGLE_API_KEY loaded from env: {bool(GOOGLE_API_KEY)}")
+if not GOOGLE_API_KEY:
+    # Fallback: load directly from server/.env if not already in os.environ
+    env_file = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '.env')
+    if os.path.exists(env_file):
+        with open(env_file, 'r', encoding='utf-8') as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith('#') and '=' in line:
+                    k, v = line.split('=', 1)
+                    if k.strip() == 'GOOGLE_API_KEY':
+                        GOOGLE_API_KEY = v.strip()
+                        os.environ['GOOGLE_API_KEY'] = GOOGLE_API_KEY
+                        break
+
 if GOOGLE_API_KEY:
     genai.configure(api_key=GOOGLE_API_KEY)
-    print(f"[advice_generator] ✅ Gemini API configured with key (first 10 chars: {GOOGLE_API_KEY[:10]}...)")
+    print("[advice_generator] ✅ Gemini API configured securely from environment")
+else:
+    print("[advice_generator] ⚠️ GOOGLE_API_KEY not found in environment or .env")
 
 
 def generate_two_week_advice(
