@@ -139,15 +139,15 @@ export default function AssessmentDashboard() {
   return (
     <div className="min-h-screen bg-slate-50 font-sans pb-12">
       {/* Top Header */}
-      <div className="bg-white border-b border-gray-200 px-8 py-4 flex justify-between items-center">
-        <div className="flex items-center gap-2">
-          <Activity className="w-6 h-6 text-indigo-600" />
-          <h1 className="text-2xl font-bold text-gray-800">Psychometric Dashboard</h1>
+      <div className="bg-white border-b border-gray-200 px-4 sm:px-8 py-3 sm:py-4 flex justify-between items-center gap-3">
+        <div className="flex items-center gap-2 min-w-0">
+          <Activity className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-600 flex-shrink-0" />
+          <h1 className="text-lg sm:text-2xl font-bold text-gray-800 truncate">Psychometric Dashboard</h1>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
           <button className="p-2 text-gray-500 hover:bg-gray-100 rounded-full transition-colors"><Bell className="w-5 h-5" /></button>
-          <button className="p-2 text-gray-500 hover:bg-gray-100 rounded-full transition-colors"><HelpCircle className="w-5 h-5" /></button>
-          <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold border-2 border-white shadow-sm">
+          <button className="p-2 text-gray-500 hover:bg-gray-100 rounded-full transition-colors hidden sm:block"><HelpCircle className="w-5 h-5" /></button>
+          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-sm border-2 border-white shadow-sm">
             RK
           </div>
         </div>
@@ -270,22 +270,22 @@ export default function AssessmentDashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Chart */}
           <div className="lg:col-span-2 bg-white rounded-3xl p-6 border border-gray-100 shadow-sm flex flex-col">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
+              <h3 className="text-lg sm:text-xl font-bold text-gray-800 flex items-center gap-2">
                 Time-Series Trend Overview
                 <span className="text-xs font-normal text-gray-400 bg-gray-100 px-2 py-1 rounded-full">Validated Scales</span>
               </h3>
               
-              <div className="bg-gray-100 p-1 rounded-xl flex">
+              <div className="bg-gray-100 p-1 rounded-xl flex flex-shrink-0">
                 <button 
                   onClick={() => setViewMode('normalized')}
-                  className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all ${viewMode === 'normalized' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                  className={`px-3 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all ${viewMode === 'normalized' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
                 >
                   Normalized (0-100%)
                 </button>
                 <button 
                   onClick={() => setViewMode('raw')}
-                  className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all ${viewMode === 'raw' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                  className={`px-3 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all ${viewMode === 'raw' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
                 >
                   Raw Scores
                 </button>

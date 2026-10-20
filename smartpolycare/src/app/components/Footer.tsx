@@ -171,7 +171,7 @@ export default function Footer() {
                 style={{
                     maxWidth: "1200px",
                     margin: "0 auto",
-                    padding: "52px 24px 36px",
+                    padding: "clamp(24px, 5vw, 52px) clamp(16px, 4vw, 24px) 36px",
                 }}
             >
                 <div

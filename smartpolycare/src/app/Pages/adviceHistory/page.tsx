@@ -175,7 +175,7 @@ function AdviceHistoryContent() {
       isFetchingRef.current = true;
       try {
         const paramName = emailParam ? 'email' : 'patientId';
-        const response = await api.get(`/patient-advice-history?${paramName}=${encodeURIComponent(identifier)}`);
+        const response = await api.get(`/patient-advice-history?${paramName}=${encodeURIComponent(identifier || '')}`);
         const data = response.data as { advice_history: SavedAdvice[] };
         setAdviceHistory(data.advice_history || []);
       } catch (err: any) {
@@ -193,6 +193,7 @@ function AdviceHistoryContent() {
   }, [identifier, emailParam]);
 
   const handleDelete = async (adviceId: string) => {
+    if (!identifier) return;
     if (!confirm('Are you sure you want to delete this advice?')) return;
     try {
       await api.delete(`/patient-advice-history/${adviceId}?email=${encodeURIComponent(identifier)}`);
@@ -312,7 +313,7 @@ function AdviceHistoryContent() {
 
                       <div className="bg-gray-50/50 rounded-2xl p-4 mb-6">
                         <p className="text-sm text-gray-700 leading-relaxed italic">
-                          "{advice.summary}"
+                          &quot;{advice.summary}&quot;
                         </p>
                       </div>
 

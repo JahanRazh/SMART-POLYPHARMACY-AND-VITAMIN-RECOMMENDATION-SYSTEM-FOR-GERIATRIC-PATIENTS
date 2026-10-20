@@ -188,7 +188,7 @@ function PatientAdviceContent() {
 
       try {
         const paramName = emailParam ? 'email' : 'patientId';
-        const endpoint = `/patient-advice?${paramName}=${encodeURIComponent(identifier)}${forceRegenerate ? '&force_regenerate=true' : ''
+        const endpoint = `/patient-advice?${paramName}=${encodeURIComponent(identifier || '')}${forceRegenerate ? '&force_regenerate=true' : ''
           }`;
 
         console.log(`📡 Fetching advice: ${endpoint}`);
@@ -225,7 +225,7 @@ function PatientAdviceContent() {
 
           // Fetch psychometric scores for PDF report
           try {
-            const psyRes = await fetch(`/api/assessment_history?email=${encodeURIComponent(identifier)}`);
+            const psyRes = await fetch(`/api/assessment_history?email=${encodeURIComponent(identifier || '')}`);
             if (psyRes.ok) {
               const psyData = await psyRes.json();
               const assessments = psyData.assessments || [];
@@ -376,7 +376,7 @@ function PatientAdviceContent() {
             </button>
             {advice && identifier && !identifier.includes('null') && (
               <Link
-                href={`/Pages/adviceHistory?${emailParam ? 'email' : 'patientId'}=${encodeURIComponent(identifier)}`}
+                href={`/Pages/adviceHistory?${emailParam ? 'email' : 'patientId'}=${encodeURIComponent(identifier || '')}`}
                 className="inline-flex items-center gap-2 rounded-lg border border-blue-300 bg-white px-5 py-3 text-sm font-semibold text-blue-700 transition-colors duration-200 hover:bg-blue-50"
               >
                 📋 View History
@@ -623,7 +623,7 @@ function PatientAdviceContent() {
 
                     <p className="mt-4 text-xs text-gray-500 italic">
                       * These recommendations are based on your assessed polypharmacy risk level.
-                      Always follow your prescribing physician's guidance.
+                      Always follow your prescribing physician&apos;s guidance.
                     </p>
                   </motion.div>
                 );
@@ -679,7 +679,7 @@ function PatientAdviceContent() {
 
                 {/* Premium 1-Month Button */}
                 <Link
-                  href={`/Pages/premium?${emailParam ? 'email' : 'patientId'}=${encodeURIComponent(identifier)}`}
+                  href={`/Pages/premium?${emailParam ? 'email' : 'patientId'}=${encodeURIComponent(identifier || '')}`}
                   className="relative rounded-full px-6 py-3 font-semibold transition-all duration-200 bg-gradient-to-r from-amber-500 to-orange-500 text-white border-2 border-amber-400 hover:shadow-lg hover:shadow-amber-300 group"
                 >
                   <span className="relative flex items-center gap-2">

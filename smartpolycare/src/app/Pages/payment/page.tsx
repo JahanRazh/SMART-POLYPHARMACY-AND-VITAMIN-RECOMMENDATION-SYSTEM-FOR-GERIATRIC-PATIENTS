@@ -489,7 +489,7 @@ export default function PaymentPage() {
                 </p>
                 <div className="bg-blue-50 border-4 border-blue-300 rounded-2xl p-6 max-w-2xl mx-auto">
                   <p className="text-2xl text-blue-900 font-semibold">
-                    Click the "Pay with PayPal" button below to proceed
+                    Click the &quot;Pay with PayPal&quot; button below to proceed
                   </p>
                 </div>
               </div>

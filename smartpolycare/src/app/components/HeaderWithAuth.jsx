@@ -4,7 +4,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import UserProfile from "./UserProfile";
 import NotificationBell from "./NotificationBell";
 
@@ -67,30 +67,30 @@ export default function HeaderWithAuth() {
   return (
     <header className="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
       {/* TOP BAR */}
-      <div className="mx-auto max-w-6xl flex items-center justify-between gap-3 py-3 px-4">
+      <div className="mx-auto max-w-6xl flex items-center justify-between gap-2 py-2.5 px-3 sm:px-4 sm:py-3">
         {/* LOGO + TITLE */}
-        <Link href="/" className="flex items-center space-x-3">
-          <div className="w-12 h-12 bg-gradient-to-br from-teal-600 to-blue-500 rounded-xl flex items-center justify-center shadow-md">
+        <Link href="/" className="flex items-center space-x-2 sm:space-x-3 min-w-0">
+          <div className="w-9 h-9 sm:w-12 sm:h-12 flex-shrink-0 bg-gradient-to-br from-teal-600 to-blue-500 rounded-xl flex items-center justify-center shadow-md">
             <Image
               src="/images/favicon.ico"
               alt="SmartPolyCare logo"
-              width={40}
-              height={40}
+              width={36}
+              height={36}
               className="object-contain"
             />
           </div>
-          <div className="flex flex-col">
-            <span className="text-xl sm:text-2xl font-bold text-gray-900">
+          <div className="flex flex-col min-w-0">
+            <span className="text-base sm:text-xl lg:text-2xl font-bold text-gray-900 leading-tight truncate">
               SmartPolyCare
             </span>
-            <span className="text-[11px] text-teal-600 font-medium">
+            <span className="text-[10px] sm:text-[11px] text-teal-600 font-medium hidden xs:block sm:block">
               Geriatric Health Intelligence
             </span>
           </div>
         </Link>
 
         {/* DESKTOP NAV */}
-        <nav className="hidden lg:flex items-center gap-4 text-sm">
+        <nav className="hidden lg:flex items-center gap-1 xl:gap-4 text-sm">
           {navItems.map((item) => (
             <DesktopNavLink
               key={item.href}
@@ -101,39 +101,60 @@ export default function HeaderWithAuth() {
         </nav>
 
         {/* RIGHT SIDE: USER + MOBILE MENU BUTTON */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
           <NotificationBell />
           <UserProfile />
 
           {/* MOBILE BURGER BUTTON */}
           <button
             type="button"
-            className="lg:hidden p-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-teal-500"
+            className="lg:hidden p-2.5 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-teal-500 min-w-[44px] min-h-[44px] flex flex-col items-center justify-center gap-1"
             onClick={() => setMenuOpen((prev) => !prev)}
-            aria-label="Toggle navigation"
+            aria-label={menuOpen ? "Close navigation" : "Open navigation"}
+            aria-expanded={menuOpen}
           >
-            <span className="block w-5 h-0.5 bg-gray-800 mb-1" />
-            <span className="block w-5 h-0.5 bg-gray-800 mb-1" />
-            <span className="block w-5 h-0.5 bg-gray-800" />
+            <motion.span
+              className="block w-5 h-0.5 bg-gray-800 origin-center"
+              animate={menuOpen ? { rotate: 45, y: 6 } : { rotate: 0, y: 0 }}
+              transition={{ duration: 0.2 }}
+            />
+            <motion.span
+              className="block w-5 h-0.5 bg-gray-800"
+              animate={menuOpen ? { opacity: 0, scaleX: 0 } : { opacity: 1, scaleX: 1 }}
+              transition={{ duration: 0.2 }}
+            />
+            <motion.span
+              className="block w-5 h-0.5 bg-gray-800 origin-center"
+              animate={menuOpen ? { rotate: -45, y: -6 } : { rotate: 0, y: 0 }}
+              transition={{ duration: 0.2 }}
+            />
           </button>
         </div>
       </div>
 
       {/* MOBILE MENU */}
-      {menuOpen && (
-        <nav className="lg:hidden border-t border-gray-200 bg-white">
-          <div className="max-w-6xl mx-auto px-4 py-4 flex flex-col gap-3 text-sm">
-            {navItems.map((item, index) => (
-              <MobileNavLink
-                key={item.href}
-                href={item.href}
-                label={item.label}
-                index={index}
-              />
-            ))}
-          </div>
-        </nav>
-      )}
+      <AnimatePresence>
+        {menuOpen && (
+          <motion.nav
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.25, ease: "easeInOut" }}
+            className="lg:hidden border-t border-gray-200 bg-white overflow-hidden"
+          >
+            <div className="max-w-6xl mx-auto px-4 py-4 flex flex-col gap-2 text-sm">
+              {navItems.map((item, index) => (
+                <MobileNavLink
+                  key={item.href}
+                  href={item.href}
+                  label={item.label}
+                  index={index}
+                />
+              ))}
+            </div>
+          </motion.nav>
+        )}
+      </AnimatePresence>
     </header>
   );
 }

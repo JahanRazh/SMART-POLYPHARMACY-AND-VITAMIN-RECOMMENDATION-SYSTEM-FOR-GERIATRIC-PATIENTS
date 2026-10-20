@@ -61,7 +61,7 @@ const NotificationBell: React.FC = () => {
                   <Bell className="h-6 w-6" />
                 </div>
                 <p className="text-sm font-medium text-gray-900">No notifications yet</p>
-                <p className="mt-1 text-xs text-gray-500">We'll alert you when it's time for your meals.</p>
+                <p className="mt-1 text-xs text-gray-500">We&apos;ll alert you when it&apos;s time for your meals.</p>
               </div>
             ) : (
               <div className="divide-y divide-gray-100">

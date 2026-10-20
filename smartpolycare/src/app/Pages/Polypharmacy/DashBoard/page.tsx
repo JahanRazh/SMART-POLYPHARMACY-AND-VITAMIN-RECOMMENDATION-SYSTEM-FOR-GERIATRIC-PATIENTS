@@ -610,7 +610,7 @@ const DashboardPage = () => {
             <div className="min-h-screen bg-gray-50 py-10">
                 <div className="mx-auto max-w-5xl rounded-3xl bg-white p-8 shadow-xl text-center">
                     <h1 className="text-2xl font-bold text-gray-900 mb-4">No Analysis Found</h1>
-                    <p className="text-gray-600 mb-6">You haven't performed a polypharmacy risk analysis yet.</p>
+                    <p className="text-gray-600 mb-6">You haven&apos;t performed a polypharmacy risk analysis yet.</p>
                     <Link
                         href="/Pages/Polypharmacy/Polyform"
                         className="inline-block rounded-2xl bg-indigo-600 px-6 py-3 text-white shadow-lg transition hover:bg-indigo-700"

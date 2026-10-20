@@ -296,7 +296,7 @@ export default function AboutUs() {
               <h3 className="text-2xl font-bold text-gray-900">Partner with Us</h3>
               <p className="mt-2 text-gray-600 text-sm md:text-base leading-relaxed">
                 We collaborate with clinicians, health systems, and researchers to validate
-                and scale safe, explainable AI for geriatric care. Let's co‑design the
+                and scale safe, explainable AI for geriatric care. Let&apos;s co‑design the
                 future of preventive medicine.
               </p>
             </div>
