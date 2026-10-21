@@ -13,16 +13,21 @@ def get_db():
         # 1. Check if raw JSON or base64 string is provided in environment variables
         raw_key = os.environ.get("FIREBASE_SERVICE_ACCOUNT_KEY")
         if raw_key:
+            clean_raw = raw_key.strip().strip("'\"")
             try:
                 # Try JSON string directly
-                key_dict = json.loads(raw_key)
+                key_dict = json.loads(clean_raw)
+                if isinstance(key_dict, dict) and "private_key" in key_dict:
+                    key_dict["private_key"] = key_dict["private_key"].replace("\\n", "\n")
                 cred = credentials.Certificate(key_dict)
                 print("🔑 Loaded Firebase credentials from FIREBASE_SERVICE_ACCOUNT_KEY (JSON)")
             except Exception:
                 try:
                     # Try base64 decoding
-                    decoded = base64.b64decode(raw_key).decode("utf-8")
+                    decoded = base64.b64decode(clean_raw).decode("utf-8")
                     key_dict = json.loads(decoded)
+                    if isinstance(key_dict, dict) and "private_key" in key_dict:
+                        key_dict["private_key"] = key_dict["private_key"].replace("\\n", "\n")
                     cred = credentials.Certificate(key_dict)
                     print("🔑 Loaded Firebase credentials from FIREBASE_SERVICE_ACCOUNT_KEY (Base64)")
                 except Exception as e:
