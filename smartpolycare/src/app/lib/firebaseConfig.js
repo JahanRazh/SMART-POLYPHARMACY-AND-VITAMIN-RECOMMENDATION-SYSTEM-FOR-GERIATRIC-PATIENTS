@@ -18,17 +18,7 @@ const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 // Initialize Firestore
 const db = getFirestore(app);
 
-// Optional: Enable offline persistence (remove if not needed)
-if (typeof window !== 'undefined') {
-  enableIndexedDbPersistence(db).catch((err) => {
-    if (err.code == 'failed-precondition') {
-      console.log('Multiple tabs open, persistence can only be enabled in one tab at a time.');
-    } else if (err.code == 'unimplemented') {
-      console.log('The current browser doesn\'t support persistence.');
-    }
-  });
-}
-
+// Firestore is initialized and ready for standard cloud connectivity
 export const auth = getAuth(app);
 export { db };
 export default app;
