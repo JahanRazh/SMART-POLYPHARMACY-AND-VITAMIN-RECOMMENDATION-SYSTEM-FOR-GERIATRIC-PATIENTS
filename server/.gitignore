@@ -18,6 +18,11 @@ __pycache__/
 
 # Secrets/credentials
 serviceAccountKey.json
+*serviceAccountKey*.json
+
+# Runtime data & temp
+patient_emotions.csv
+project _folder/
 
 # start flask
 start_flask_with_api_key.py

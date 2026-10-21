@@ -7,7 +7,7 @@ from flask_cors import CORS
 env_file = os.path.join(os.path.dirname(__file__), '.env')
 if os.path.exists(env_file):
     print(f"📁 Loading environment from: {env_file}")
-    with open(env_file) as f:
+    with open(env_file, "r", encoding="utf-8-sig") as f:
         for line in f:
             line = line.strip()
             if line and not line.startswith('#') and '=' in line:
@@ -44,16 +44,8 @@ print("✅ Loaded database connection")
 app = Flask(__name__)
 
 
-# Configure CORS explicitly to allow all origins
-CORS(app, resources={
-    r"/api/*": {"origins": "*"},
-    r"/full_assessment": {"origins": "*"},
-    r"/detect_emotion": {"origins": "*"},
-
-    r"/meal_plan": {"origins": "*"},
-    r"/polypharmacy_assessment": {"origins": "*"},
-    r"/patient*": {"origins": "*"},
-}, allow_headers=["Content-Type", "Authorization"])
+# Configure CORS explicitly to allow all origins and all headers
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 # Register blueprints
 app.register_blueprint(polypharmacy_bp)
@@ -67,8 +59,13 @@ app.register_blueprint(advice_history_bp)
 app.register_blueprint(counsellor_booking_bp)
 
 @app.route('/')
+@app.route('/health')
 def health_check():
-    return jsonify({"status": "Server is running", "message": "Smart Polycare API"}), 200
+    return jsonify({
+        "status": "healthy",
+        "service": "Smart Polycare API",
+        "timestamp": os.environ.get("RENDER_GIT_COMMIT", "running")
+    }), 200
 
 @app.route('/check-firebase')
 def check_firebase():
@@ -80,28 +77,37 @@ def check_firebase():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.before_request
-def log_request():
-    """Log all incoming requests for debugging"""
+def handle_incoming_request():
+    """Handle CORS preflight (OPTIONS) instantly and log incoming requests."""
+    if request.method == "OPTIONS":
+        response = app.make_default_options_response()
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS, PATCH'
+        response.headers['Access-Control-Allow-Headers'] = '*'
+        return response
+
     print(f"\n📡 Incoming request: {request.method} {request.path}")
-    if request.is_json:
-        print(f"   Headers: {dict(request.headers)}")
 
 @app.after_request
 def after_request(response):
     """Ensure CORS headers are set on all responses"""
     response.headers['Access-Control-Allow-Origin'] = '*'
-    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
-    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS, PATCH'
+    response.headers['Access-Control-Allow-Headers'] = '*'
     return response
 
 @app.errorhandler(404)
 def not_found(error):
-    return jsonify({"error": "Endpoint not found", "path": request.path}), 404
+    resp = jsonify({"error": "Endpoint not found", "path": request.path})
+    resp.headers['Access-Control-Allow-Origin'] = '*'
+    return resp, 404
 
 @app.errorhandler(500)
 def server_error(error):
     print(f"❌ Server error: {error}")
-    return jsonify({"error": "Internal server error", "details": str(error)}), 500
+    resp = jsonify({"error": "Internal server error", "details": str(error)})
+    resp.headers['Access-Control-Allow-Origin'] = '*'
+    return resp, 500
 
 if __name__ == "__main__":
     print("\n🚀 Starting Smart Polycare API Server...")
@@ -110,7 +116,9 @@ if __name__ == "__main__":
     print("💾 Using Firebase Admin SDK for database access\n")
     
     try:
-        app.run(host="127.0.0.1", port=5000, debug=False, use_reloader=False)
+        port = int(os.environ.get("PORT", 5000))
+        host = os.environ.get("HOST", "0.0.0.0")
+        app.run(host=host, port=port, debug=False, use_reloader=False)
     except OSError as e:
         if "Address already in use" in str(e):
             print("❌ ERROR: Port 5000 is already in use!")

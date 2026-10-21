@@ -9,6 +9,7 @@ import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/app/components/Contexts/AuthContext';
 import { useNotifications } from '@/app/components/Contexts/NotificationContext';
 import { generatePatientReport } from '@/app/utils/generateReport';
+import { API_BASE_URL } from '@/app/lib/apiConfig';
 
 // Dynamic import avoids SSR issues with Recharts canvas
 const MentalHealthGraph = dynamic(
@@ -59,7 +60,7 @@ const VITAMIN_LAB_TESTS: Record<string, { test: string, description: string, why
 };
 
 // ─── Stable axios instance outside component to avoid re-creation ────────────
-const api = axios.create({ baseURL: 'http://127.0.0.1:5000/api' });
+const api = axios.create({ baseURL: `${API_BASE_URL}/api` });
 
 // ─── formatDate: robust ISO-8601 / any date-string handler ───────────────────
 function formatDate(dateString?: string): string {
@@ -412,7 +413,7 @@ function PatientAdviceContent() {
                 <p className="font-semibold">Troubleshooting:</p>
                 <ul className="list-disc ml-5 mt-2 space-y-1">
                   <li>Make sure the Flask server is running at{' '}
-                    <code className="bg-red-100 px-1">http://127.0.0.1:5000</code>
+                    <code className="bg-red-100 px-1">{API_BASE_URL}</code>
                   </li>
                   <li>Check that Google API key is set in the{' '}
                     <code className="bg-red-100 px-1">.env</code> file

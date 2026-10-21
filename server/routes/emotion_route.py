@@ -1,16 +1,64 @@
 from flask import Blueprint, request, jsonify
 from db import get_db
-from tensorflow.keras.models import load_model
 import base64
 import cv2
 import numpy as np
+import os
 from datetime import datetime
 from typing import Optional, Tuple
 
 emotion_bp = Blueprint("emotion_bp", __name__)
 
-# Load emotion model (transfer learning)
-model = load_model("models/model_3_csv_transfer_learning.keras")
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+MODEL_PATH = os.path.join(BASE_DIR, "models", "model_3_csv_transfer_learning.keras")
+
+_model = None
+
+def get_emotion_model():
+    """Lazy load emotion model on demand to save RAM on cloud startup (Render)."""
+    global _model
+    if _model is not None:
+        return _model
+
+    if not os.path.exists(MODEL_PATH):
+        print(f"[WARN] Emotion model file not found at {MODEL_PATH}")
+        return None
+
+    try:
+        # Cross-platform compatibility fix for Keras 2.15 models saved on Windows:
+        import keras.src.saving.saving_lib as _keras_saving_lib
+        _orig_h5_get = _keras_saving_lib.H5IOStore.get
+
+        def _compat_h5_get(self, path):
+            if not path:
+                return self.h5_file["vars"] if "vars" in self.h5_file else {}
+            clean_path = path.strip("/\\")
+            if path in self.h5_file and "vars" in self.h5_file[path]:
+                return self.h5_file[path]["vars"]
+            if clean_path in self.h5_file and "vars" in self.h5_file[clean_path]:
+                return self.h5_file[clean_path]["vars"]
+            win_path = clean_path.replace("/", "\\")
+            if win_path in self.h5_file and "vars" in self.h5_file[win_path]:
+                return self.h5_file[win_path]["vars"]
+            posix_path = clean_path.replace("\\", "/")
+            if posix_path in self.h5_file and "vars" in self.h5_file[posix_path]:
+                return self.h5_file[posix_path]["vars"]
+            return _orig_h5_get(self, path)
+
+        _keras_saving_lib.H5IOStore.get = _compat_h5_get
+    except Exception as _patch_err:
+        print(f"[WARN] Could not patch Keras H5IOStore: {_patch_err}")
+
+    try:
+        from tensorflow.keras.models import load_model
+        _model = load_model(MODEL_PATH)
+        print(f"[INFO] Emotion model loaded successfully from {MODEL_PATH}")
+    except Exception as e:
+        print(f"[ERROR] Failed to load emotion model: {e}")
+        return None
+
+    return _model
+
 emotion_labels = ["Angry", "Disgust", "Fear", "Happy", "Sad", "Surprise", "Neutral"]
 
 # OpenCV face detector
@@ -61,6 +109,10 @@ def detect_emotion():
     face_input, face_box = extract_face_for_model(frame)
     if face_input is None:
         return jsonify({"emotion": None, "all_predictions": {}, "face_detected": False}), 200
+
+    model = get_emotion_model()
+    if model is None:
+        return jsonify({"error": "Emotion model is currently unavailable on server"}), 503
 
     preds = model.predict(face_input, verbose=0)[0]
     emotion_idx = int(np.argmax(preds))

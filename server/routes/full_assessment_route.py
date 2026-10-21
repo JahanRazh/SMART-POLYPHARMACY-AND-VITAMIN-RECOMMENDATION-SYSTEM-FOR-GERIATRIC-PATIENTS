@@ -8,23 +8,33 @@ import os
 
 full_assessment_bp = Blueprint("full_assessment", __name__)
 
-# Load ML artifacts
+# ML artifacts (lazy loaded on demand)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MODEL_DIR = os.path.join(BASE_DIR, "models")
 
-model = joblib.load(os.path.join(MODEL_DIR, "mental_health_model.pkl"))
-scaler = joblib.load(os.path.join(MODEL_DIR, "scaler.pkl"))
-label_encoders = joblib.load(os.path.join(MODEL_DIR, "label_encoders.pkl"))
-target_encoder = joblib.load(os.path.join(MODEL_DIR, "target_encoder.pkl"))
+_model = None
+_scaler = None
+_label_encoders = None
+_target_encoder = None
+_train_features = None
 
-TRAIN_FEATURES = list(model.feature_names_in_)
+def _get_artifacts():
+    global _model, _scaler, _label_encoders, _target_encoder, _train_features
+    if _model is None:
+        _model = joblib.load(os.path.join(MODEL_DIR, "mental_health_model.pkl"))
+        _scaler = joblib.load(os.path.join(MODEL_DIR, "scaler.pkl"))
+        _label_encoders = joblib.load(os.path.join(MODEL_DIR, "label_encoders.pkl"))
+        _target_encoder = joblib.load(os.path.join(MODEL_DIR, "target_encoder.pkl"))
+        _train_features = list(_model.feature_names_in_)
+    return _model, _scaler, _label_encoders, _target_encoder, _train_features
 
 @full_assessment_bp.route("/full_assessment", methods=["POST"])
 def full_assessment():
-    data = request.get_json()
+    data = request.get_json() or {}
+    model, scaler, label_encoders, target_encoder, train_features = _get_artifacts()
 
     # Step 1: create empty row
-    row = {feature: 0 for feature in TRAIN_FEATURES}
+    row = {feature: 0 for feature in train_features}
 
     # Step 2: numeric features
     for col in ["age", "exercise_time", "sleep_duration", "physical_activity",

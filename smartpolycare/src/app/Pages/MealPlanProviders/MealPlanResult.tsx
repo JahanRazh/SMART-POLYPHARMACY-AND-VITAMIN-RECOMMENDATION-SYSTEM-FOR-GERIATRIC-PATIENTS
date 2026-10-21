@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/app/components/Contexts/AuthContext';
 import { useMealReminders } from '@/app/components/Hooks/useMealReminders';
+import { API_BASE_URL } from '@/app/lib/apiConfig';
 
 interface ParsedMeal {
   foodName: string;
@@ -246,7 +247,7 @@ const MealPlanResult: React.FC<MealPlanResultProps> = ({
         timestamp: new Date().toISOString()
       };
 
-      const baseUrl = process.env.NEXT_PUBLIC_LOCAL_API_URL || "http://127.0.0.1:5000";
+      const baseUrl = API_BASE_URL;
       const response = await fetch(`${baseUrl}/api/meal-plans/track`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
