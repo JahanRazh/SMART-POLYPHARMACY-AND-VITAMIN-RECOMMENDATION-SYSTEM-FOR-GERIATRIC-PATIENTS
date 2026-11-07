@@ -458,8 +458,8 @@ function AdviceHistoryContent() {
                     <div className="rounded-xl bg-gradient-to-br from-purple-50 to-pink-50 p-4">
                       <h3 className="text-xs font-bold text-purple-800 uppercase tracking-wide mb-2">Week 1</h3>
                       <ul className="space-y-2 text-xs text-purple-700">
-                        {selectedAdvice.week_1?.map(r => (
-                          <li key={r.day} className="border-l-2 border-purple-300 pl-2">
+                        {selectedAdvice.week_1?.map((r, i) => (
+                          <li key={`w1-rec-${r.day}-${i}`} className="border-l-2 border-purple-300 pl-2">
                             <strong>Day {r.day}:</strong> {r.recommendation}
                           </li>
                         ))}
@@ -468,8 +468,8 @@ function AdviceHistoryContent() {
                     <div className="rounded-xl bg-gradient-to-br from-green-50 to-teal-50 p-4">
                       <h3 className="text-xs font-bold text-green-800 uppercase tracking-wide mb-2">Week 2</h3>
                       <ul className="space-y-2 text-xs text-green-700">
-                        {selectedAdvice.week_2?.map(r => (
-                          <li key={r.day} className="border-l-2 border-green-300 pl-2">
+                        {selectedAdvice.week_2?.map((r, i) => (
+                          <li key={`w2-rec-${r.day}-${i}`} className="border-l-2 border-green-300 pl-2">
                             <strong>Day {r.day}:</strong> {r.recommendation}
                           </li>
                         ))}

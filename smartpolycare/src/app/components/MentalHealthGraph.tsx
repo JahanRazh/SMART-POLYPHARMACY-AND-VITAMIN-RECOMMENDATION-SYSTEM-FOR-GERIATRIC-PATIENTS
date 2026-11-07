@@ -209,7 +209,7 @@ function HistoryTable({ entries }: { entries: AssessmentEntry[] }) {
             {[...entries].reverse().map((e, i) => {
               const st = overallStatus(e);
               return (
-                <tr key={e.id || i} className="border-b border-gray-50 hover:bg-gray-50">
+                <tr key={e.id ? `assessment-${e.id}-${i}` : `assessment-${i}`} className="border-b border-gray-50 hover:bg-gray-50">
                   <td className="py-2.5 pr-4 text-gray-600 font-medium whitespace-nowrap">
                     {new Date(e.timestamp).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}
                   </td>

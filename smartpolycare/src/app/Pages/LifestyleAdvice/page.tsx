@@ -816,9 +816,9 @@ export default function LifestyleAdvicePage() {
                       <span className="text-2xl">📝</span> Week 1 (Days 1-7)
                     </h4>
                     <ul className="space-y-3 max-h-96 overflow-y-auto pr-2">
-                      {recentAdvice.week_1?.map((rec) => (
+                      {recentAdvice.week_1?.map((rec, idx) => (
                         <motion.li
-                          key={rec.day}
+                          key={`w1-rec-${rec.day}-${idx}`}
                           initial={{ opacity: 0, x: -10 }}
                           animate={{ opacity: 1, x: 0 }}
                           className="flex gap-3 text-sm text-gray-700 bg-white/60 p-3 rounded-lg hover:bg-white/80 transition-colors"
@@ -844,9 +844,9 @@ export default function LifestyleAdvicePage() {
                       <span className="text-2xl">📝</span> Week 2 (Days 8-14)
                     </h4>
                     <ul className="space-y-3 max-h-96 overflow-y-auto pr-2">
-                      {recentAdvice.week_2?.map((rec) => (
+                      {recentAdvice.week_2?.map((rec, idx) => (
                         <motion.li
-                          key={rec.day}
+                          key={`w2-rec-${rec.day}-${idx}`}
                           initial={{ opacity: 0, x: 10 }}
                           animate={{ opacity: 1, x: 0 }}
                           className="flex gap-3 text-sm text-gray-700 bg-white/60 p-3 rounded-lg hover:bg-white/80 transition-colors"
