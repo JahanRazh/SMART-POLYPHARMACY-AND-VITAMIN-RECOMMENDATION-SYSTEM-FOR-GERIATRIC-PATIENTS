@@ -516,7 +516,7 @@ function PatientAdviceContent() {
                       const labTestInfo = VITAMIN_LAB_TESTS[pred.vitamin];
                       if (!labTestInfo) return null;
                       return (
-                        <div key={idx} className="rounded-xl border border-blue-100 bg-white p-4 flex flex-col gap-2 shadow-sm">
+                        <div key={`lab-test-${pred.vitamin || idx}-${idx}`} className="rounded-xl border border-blue-100 bg-white p-4 flex flex-col gap-2 shadow-sm">
                           <div className="flex items-center gap-2 mb-1">
                             <span className="text-xl">{pred.icon || "💊"}</span>
                             <h3 className="font-bold text-blue-900">{pred.name || `Vitamin ${pred.vitamin}`} Deficiency</h3>
@@ -610,7 +610,7 @@ function PatientAdviceContent() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {advices.map((adv, idx) => (
                         <div
-                          key={idx}
+                          key={`poly-adv-${idx}`}
                           className={`rounded-xl bg-white border ${cardBorder} p-4 flex gap-3 shadow-sm`}
                         >
                           <span className="text-2xl shrink-0 mt-0.5">{adv.icon}</span>
@@ -700,7 +700,7 @@ function PatientAdviceContent() {
                 {currentWeekData.length > 0 ? (
                   currentWeekData.map((dailyRec, index) => (
                     <motion.div
-                      key={dailyRec.day}
+                      key={`daily-rec-${activeWeek}-${dailyRec.day}-${index}`}
                       initial={{ opacity: 0, x: -10 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ duration: 0.3, delay: index * 0.07 }}

@@ -3,7 +3,16 @@ import os
 import pandas as pd
 import difflib
 from datetime import datetime, timedelta, timezone
-import pytz
+
+try:
+    import pytz
+except ImportError:
+    pytz = None
+
+try:
+    from zoneinfo import ZoneInfo
+except ImportError:
+    ZoneInfo = None
 
 from db import get_db
 from services.advice_generator import generate_two_week_advice
@@ -244,12 +253,20 @@ def patient_advice():
                             generated_date = datetime.fromisoformat(generated_date.replace("Z", "+00:00"))
                         
                         # Use timezone-aware datetime for comparison
-                        sl_tz = pytz.timezone('Asia/Colombo')
-                        now_sl = datetime.now(sl_tz)
-                        
-                        # Ensure generated_date is timezone aware before subtraction
-                        if generated_date.tzinfo is None:
-                            generated_date = sl_tz.localize(generated_date)
+                        if pytz:
+                            sl_tz = pytz.timezone('Asia/Colombo')
+                            now_sl = datetime.now(sl_tz)
+                            if generated_date.tzinfo is None:
+                                generated_date = sl_tz.localize(generated_date)
+                        elif ZoneInfo:
+                            sl_tz = ZoneInfo('Asia/Colombo')
+                            now_sl = datetime.now(sl_tz)
+                            if generated_date.tzinfo is None:
+                                generated_date = generated_date.replace(tzinfo=sl_tz)
+                        else:
+                            now_sl = datetime.now(timezone.utc)
+                            if generated_date.tzinfo is None:
+                                generated_date = generated_date.replace(tzinfo=timezone.utc)
                             
                         days_old = (now_sl - generated_date).days
                         if days_old < 14:
@@ -317,8 +334,14 @@ def patient_advice():
         }), 500
 
     # Store advice in Firestore
-    sl_tz = pytz.timezone('Asia/Colombo')
-    now = datetime.now(sl_tz)
+    if pytz:
+        sl_tz = pytz.timezone('Asia/Colombo')
+        now = datetime.now(sl_tz)
+    elif ZoneInfo:
+        sl_tz = ZoneInfo('Asia/Colombo')
+        now = datetime.now(sl_tz)
+    else:
+        now = datetime.now(timezone.utc)
     expires = now + timedelta(days=14)
     
     advice_to_store = {

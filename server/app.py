@@ -1,4 +1,18 @@
 import os
+import sys
+
+# Ensure UTF-8 output encoding across all platforms and WSGI runners (prevents UnicodeEncodeError)
+if hasattr(sys.stdout, 'reconfigure'):
+    try:
+        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+    except Exception:
+        pass
+if hasattr(sys.stderr, 'reconfigure'):
+    try:
+        sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+    except Exception:
+        pass
+
 # pyrefly: ignore [missing-import]
 from flask import Flask, jsonify, request
 from flask_cors import CORS
@@ -6,7 +20,7 @@ from flask_cors import CORS
 # Load environment variables from .env file
 env_file = os.path.join(os.path.dirname(__file__), '.env')
 if os.path.exists(env_file):
-    print(f"📁 Loading environment from: {env_file}")
+    print(f"[INFO] Loading environment from: {env_file}")
     with open(env_file, "r", encoding="utf-8-sig") as f:
         for line in f:
             line = line.strip()
@@ -14,35 +28,34 @@ if os.path.exists(env_file):
                 key, value = line.split('=', 1)
                 os.environ[key.strip()] = value.strip()
                 if key.strip() == 'GOOGLE_API_KEY':
-                    print(f"✅ Loaded from .env")
+                    print("[INFO] Google API key loaded from .env")
 else:
-    print(f"⚠️ No .env file found at {env_file}")
+    print(f"[INFO] No .env file found at {env_file} (using runtime environment variables)")
 
 # Blueprints
-print("📦 Loading routes...")
+print("[INFO] Loading route blueprints...")
 from routes.polyphamacy_risk_route import polypharmacy_bp
-print("✅ Loaded polypharmacy route")
+print("[INFO] Loaded polypharmacy route")
 from routes.emotion_route import emotion_bp
-print("✅ Loaded emotion route")
+print("[INFO] Loaded emotion route")
 from routes.full_assessment_route import full_assessment_bp
-print("✅ Loaded full assessment route")
+print("[INFO] Loaded full assessment route")
 from routes.meal_plan_route import meal_plan_bp
-print("✅ Loaded meal plan route")
+print("[INFO] Loaded meal plan route")
 
 from routes.advice_route import advice_bp
-print("✅ Loaded advice route")
+print("[INFO] Loaded advice route")
 from routes.vitamin_deficiency_route import vitamin_deficiency_bp
-print("✅ Loaded vitamin deficiency route")
+print("[INFO] Loaded vitamin deficiency route")
 from routes.advice_history_route import advice_history_bp
-print("✅ Loaded advice history route")
+print("[INFO] Loaded advice history route")
 from routes.counsellor_booking_route import counsellor_booking_bp
-print("✅ Loaded counsellor booking route")
+print("[INFO] Loaded counsellor booking route")
 
 from db import get_db
-print("✅ Loaded database connection")
+print("[INFO] Loaded database connection module")
 
 app = Flask(__name__)
-
 
 # Configure CORS explicitly to allow all origins and all headers
 CORS(app, resources={r"/*": {"origins": "*"}})
@@ -60,11 +73,22 @@ app.register_blueprint(counsellor_booking_bp)
 
 @app.route('/')
 @app.route('/health')
+@app.route('/api/health')
+@app.route('/api/ping')
 def health_check():
     return jsonify({
         "status": "healthy",
         "service": "Smart Polycare API",
-        "timestamp": os.environ.get("RENDER_GIT_COMMIT", "running")
+        "version": "1.0.0",
+        "timestamp": os.environ.get("RENDER_GIT_COMMIT", "running"),
+        "modules": [
+            "polypharmacy_risk",
+            "vitamin_deficiency",
+            "meal_plans",
+            "patient_advice",
+            "emotion_detection",
+            "counsellor_booking"
+        ]
     }), 200
 
 @app.route('/check-firebase')
@@ -86,7 +110,7 @@ def handle_incoming_request():
         response.headers['Access-Control-Allow-Headers'] = '*'
         return response
 
-    print(f"\n📡 Incoming request: {request.method} {request.path}")
+    print(f"\n[REQUEST] Incoming request: {request.method} {request.path}")
 
 @app.after_request
 def after_request(response):
@@ -104,16 +128,16 @@ def not_found(error):
 
 @app.errorhandler(500)
 def server_error(error):
-    print(f"❌ Server error: {error}")
+    print(f"[ERROR] Server error: {error}")
     resp = jsonify({"error": "Internal server error", "details": str(error)})
     resp.headers['Access-Control-Allow-Origin'] = '*'
     return resp, 500
 
 if __name__ == "__main__":
-    print("\n🚀 Starting Smart Polycare API Server...")
-    print("📍 Server will run on http://127.0.0.1:5000")
-    print("⚠️  CORS enabled for all origins")
-    print("💾 Using Firebase Admin SDK for database access\n")
+    print("\n[START] Starting Smart Polycare API Server...")
+    print("  Server host: http://127.0.0.1:5000")
+    print("  CORS enabled for all origins")
+    print("  Using Firebase Admin SDK for database access\n")
     
     try:
         port = int(os.environ.get("PORT", 5000))

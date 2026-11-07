@@ -44,6 +44,16 @@ type PredictionResponse = {
   dosage_info: DrugDosage[];
 };
 
+/* ================= DEFAULT CLINICAL SYMPTOMS FALLBACK ================= */
+const DEFAULT_SYMPTOMS: string[] = [
+  "fatigue", "muscle weakness", "tingling", "numbness", "dizziness",
+  "confusion", "headache", "bone ache", "joint pain", "bleeding gums",
+  "vision changes", "dry skin", "hair loss", "swollen tongue",
+  "irregular heartbeat", "shortness of breath", "cold hands and feet",
+  "depression", "memory loss", "mouth ulcers", "brittle nails",
+  "anemia", "arrhythmias", "nausea", "loss of appetite"
+];
+
 /* ================= API BASE ================= */
 const API = `${API_BASE_URL}/api/vitamin-deficiency`;
 
@@ -59,7 +69,9 @@ export default function VitaminDeficiencyPage() {
   const [drugSuggestions, setDrugSuggestions] = useState<Record<number, string[]>>({});
   const [activeDrugDrop, setActiveDrugDrop] = useState<number | null>(null);
 
-  const [allSymptoms, setAllSymptoms] = useState<string[]>([]);
+  const [allSymptoms, setAllSymptoms] = useState<string[]>(DEFAULT_SYMPTOMS);
+  const [symptomsLoading, setSymptomsLoading] = useState<boolean>(true);
+  const [symptomsError, setSymptomsError] = useState<boolean>(false);
   const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([]);
   const [symptomSearch, setSymptomSearch] = useState("");
 
@@ -69,13 +81,35 @@ export default function VitaminDeficiencyPage() {
 
   const drugsContainerRef = useRef<HTMLDivElement>(null);
 
-  /* ---- load symptoms on mount ---- */
-  useEffect(() => {
+  /* ---- load symptoms on mount with retry & graceful fallback ---- */
+  const loadSymptoms = useCallback(() => {
+    setSymptomsLoading(true);
+    setSymptomsError(false);
     fetch(`${API}/symptoms`)
-      .then((r) => r.json())
-      .then((d) => setAllSymptoms(d.items || []))
-      .catch(() => { });
+      .then((r) => {
+        if (!r.ok) throw new Error(`Status ${r.status}`);
+        return r.json();
+      })
+      .then((d) => {
+        if (d && Array.isArray(d.items) && d.items.length > 0) {
+          setAllSymptoms(d.items);
+          setSymptomsError(false);
+        } else {
+          setAllSymptoms(DEFAULT_SYMPTOMS);
+        }
+        setSymptomsLoading(false);
+      })
+      .catch((err) => {
+        console.warn("Could not reach backend symptoms API, active fallback applied:", err);
+        setAllSymptoms((prev) => (prev.length > 0 ? prev : DEFAULT_SYMPTOMS));
+        setSymptomsLoading(false);
+        setSymptomsError(true);
+      });
   }, []);
+
+  useEffect(() => {
+    loadSymptoms();
+  }, [loadSymptoms]);
 
   /* ---- fetch saved assessment ---- */
   useEffect(() => {
@@ -587,10 +621,32 @@ export default function VitaminDeficiencyPage() {
           )}
 
           <div className={styles.availableSymptoms}>
-            {filteredSymptoms.length === 0 ? (
+            {symptomsLoading && allSymptoms.length === 0 ? (
               <p style={{ textAlign: "center", color: "#64748b", fontSize: "0.875rem" }}>
-                {allSymptoms.length === 0 ? "Loading symptoms..." : "No matching symptoms"}
+                Connecting to server &amp; loading symptoms...
               </p>
+            ) : filteredSymptoms.length === 0 ? (
+              <div style={{ textAlign: "center", color: "#64748b", fontSize: "0.875rem", padding: "1rem" }}>
+                <p>No matching symptoms found.</p>
+                {symptomsError && (
+                  <button
+                    type="button"
+                    onClick={loadSymptoms}
+                    style={{
+                      marginTop: "0.5rem",
+                      padding: "0.35rem 0.85rem",
+                      fontSize: "0.75rem",
+                      borderRadius: "6px",
+                      backgroundColor: "#0284c7",
+                      color: "#fff",
+                      border: "none",
+                      cursor: "pointer"
+                    }}
+                  >
+                    Retry Server Sync
+                  </button>
+                )}
+              </div>
             ) : (
               <div>
                 {filteredSymptoms.map((s) => (
