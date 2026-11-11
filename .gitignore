@@ -95,6 +95,7 @@ serviceAccountKey.json
 *.env
 server/.env
 smartpolycare/.env*
+!smartpolycare/.env.example
 
 # Startup scripts with keys
 server/start_flask_with_api_key.py
